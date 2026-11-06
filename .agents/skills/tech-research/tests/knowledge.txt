@@ -1,0 +1,18 @@
+# The cold reader sees only SKILL.md. Each question has one expected answer.
+Q: When may an agent start to collect sources for a research?
+A: The agent may collect sources only after the user approves the brief and the agent runs `$R status <slug> brief.md final`.
+
+Q: How does an agent add a source to the register of a research?
+A: The agent runs `$R source add <slug>` with the kind, author, title, url and evidence of the source, and the command prints the ID of the source.
+
+Q: How does a file cite a source, and what writes the footnote definitions?
+A: The file puts a footnote reference such as `[^S2]` right after the claim, and `$R cite sync <slug>` writes the footnote definitions at the end of the file.
+
+Q: What does the check require of each key finding in a report that is in review or final?
+A: Each key finding in the report cites at least one primary source or ends with `(unverified)`.
+
+Q: What must follow every Mermaid diagram in a research artifact?
+A: A prose paragraph must follow right after each diagram, and it says what the diagram shows and why it matters.
+
+Q: Which files does `$R init` create, and where?
+A: `$R init` creates `brief.md`, `report.md` and `sources.md` in the folder `docs/research/<slug>/`.

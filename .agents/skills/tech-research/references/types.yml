@@ -1,0 +1,13 @@
+# The closed set of research artifact types. scripts/research.sh reads this
+# file, and the template of each type is references/templates/<type>.md.
+# required: every research holds the type.
+# repeatable: a research may hold more files of the type, named
+#   <type>-<name>.md.
+# diagram: from status review on, the file holds a Mermaid diagram.
+brief: {required: true, repeatable: false, diagram: false}
+report: {required: true, repeatable: false, diagram: true}
+sources: {required: true, repeatable: false, diagram: false}
+comparison: {required: false, repeatable: true, diagram: true}
+recommendation: {required: false, repeatable: true, diagram: false}
+tech-profile: {required: false, repeatable: true, diagram: true}
+experiment: {required: false, repeatable: true, diagram: true}

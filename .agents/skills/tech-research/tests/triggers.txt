@@ -1,0 +1,9 @@
+# "+" tasks must load tech-research. "-" tasks belong to other skills.
++ Research which message queue we should use for the order events: SQS, RabbitMQ or Kafka.
++ Evaluate whether we should adopt OpenTelemetry for tracing, and write it up with sources.
++ Fix the failing check in docs/research/vector-db-choice/report.md.
++ Run a spike to measure the cold start time of AWS Lambda with Java 21 and record the results.
+- Open a GitHub issue for the flaky drift test in the decisionkit skill.
+- Find the current GitHub Actions documentation for the permissions key of a workflow.
+- Decide whether this new instruction belongs in AGENTS.md or in a skill.
+- Check this README paragraph for slop before I commit it.

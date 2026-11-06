@@ -1,0 +1,5 @@
+# Paths outside this skill that drift.bats reads. skill-drift runs the
+# file when one of them changes. A path that ends with "/" covers a folder.
+.claude/skills
+.pre-commit-config.yaml
+mise.toml

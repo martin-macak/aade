@@ -54,6 +54,7 @@ same files. `docs/agentic-setup.md` explains how each agent finds them.
 | `<skill>/Makefile` | The `test` target for the skill tests. | Everyone |
 | `README.md` | Repository summary and setup. | Humans |
 | `docs/` | Longer human docs, such as the agent setup. | Humans |
+| `docs/research/<slug>/` | The brief, sources and typed artifacts of one technical research, in the format of the `tech-research` skill. | Humans and agents |
 | Config file comments | Why one setting exists. | Everyone who edits it |
 | `CLAUDE.md`, `GEMINI.md` | Symlinks to an `AGENTS.md`. Never edit or replace them. | Claude Code, Gemini CLI |
 
@@ -80,6 +81,7 @@ Current skills:
 | `cold-reader` | Documentation quality through Vale, a cold reader and decisionkit. |
 | `library-docs` | Current library docs through Context7. |
 | `issue-authoring` | GitHub issues, pull requests and the label taxonomy in `.github/`. |
+| `tech-research` | Technical research in `docs/research/`: brief, sources, typed artifacts. |
 
 ## Triage a new instruction
 
