@@ -1,0 +1,2 @@
+hook-runner-first-look/sources.md: source heading '### Source 1' must have the form '### S<n>', such as '### S1'. Rename it, and keep the ID that other files cite.
+hook-runner-first-look/report.md: cites S1, which sources.md does not have. Add each source with: research.sh source add hook-runner-first-look, or fix the ID.

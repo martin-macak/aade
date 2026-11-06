@@ -1,0 +1,1 @@
+cache-layer/tech-profile-redis.md: the Mermaid diagram at line 21 has no prose paragraph right after it. Add a paragraph that explains the diagram after its closing fence.

@@ -43,6 +43,12 @@ repos:
         language: system
         pass_filenames: false
         files: ^(\.github/ISSUE_TEMPLATE/|\.github/dependabot\.yml$|\.github/labels\.yml$|scripts/taxonomy-check\.sh$)
+      - id: research-check
+        name: research format (tech-research skill)
+        entry: mise run research:check
+        language: system
+        pass_filenames: false
+        files: ^docs/research/
       - id: vale
         name: vale (prose lint)
         entry: mise exec -- vale

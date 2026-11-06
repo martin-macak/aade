@@ -56,6 +56,10 @@ done
 exit $status
 '''
 
+[tasks."research:check"]
+description = "Check every research in docs/research (tech-research skill)"
+run = ".agents/skills/tech-research/scripts/research.sh check"
+
 [tasks."taxonomy:check"]
 description = "Fail if the issue forms and .github/labels.yml differ"
 run = "scripts/taxonomy-check.sh"
@@ -84,4 +88,4 @@ run = "git ls-files -z '*.md' | xargs -0 vale"
 
 [tasks.check]
 description = "Run every deterministic check, as CI does"
-depends = ["agents:check", "knowledge:size", "knowledge:lint", "skills:drift", "taxonomy:check", "prose:lint"]
+depends = ["agents:check", "knowledge:size", "knowledge:lint", "skills:drift", "research:check", "taxonomy:check", "prose:lint"]

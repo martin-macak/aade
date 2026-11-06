@@ -1,0 +1,13 @@
+diff --git a/hook-runner-first-look/report.md b/hook-runner-first-look/report.md
+index 727958a..b62a1b4 100644
+--- a/hook-runner-first-look/report.md
++++ b/hook-runner-first-look/report.md
+@@ -6,7 +6,7 @@ created: "2026-10-01"
+ updated: "2026-11-02"
+ authors:
+   - aade maintainers
+-superseded_by: hook-runner-choice
++superseded_by: hook-runner-v2
+ ---
+ 
+ # First look at hook runners

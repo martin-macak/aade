@@ -1,0 +1,1 @@
+hook-runner-choice/tech-profile-lefthook.md: a tech-profile in status final needs at least one Mermaid diagram. Add a mermaid code block, and a paragraph after it.

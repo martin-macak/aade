@@ -1,0 +1,13 @@
+diff --git a/hook-runner-choice/recommendation.md b/hook-runner-choice/recommendation.md
+index a0e88b8..5e23126 100644
+--- a/hook-runner-choice/recommendation.md
++++ b/hook-runner-choice/recommendation.md
+@@ -1,7 +1,7 @@
+ ---
+ type: recommendation
+ title: "Keep pre-commit"
+-status: final
++status: done
+ created: "2026-11-02"
+ updated: "2026-11-02"
+ authors:

@@ -1,0 +1,20 @@
+diff --git a/hook-runner-first-look/report.md b/hook-runner-first-look/report.md
+index 727958a..38550c3 100644
+--- a/hook-runner-first-look/report.md
++++ b/hook-runner-first-look/report.md
+@@ -26,8 +26,7 @@ hook. The research hook-runner-choice replaces this answer.
+ 
+ ## Key findings
+ 
+-- pre-commit pins each hook to a git revision.[^S1]
+-- The team knows pre-commit from other projects (unverified).
++Nothing yet.
+ 
+ ## Analysis
+ 
+@@ -40,5 +39,3 @@ The pinned hooks match the rule that every tool has a pinned version.
+ ## Conclusion
+ 
+ The answer is yes, because pre-commit pins its hooks.
+-
+-[^S1]: [S1](sources.md#s1) pre-commit maintainers, pre-commit documentation.

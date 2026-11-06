@@ -1,0 +1,29 @@
+---
+type: sources
+title: "Cache layer for the catalog API"
+status: draft
+created: "2026-10-20"
+updated: "2026-10-21"
+authors:
+  - aade maintainers
+---
+
+# Cache layer for the catalog API
+
+The register of every source that this research cites. Only
+`research.sh source add` adds an entry. Each entry has the ID S<n>, and
+other files cite it as a footnote.
+
+## Register
+
+### S1
+
+| Field | Value |
+| --- | --- |
+| kind | primary |
+| author | Redis Ltd. |
+| title | Redis documentation |
+| url | https://redis.io/docs/latest/ |
+| published | unknown |
+| accessed | 2026-10-21 |
+| evidence | Redis keeps its data set in memory. |

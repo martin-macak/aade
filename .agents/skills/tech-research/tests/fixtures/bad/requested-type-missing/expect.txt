@@ -1,0 +1,1 @@
+hook-runner-choice: brief.md lists 'experiment' in artifacts, but the folder has no experiment file. Run: research.sh add hook-runner-choice experiment --title <t> --author <a>, or remove 'experiment' from artifacts while the brief is a draft.

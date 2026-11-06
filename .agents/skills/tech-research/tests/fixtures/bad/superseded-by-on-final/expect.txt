@@ -1,0 +1,1 @@
+hook-runner-choice/recommendation.md: front matter key 'superseded_by' is not allowed here. Remove it. Allowed keys: type title status created updated authors.

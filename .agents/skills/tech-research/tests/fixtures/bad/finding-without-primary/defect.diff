@@ -1,0 +1,21 @@
+diff --git a/hook-runner-choice/report.md b/hook-runner-choice/report.md
+index 517ff83..a84366f 100644
+--- a/hook-runner-choice/report.md
++++ b/hook-runner-choice/report.md
+@@ -27,7 +27,7 @@ answer. Pinned hooks match the rule that every tool has a pinned version.
+ 
+ ## Key findings
+ 
+-- pre-commit pins each hook to a git revision.[^S1]
++- pre-commit pins each hook to a git revision.[^S4]
+ - Lefthook is one Go binary with parallel commands.[^S2]
+ - pre-commit needs Python on the machine.[^S3]
+ - Most hook runs in this repository take less than two seconds (unverified).
+@@ -47,7 +47,6 @@ current set of hooks.
+ The research picks pre-commit and gives the reason. The experiment
+ measures the install time of both runners.
+ 
+-[^S1]: [S1](sources.md#s1) pre-commit maintainers, pre-commit documentation.
+ [^S2]: [S2](sources.md#s2) Evil Martians, Lefthook repository.
+ [^S3]: [S3](sources.md#s3) pre-commit maintainers, pre-commit source code.
+ [^S4]: [S4](sources.md#s4) Jeff Dickey, mise documentation.

@@ -1,0 +1,12 @@
+diff --git a/hook-runner-choice/sources.md b/hook-runner-choice/sources.md
+index 124ebc2..76a74b9 100644
+--- a/hook-runner-choice/sources.md
++++ b/hook-runner-choice/sources.md
+@@ -35,6 +35,7 @@ other files cite it as a footnote.
+ | kind | primary |
+ | author | Evil Martians |
+ | title | Lefthook repository |
++| licence | MIT |
+ | url | https://github.com/evilmartians/lefthook |
+ | published | unknown |
+ | accessed | 2026-11-01 |

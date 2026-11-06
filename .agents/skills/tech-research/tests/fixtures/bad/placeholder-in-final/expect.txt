@@ -1,0 +1,1 @@
+hook-runner-choice/recommendation.md: a '<!-- fill: -->' placeholder is left at line 36, but the status is final. Replace it with content, or move the file back to draft.

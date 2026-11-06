@@ -1,0 +1,1 @@
+hook-runner-first-look/report.md: '## Key findings' has no list item. Write each finding as a '- ' item with a citation.

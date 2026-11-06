@@ -1,0 +1,1 @@
+hook-runner-choice/sources.md: S4: kind 'blog' is not allowed. Set kind to one of: primary secondary tertiary.

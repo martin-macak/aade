@@ -1,0 +1,13 @@
+diff --git a/hook-runner-choice/tech-profile-lefthook.md b/hook-runner-choice/tech-profile-lefthook.md
+index cc16cd8..a2e8dcf 100644
+--- a/hook-runner-choice/tech-profile-lefthook.md
++++ b/hook-runner-choice/tech-profile-lefthook.md
+@@ -41,7 +41,7 @@ Evil Martians maintain Lefthook in a public repository.[^S2]
+ 
+ Lefthook is free to use.
+ 
+-## Limits
++## Edges
+ 
+ - The config does not pin hook repositories, as pre-commit does.
+ 

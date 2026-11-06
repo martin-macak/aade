@@ -1,0 +1,9 @@
+diff --git a/hook-runner-choice/report.md b/hook-runner-choice/report.md
+index 517ff83..ed977be 100644
+--- a/hook-runner-choice/report.md
++++ b/hook-runner-choice/report.md
+@@ -50,4 +50,3 @@ measures the install time of both runners.
+ [^S1]: [S1](sources.md#s1) pre-commit maintainers, pre-commit documentation.
+ [^S2]: [S2](sources.md#s2) Evil Martians, Lefthook repository.
+ [^S3]: [S3](sources.md#s3) pre-commit maintainers, pre-commit source code.
+-[^S4]: [S4](sources.md#s4) Jeff Dickey, mise documentation.

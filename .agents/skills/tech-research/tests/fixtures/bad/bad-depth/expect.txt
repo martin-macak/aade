@@ -1,0 +1,1 @@
+hook-runner-first-look/brief.md: depth 'shallow' is not allowed. Set depth to one of: quick standard deep.

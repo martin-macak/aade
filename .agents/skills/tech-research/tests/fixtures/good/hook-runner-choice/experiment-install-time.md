@@ -1,0 +1,48 @@
+---
+type: experiment
+title: "Install time of the hook runners"
+status: final
+created: "2026-11-02"
+updated: "2026-11-02"
+authors:
+  - aade maintainers
+---
+
+# Install time of the hook runners
+
+The experiment measures how long each runner takes to install its hooks.
+The values are test data of the fixture, not real measurements.
+
+## Hypothesis
+
+Lefthook installs its hooks in less time than pre-commit. A result where
+pre-commit is faster proves the claim wrong.
+
+## Setup
+
+```mermaid
+flowchart LR
+  C[Clean clone] --> M[mise install]
+  M --> I[Install the hooks]
+  I --> T[Record the time]
+```
+
+Each run starts from a clean clone. mise installs the pinned tools, and
+then the runner installs the hooks.
+
+## Method
+
+1. Clone the repository into an empty folder.
+2. Run `mise install`.
+3. Time the hook install command of the runner.
+
+## Results
+
+| Runner | Seconds |
+| --- | --- |
+| pre-commit | 40 |
+| Lefthook | 2 |
+
+## Verdict
+
+Confirmed. Lefthook installed its hooks in less time.

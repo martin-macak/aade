@@ -1,0 +1,1 @@
+hook-runner-first-look/report.md: the status is superseded, but superseded_by is missing. Add the line 'superseded_by: <slug>' to the front matter, with the folder name of the research that replaces this file: cache-layer, hook-runner-choice.

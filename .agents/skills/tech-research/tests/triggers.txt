@@ -1,0 +1,24 @@
+# "+" tasks must load tech-research. "-" tasks belong to other skills.
+# decisionkit checked the owner of each task. The "-" tasks are sorted by
+# how easily a reader takes them for research, the closest first.
++ Research which message queue we should use for the order events: SQS, RabbitMQ or Kafka.
++ Evaluate whether we should adopt OpenTelemetry for tracing, and write it up with sources.
++ Fix the failing check in docs/research/vector-db-choice/report.md.
++ Run a spike to measure the cold start time of AWS Lambda with Java 21 and record the results.
++ Compare Postgres and DynamoDB as the store for user sessions and recommend one.
++ How does Temporal replay a workflow after a worker crash? Investigate and document it.
++ Is htmx a good fit for our admin UI? Look into it.
++ Add two more sources to the cache-layer research and update its report.
++ Mark the old hook-runner-first-look report as superseded by the newer research.
++ Write a tech profile of Bun 1.2 to support the build tooling decision.
+- Open a GitHub issue to research a message queue for the order events later.
+- Show me the current Prisma docs for the migrate deploy command and apply it in our CI.
+- Find the current GitHub Actions documentation for the permissions key of a workflow.
+- Look up the current flags of `mise use` so I can pin node in mise.toml.
+- Summarise the trade-offs explained in docs/agentic-setup.md in plain words for a new contributor.
+- Should the rule "cite every claim" go into AGENTS.md or into a skill?
+- Decide whether this new instruction belongs in AGENTS.md or in a skill.
+- Check this README paragraph for slop before I commit it.
+- Add a retry with exponential backoff to the SQS consumer in the order service.
+- Rank these three open issues by priority: #12, #14, #15.
+- Open a GitHub issue for the flaky drift test in the decisionkit skill.

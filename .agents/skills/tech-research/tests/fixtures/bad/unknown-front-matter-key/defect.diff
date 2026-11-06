@@ -1,0 +1,12 @@
+diff --git a/cache-layer/report.md b/cache-layer/report.md
+index 2838c30..9670482 100644
+--- a/cache-layer/report.md
++++ b/cache-layer/report.md
+@@ -2,6 +2,7 @@
+ type: report
+ title: "Cache layer for the catalog API"
+ status: draft
++tags: [cache]
+ created: "2026-10-20"
+ updated: "2026-10-20"
+ authors:

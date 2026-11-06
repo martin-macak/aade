@@ -1,0 +1,1 @@
+hook-runner-choice/sources.md: front matter needs authors as a list of one or more names, such as 'authors: [aade maintainers]'.

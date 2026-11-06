@@ -1,0 +1,13 @@
+diff --git a/cache-layer/sources.md b/cache-layer/sources.md
+index b1dfd1e..27e488c 100644
+--- a/cache-layer/sources.md
++++ b/cache-layer/sources.md
+@@ -23,7 +23,7 @@ other files cite it as a footnote.
+ | kind | primary |
+ | author | Redis Ltd. |
+ | title | Redis documentation |
+-| url | https://redis.io/docs/latest/ |
++| url | redis.io/docs |
+ | published | unknown |
+ | accessed | 2026-10-21 |
+ | evidence | Redis keeps its data set in memory. |

@@ -1,0 +1,1 @@
+cache-layer/tech-profile-redis.md: brief.md does not list 'tech-profile' in artifacts. Add it while the brief is a draft, ask the user to change an approved brief, or delete this file.

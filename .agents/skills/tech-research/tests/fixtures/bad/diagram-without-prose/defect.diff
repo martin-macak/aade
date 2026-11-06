@@ -1,0 +1,13 @@
+diff --git a/cache-layer/tech-profile-redis.md b/cache-layer/tech-profile-redis.md
+index 43eb470..d4075e4 100644
+--- a/cache-layer/tech-profile-redis.md
++++ b/cache-layer/tech-profile-redis.md
+@@ -24,8 +24,6 @@ flowchart LR
+   API --> DB[(Database)]
+ ```
+ 
+-The API reads from Redis first and falls back to the database on a miss.
+-
+ ## Maturity and community
+ 
+ <!-- fill: release history, adoption, maintainers, support channels and the health of the project. Cite each fact. -->

@@ -1,0 +1,13 @@
+diff --git a/cache-layer/brief.md b/cache-layer/brief.md
+index 3b5758c..7b512ce 100644
+--- a/cache-layer/brief.md
++++ b/cache-layer/brief.md
+@@ -2,7 +2,7 @@
+ type: brief
+ title: "Cache layer for the catalog API"
+ status: draft
+-created: "2026-10-20"
++created: "20 Oct 2026"
+ updated: "2026-10-21"
+ authors:
+   - aade maintainers

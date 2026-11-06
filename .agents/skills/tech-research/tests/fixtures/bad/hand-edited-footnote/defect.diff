@@ -1,0 +1,10 @@
+diff --git a/hook-runner-choice/comparison.md b/hook-runner-choice/comparison.md
+index 0bcc727..b8212c8 100644
+--- a/hook-runner-choice/comparison.md
++++ b/hook-runner-choice/comparison.md
+@@ -53,4 +53,4 @@ versions. The rank changes when install time gets the higher weight.
+ pre-commit ranks first, because pinned hooks have the highest weight.
+ 
+ [^S1]: [S1](sources.md#s1) pre-commit maintainers, pre-commit documentation.
+-[^S2]: [S2](sources.md#s2) Evil Martians, Lefthook repository.
++[^S2]: [S2](sources.md#s2) Lefthook on GitHub.

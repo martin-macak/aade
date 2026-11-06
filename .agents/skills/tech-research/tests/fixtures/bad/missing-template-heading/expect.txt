@@ -1,0 +1,1 @@
+hook-runner-choice/tech-profile-lefthook.md: the heading '## Limits' of the tech-profile template is missing. Add it with this exact text, outside code blocks and comments.
