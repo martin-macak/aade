@@ -4,6 +4,9 @@
 # of fixtures/good in a temporary research root, with a fixed date.
 # fixtures.bats tests the rules of the check. No LLM and no network.
 
+# run ! needs bats 1.5 or later.
+bats_require_minimum_version 1.5.0
+
 setup() {
 	SKILL_DIR=$(cd "$BATS_TEST_DIRNAME/.." && pwd)
 	R="$SKILL_DIR/scripts/research.sh"
@@ -92,11 +95,11 @@ swap() {
 	new_research
 	run "$R" add q report --title X --author A
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"exists already."* ]]
+	[[ "$output" == *"exists already."* ]] || false
 	swap "$RESEARCH_ROOT/q/brief.md" "status: draft" "status: final"
 	run "$R" add q experiment --title X --author A
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"Ask the user to change the brief."* ]]
+	[[ "$output" == *"Ask the user to change the brief."* ]] || false
 	[ ! -e "$RESEARCH_ROOT/q/experiment.md" ]
 }
 
@@ -146,7 +149,7 @@ swap() {
 	[ "$status" -eq 2 ]
 	run "$R" source add q --kind primary --author A --title T --url https://example.com --evidence $'two\nlines'
 	[ "$status" -eq 2 ]
-	! grep -q '^### S' "$RESEARCH_ROOT/q/sources.md"
+	run ! grep -q '^### S' "$RESEARCH_ROOT/q/sources.md"
 }
 
 # ------------------------------------------------------------------ cite
@@ -172,7 +175,7 @@ swap() {
 	cp "$V/report.md" "$BATS_TEST_TMPDIR/before"
 	run "$R" cite sync hook-runner-choice
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"cites sources that are not in sources.md: S9."* ]]
+	[[ "$output" == *"cites sources that are not in sources.md: S9."* ]] || false
 	cmp "$BATS_TEST_TMPDIR/before" "$V/report.md"
 }
 
@@ -200,12 +203,12 @@ swap() {
 	new_research
 	run "$R" status q report.md final
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"cannot move from draft to final"* ]]
+	[[ "$output" == *"cannot move from draft to final"* ]] || false
 	cp "$RESEARCH_ROOT/q/report.md" "$BATS_TEST_TMPDIR/before"
 	run "$R" status q report.md review
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"the brief is not final yet."* ]]
-	[[ "$output" == *"The status stays draft."* ]]
+	[[ "$output" == *"but brief.md is draft."* ]] || false
+	[[ "$output" == *"The status stays draft."* ]] || false
 	cmp "$BATS_TEST_TMPDIR/before" "$RESEARCH_ROOT/q/report.md"
 }
 

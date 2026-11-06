@@ -72,12 +72,12 @@ yes_no() { [[ "$1" == true ]] && echo yes || echo no; }
 	run_line=$(yq -p toml '.tasks["research:check"].run' "$MISE")
 	[ "$run_line" = ".agents/skills/tech-research/scripts/research.sh check" ]
 	yq -p toml '.tasks.check.depends[]' "$MISE" | grep -qx research:check
-	[[ "$TEXT" == *'mise run research:check'* ]]
+	[[ "$TEXT" == *'mise run research:check'* ]] || false
 }
 
 @test "the research-check hook runs the task on docs/research" {
 	hook='.repos[].hooks[] | select(.id == "research-check")'
 	[ "$(yq "$hook | .entry" "$CONFIG")" = "mise run research:check" ]
 	[ "$(yq "$hook | .files" "$CONFIG")" = "^docs/research/" ]
-	[[ "$TEXT" == *'pre-commit hook `research-check`'* ]]
+	[[ "$TEXT" == *'pre-commit hook `research-check`'* ]] || false
 }
