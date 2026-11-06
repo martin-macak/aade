@@ -7,3 +7,7 @@ updates:
       interval: weekly
     commit-message:
       prefix: chore(ci)
+    # Labels from .github/labels.yml. Without them, Dependabot adds its own
+    # labels, and the next labels-sync deletes them.
+    # `mise run taxonomy:check` fails when a label is not in labels.yml.
+    labels: [type:ci, scope:github]

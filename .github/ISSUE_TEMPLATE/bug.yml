@@ -1,0 +1,73 @@
+# Issue form for a bug. The issue-authoring skill tells agents how to
+# write the same body with scripts/issue-new.sh.
+name: Bug
+description: Something does not work as specified.
+labels: [type:bug]
+body:
+  # The options must equal the scope:* labels in .github/labels.yml.
+  # `mise run taxonomy:check` fails when they differ.
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: The area this issue changes. It becomes the scope:<x> label.
+      options:
+        - agents
+        - github
+        - docs
+        - repository
+        - tooling
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences. What is wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands or actions, in order.
+      placeholder: |
+        1. Run `mise run check`
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: low = cosmetic, medium = workaround exists, high = no workaround, critical = data loss or security.
+      options:
+        - low
+        - medium
+        - high
+        - critical
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: The commit SHA, tag or tool version where it fails.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant output. Remove secrets first.
+      render: text

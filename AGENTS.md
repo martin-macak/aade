@@ -29,3 +29,6 @@ aade. The purpose and the stack are not decided yet.
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org).
 - Keep history linear. Rebase, do not merge.
 - Write prose in short, active sentences.
+- Open GitHub issues and pull requests only through the forms, the
+  template and the labels in `.github/`. Load the `issue-authoring` skill
+  first.

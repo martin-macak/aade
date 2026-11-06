@@ -1,0 +1,57 @@
+# Issue form for CI: GitHub Actions workflows and CI checks. The
+# issue-authoring skill tells agents how to write the same body with
+# scripts/issue-new.sh.
+name: CI
+description: A change to GitHub Actions workflows or CI checks.
+labels: [type:ci]
+body:
+  # The options must equal the scope:* labels in .github/labels.yml.
+  # `mise run taxonomy:check` fails when they differ.
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: The area this issue changes. It becomes the scope:<x> label.
+      options:
+        - agents
+        - github
+        - docs
+        - repository
+        - tooling
+    validations:
+      required: true
+  - type: input
+    id: workflow
+    attributes:
+      label: Workflow or job
+      description: The workflow file and job, or "new".
+      placeholder: .github/workflows/agents-check.yml, job check
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Problem or goal
+      description: What fails or is missing, with a link to a failed run if one exists.
+    validations:
+      required: true
+  - type: input
+    id: trigger
+    attributes:
+      label: Trigger
+      description: The events that run the workflow, such as pull_request or push to main.
+  - type: checkboxes
+    id: permissions
+    attributes:
+      label: Permissions and secrets
+      options:
+        - label: This change adds or widens token permissions, secrets or variables.
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Checkable statements. The issue is done when all hold.
+      placeholder: |
+        - [ ] ...
+    validations:
+      required: true

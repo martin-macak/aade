@@ -79,6 +79,7 @@ Current skills:
 | `decisionkit` | Closed decisions with calibrated probabilities. |
 | `cold-reader` | Documentation quality through Vale, a cold reader and decisionkit. |
 | `library-docs` | Current library docs through Context7. |
+| `issue-authoring` | GitHub issues, pull requests and the label taxonomy in `.github/`. |
 
 ## Triage a new instruction
 

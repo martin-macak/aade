@@ -1,0 +1,66 @@
+# Applies .github/labels.yml to the labels of this repository.
+# On a pull request, the plan job prints the changes and applies nothing.
+# On a push to main, the sync job applies them. It deletes every label that
+# labels.yml does not list.
+name: labels-sync
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/labels.yml
+      - scripts/labels-sync.sh
+      - .github/workflows/labels-sync.yml
+  pull_request:
+    paths:
+      - .github/labels.yml
+      - scripts/labels-sync.sh
+      - .github/workflows/labels-sync.yml
+
+permissions:
+  contents: read
+
+# Two syncs at once could race on the same label.
+concurrency:
+  group: labels-sync-${{ github.ref }}
+
+jobs:
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Only the tools that the script needs, at the versions of mise.toml.
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: gh jq yq
+      - run: scripts/taxonomy-check.sh
+      - run: scripts/labels-sync.sh --dry-run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+
+  sync:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Labels belong to issues, so writing them needs issues: write.
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: gh jq yq
+      # Never apply labels that the forms do not agree with.
+      - run: scripts/taxonomy-check.sh
+      - run: scripts/labels-sync.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
