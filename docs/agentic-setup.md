@@ -45,6 +45,8 @@ flowchart LR
   `GEMINI.md` to `AGENTS.md` when no `AGENTS.md` exists. Otherwise it stops and
   asks you to merge by hand.
 - `mise run agents:check` only reads. It exits 1 on drift.
+- `mise run agents:health` checks the agent environment of this machine:
+  decisionkit and the pre-commit hook.
 
 Generated files are committed, so agents work right after clone.
 
