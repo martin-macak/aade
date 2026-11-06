@@ -19,7 +19,9 @@ on:
 jobs:
   copilot-setup-steps:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Copilot uses this value as the time limit of the whole agent session,
+    # not only of these steps. The maximum is 59 minutes.
+    timeout-minutes: 59
     # Copilot gets its own token for its work. The steps only read the repo.
     permissions:
       contents: read
