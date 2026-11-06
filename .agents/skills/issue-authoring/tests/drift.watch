@@ -1,0 +1,10 @@
+# Paths outside this skill that drift.bats reads. skill-drift runs the
+# file when one of them changes. A path that ends with "/" covers a folder.
+.claude/skills
+.github/ISSUE_TEMPLATE/
+.github/labels.yml
+.github/pull_request_template.md
+.github/workflows/
+mise.toml
+scripts/issue-new.sh
+scripts/issue-scope-label.sh

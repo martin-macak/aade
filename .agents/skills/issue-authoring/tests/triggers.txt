@@ -1,0 +1,9 @@
+# "+" tasks must load issue-authoring. "-" tasks belong to other skills.
++ Open a GitHub issue for the flaky drift test in the decisionkit skill.
++ Write the pull request title and body for my branch that fixes issue #12.
++ Add a new scope called api to the issue labels and the forms.
++ Which labels should the new issue about the Vale config get?
+- Classify this review finding as blocker, major or minor: "The setup task deletes mise.local.toml."
+- Find the current GitHub Actions documentation for the permissions key of a workflow.
+- Decide whether this new instruction belongs in AGENTS.md or in a skill.
+- Check this README paragraph for slop before I commit it.

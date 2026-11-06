@@ -1,0 +1,18 @@
+# The cold reader sees only SKILL.md. Each question has one expected answer.
+Q: How does an agent open a GitHub issue in this repository?
+A: The agent runs `mise run issue:new <type>` with the title and the form fields as YAML on stdin, checks the `--dry-run` output first, and never calls `gh issue create` directly.
+
+Q: Where is the list of valid types and scopes?
+A: `.github/labels.yml` is the only list of labels, so the agent reads it to pick the type and the scope.
+
+Q: How does an issue get its scope label?
+A: The `issue-scope` workflow reads the `### Scope` section of the issue body and sets the `scope:<x>` label.
+
+Q: What is the format of a pull request title?
+A: The title is `type(scope): summary` in Conventional Commits form, with the type from the issue type and the scope from its scope label.
+
+Q: How do you rename a label without removing it from its issues?
+A: Add `from: <old name>` to the label entry in `.github/labels.yml`.
+
+Q: When are the labels in `.github/labels.yml` applied to GitHub, and why must you not run the sync yourself?
+A: The `labels-sync` workflow applies them after merge to `main`. Running `mise run labels:sync` without `--dry-run` changes the live labels before review.

@@ -24,3 +24,9 @@ This repository is agent-agnostic. Read [AGENTS.md](AGENTS.md) and
 [docs/agentic-setup.md](docs/agentic-setup.md). The
 [knowledge-curator](.agents/skills/knowledge-curator/SKILL.md) skill
 gives the home of each rule and fact.
+
+## Issues and pull requests
+
+Open issues through the forms. Each issue gets a `type:<x>` and a
+`scope:<x>` label. [docs/github-taxonomy.md](docs/github-taxonomy.md)
+explains the labels and their automation.
