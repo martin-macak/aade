@@ -1,0 +1,21 @@
+# Personal agent overrides. Never commit these.
+CLAUDE.local.md
+AGENTS.override.md
+.claude/settings.local.json
+.claude/*.local.*
+.cursor/*.local.*
+.gemini/.env
+.codex/*.local.*
+
+# Local environment
+.env
+.env.*
+.direnv/
+mise.local.toml
+.mise.local.toml
+
+# OS and editor noise
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/mcp.json

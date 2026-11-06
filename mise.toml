@@ -1,0 +1,12 @@
+# Tool versions and tasks. Add the project stack here once it is chosen.
+
+[tools]
+jq = "1.8"
+
+[tasks."agents:link"]
+description = "Create or repair agent symlinks and generated MCP configs"
+run = "scripts/agents-link.sh"
+
+[tasks."agents:check"]
+description = "Fail if agent symlinks or generated MCP configs drift"
+run = "scripts/agents-link.sh --check"
