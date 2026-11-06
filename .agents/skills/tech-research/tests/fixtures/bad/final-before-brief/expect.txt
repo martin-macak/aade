@@ -1,0 +1,2 @@
+hook-runner-first-look/report.md: the status is superseded, but brief.md is review. Get the approval of the user and run: research.sh status hook-runner-first-look brief.md final
+hook-runner-first-look/sources.md: the status is final, but brief.md is review. Get the approval of the user and run: research.sh status hook-runner-first-look brief.md final

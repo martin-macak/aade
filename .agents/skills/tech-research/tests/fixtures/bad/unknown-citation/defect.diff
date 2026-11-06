@@ -1,0 +1,13 @@
+diff --git a/hook-runner-choice/report.md b/hook-runner-choice/report.md
+index 517ff83..1317bf9 100644
+--- a/hook-runner-choice/report.md
++++ b/hook-runner-choice/report.md
+@@ -36,7 +36,7 @@ answer. Pinned hooks match the rule that every tool has a pinned version.
+ 
+ The repository pins every tool through mise[^S4], so a runner without
+ pinned hooks breaks a rule. The speed gain of Lefthook is small for the
+-current set of hooks.
++current set of hooks.[^S9]
+ 
+ ## Risks and open questions
+ 

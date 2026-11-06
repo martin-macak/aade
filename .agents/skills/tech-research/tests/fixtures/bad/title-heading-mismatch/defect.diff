@@ -1,0 +1,13 @@
+diff --git a/hook-runner-choice/experiment-install-time.md b/hook-runner-choice/experiment-install-time.md
+index ccf2d59..da89b30 100644
+--- a/hook-runner-choice/experiment-install-time.md
++++ b/hook-runner-choice/experiment-install-time.md
+@@ -8,7 +8,7 @@ authors:
+   - aade maintainers
+ ---
+ 
+-# Install time of the hook runners
++# Install times
+ 
+ The experiment measures how long each runner takes to install its hooks.
+ The values are test data of the fixture, not real measurements.

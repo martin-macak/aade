@@ -1,0 +1,13 @@
+diff --git a/hook-runner-choice/sources.md b/hook-runner-choice/sources.md
+index 124ebc2..dca5e1e 100644
+--- a/hook-runner-choice/sources.md
++++ b/hook-runner-choice/sources.md
+@@ -57,7 +57,7 @@ other files cite it as a footnote.
+ 
+ | Field | Value |
+ | --- | --- |
+-| kind | secondary |
++| kind | blog |
+ | author | Jeff Dickey |
+ | title | mise documentation |
+ | url | https://mise.jdx.dev/ |

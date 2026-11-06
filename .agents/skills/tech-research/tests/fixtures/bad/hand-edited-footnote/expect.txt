@@ -1,0 +1,1 @@
+hook-runner-choice/comparison.md: the footnote definitions at the end of the file do not match sources.md. Do not edit them by hand. Run: research.sh cite sync hook-runner-choice

@@ -1,0 +1,13 @@
+diff --git a/hook-runner-first-look/sources.md b/hook-runner-first-look/sources.md
+index 859ce5d..97ce262 100644
+--- a/hook-runner-first-look/sources.md
++++ b/hook-runner-first-look/sources.md
+@@ -16,7 +16,7 @@ other files cite it as a footnote.
+ 
+ ## Register
+ 
+-### S1
++### Source 1
+ 
+ | Field | Value |
+ | --- | --- |

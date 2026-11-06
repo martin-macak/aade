@@ -1,0 +1,13 @@
+diff --git a/hook-runner-choice/sources.md b/hook-runner-choice/sources.md
+index 124ebc2..e20b188 100644
+--- a/hook-runner-choice/sources.md
++++ b/hook-runner-choice/sources.md
+@@ -48,7 +48,7 @@ other files cite it as a footnote.
+ | kind | primary |
+ | author | pre-commit maintainers |
+ | title | pre-commit source code |
+-| url | https://github.com/pre-commit/pre-commit |
++| url | https://pre-commit.com/ |
+ | published | unknown |
+ | accessed | 2026-11-01 |
+ | evidence | pre-commit is a Python program. |

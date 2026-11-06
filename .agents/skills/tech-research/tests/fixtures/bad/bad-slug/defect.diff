@@ -1,0 +1,16 @@
+diff --git a/cache-layer/brief.md b/Cache_Layer/brief.md
+similarity index 100%
+rename from cache-layer/brief.md
+rename to Cache_Layer/brief.md
+diff --git a/cache-layer/report.md b/Cache_Layer/report.md
+similarity index 100%
+rename from cache-layer/report.md
+rename to Cache_Layer/report.md
+diff --git a/cache-layer/sources.md b/Cache_Layer/sources.md
+similarity index 100%
+rename from cache-layer/sources.md
+rename to Cache_Layer/sources.md
+diff --git a/cache-layer/tech-profile-redis.md b/Cache_Layer/tech-profile-redis.md
+similarity index 100%
+rename from cache-layer/tech-profile-redis.md
+rename to Cache_Layer/tech-profile-redis.md

@@ -1,0 +1,22 @@
+diff --git a/hook-runner-choice/tech-profile-lefthook.md b/hook-runner-choice/tech-profile-lefthook.md
+index cc16cd8..eed07d3 100644
+--- a/hook-runner-choice/tech-profile-lefthook.md
++++ b/hook-runner-choice/tech-profile-lefthook.md
+@@ -19,17 +19,6 @@ Lefthook runs the commands of a git hook from one config file.[^S2]
+ 
+ ## Architecture
+ 
+-```mermaid
+-sequenceDiagram
+-  participant Git
+-  participant Lefthook
+-  participant Command
+-  Git->>Lefthook: run the pre-commit hook
+-  Lefthook->>Command: start each command
+-  Command-->>Lefthook: exit code
+-  Lefthook-->>Git: pass or fail
+-```
+-
+ Git calls Lefthook for a hook. Lefthook starts the commands of the hook
+ and returns one result to git.
+ 

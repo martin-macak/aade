@@ -1,0 +1,1 @@
+cache-layer/sources.md: the register must not cite sources. Remove each [^S<n>] reference from sources.md.

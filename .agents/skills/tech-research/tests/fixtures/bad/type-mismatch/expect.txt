@@ -1,0 +1,1 @@
+hook-runner-choice/comparison.md: front matter type is 'report', but the file name gives 'comparison'. Set 'type: comparison', or rename the file.

@@ -1,0 +1,12 @@
+diff --git a/cache-layer/brief.md b/cache-layer/brief.md
+index 3b5758c..316813f 100644
+--- a/cache-layer/brief.md
++++ b/cache-layer/brief.md
+@@ -10,6 +10,7 @@ depth: standard
+ artifacts:
+   - comparison
+   - tech-profile
++  - report
+ ---
+ 
+ # Cache layer for the catalog API

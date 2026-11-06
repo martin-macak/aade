@@ -1,0 +1,14 @@
+diff --git a/hook-runner-choice/sources.md b/hook-runner-choice/sources.md
+index 124ebc2..91feb02 100644
+--- a/hook-runner-choice/sources.md
++++ b/hook-runner-choice/sources.md
+@@ -4,8 +4,7 @@ title: "Hook runner choice"
+ status: final
+ created: "2026-11-01"
+ updated: "2026-11-02"
+-authors:
+-  - aade maintainers
++authors: []
+ ---
+ 
+ # Hook runner choice

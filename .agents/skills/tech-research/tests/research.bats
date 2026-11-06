@@ -1,7 +1,8 @@
 #!/usr/bin/env bats
 
-# Tests for scripts/research.sh. Each test works on a copy of the fixtures
-# in a temporary research root, with a fixed date. No LLM and no network.
+# Tests for the commands of scripts/research.sh. Each test works on a copy
+# of fixtures/good in a temporary research root, with a fixed date.
+# fixtures.bats tests the rules of the check. No LLM and no network.
 
 setup() {
 	SKILL_DIR=$(cd "$BATS_TEST_DIRNAME/.." && pwd)
@@ -9,7 +10,7 @@ setup() {
 	export RESEARCH_ROOT="$BATS_TEST_TMPDIR/research"
 	export RESEARCH_TODAY=2026-11-06
 	mkdir -p "$RESEARCH_ROOT"
-	cp -R "$SKILL_DIR/tests/fixtures/valid/." "$RESEARCH_ROOT/"
+	cp -R "$SKILL_DIR/tests/fixtures/good/." "$RESEARCH_ROOT/"
 	V="$RESEARCH_ROOT/hook-runner-choice"
 	cd "$BATS_TEST_TMPDIR"
 }
@@ -28,26 +29,7 @@ swap() {
 	FROM=$2 TO=$3 perl -0pi -e 's/\Q$ENV{FROM}\E/$ENV{TO}/' "$1"
 }
 
-# Run check and expect exit 1 with the message $1 in the output.
-expect_problem() {
-	run "$R" check
-	[ "$status" -eq 1 ] || {
-		echo "check exited $status: $output"
-		return 1
-	}
-	[[ "$output" == *"$1"* ]] || {
-		echo "Expected '$1' in: $output"
-		return 1
-	}
-}
-
 # ------------------------------------------------------------------ check
-
-@test "check passes the valid fixture" {
-	run "$R" check
-	[ "$status" -eq 0 ]
-	[ -z "$output" ]
-}
 
 @test "check passes a root without research folders" {
 	export RESEARCH_ROOT="$BATS_TEST_TMPDIR/empty"
@@ -55,114 +37,6 @@ expect_problem() {
 	echo "# Research" >"$RESEARCH_ROOT/README.md"
 	run "$R" check
 	[ "$status" -eq 0 ]
-}
-
-@test "check reports a missing template heading" {
-	swap "$V/tech-profile-lefthook.md" "## Limits" "## Edges"
-	expect_problem "missing the heading '## Limits' of the template."
-}
-
-@test "check reports a file name outside the closed set" {
-	cp "$V/report.md" "$V/notes.md"
-	expect_problem "notes.md: not an artifact name."
-}
-
-@test "check reports a suffix on a type that is not repeatable" {
-	cp "$V/report.md" "$V/report-extra.md"
-	expect_problem "report-extra.md: not an artifact name."
-}
-
-@test "check reports a front matter type that differs from the file name" {
-	swap "$V/comparison.md" "type: comparison" "type: report"
-	expect_problem "front matter type is 'report', but the file name gives 'comparison'."
-}
-
-@test "check reports an unknown status and a bad date" {
-	swap "$V/report.md" "status: final" "status: done"
-	swap "$V/report.md" 'created: "2026-11-01"' 'created: "1 Nov"'
-	expect_problem "status 'done' must be one of: draft review final superseded."
-	[[ "$output" == *"report.md: created must be YYYY-MM-DD."* ]]
-}
-
-@test "check reports a missing author list" {
-	swap "$V/report.md" $'authors:\n  - aade maintainers' 'authors: []'
-	expect_problem "report.md: front matter needs a list of authors."
-}
-
-@test "check reports a missing required file" {
-	rm "$V/sources.md"
-	expect_problem "hook-runner-choice: missing sources.md."
-}
-
-@test "check reports a slug that is not kebab-case" {
-	mv "$V" "$RESEARCH_ROOT/Hook_Runner"
-	expect_problem "the slug must be kebab-case"
-}
-
-@test "check reports a placeholder left in a final file" {
-	swap "$V/recommendation.md" "## Follow-up" $'## Follow-up\n\n<!-- fill: more text. -->'
-	expect_problem "recommendation.md: a '<!-- fill: -->' placeholder is left."
-}
-
-@test "check allows a placeholder in a draft file" {
-	swap "$V/recommendation.md" "status: final" "status: draft"
-	swap "$V/recommendation.md" "## Follow-up" $'## Follow-up\n\n<!-- fill: more text. -->'
-	run "$R" check
-	[ "$status" -eq 0 ]
-}
-
-@test "check reports a final diagram type without a Mermaid diagram" {
-	perl -0pi -e 's/```mermaid.*?```\n//s' "$V/tech-profile-lefthook.md"
-	expect_problem "a tech-profile needs at least one Mermaid diagram."
-}
-
-@test "check reports a Mermaid diagram without prose after it" {
-	perl -0pi -e 's/(```\n\n)The diagram shows[^\n]*\n[^\n]*\n/$1/' "$V/report.md"
-	expect_problem "report.md: the Mermaid diagram at line 18 needs a prose paragraph right after it."
-}
-
-@test "check reports a citation that the register does not hold" {
-	swap "$V/report.md" "current set of hooks." "current set of hooks.[^S9]"
-	expect_problem "report.md: cites sources that are not in sources.md: S9."
-}
-
-@test "check reports stale footnote definitions" {
-	perl -ni -e 'print unless /^\[\^S4\]: /' "$V/report.md"
-	expect_problem "report.md: the footnote definitions are out of date. Run: research.sh cite sync hook-runner-choice"
-}
-
-@test "check reports a key finding without a primary source" {
-	swap "$V/report.md" "to a git revision.[^S1]" "to a git revision.[^S4]"
-	expect_problem "report.md: key finding 1 cites no primary source and is not marked (unverified)."
-}
-
-@test "check reports bad register entries" {
-	swap "$V/sources.md" "| kind | secondary |" "| kind | blog |"
-	swap "$V/sources.md" "| url | https://github.com/pre-commit/pre-commit |" "| url | https://pre-commit.com/ |"
-	swap "$V/sources.md" "| evidence | pre-commit is a Python program. |" ""
-	expect_problem "S4: kind 'blog' must be one of: primary secondary tertiary."
-	[[ "$output" == *"S3: the url is already in the register."* ]]
-	[[ "$output" == *"S3: missing 'evidence'."* ]]
-}
-
-@test "check reports a requested type without a file" {
-	rm "$V/experiment-install-time.md"
-	expect_problem "the brief requests the type experiment, but the folder has no file of it."
-}
-
-@test "check reports an artifact that the brief does not request" {
-	swap "$V/brief.md" $'  - experiment\n' ''
-	expect_problem "experiment-install-time.md: the brief does not request the type 'experiment' in artifacts."
-}
-
-@test "check reports a final artifact while the brief is not final" {
-	swap "$V/brief.md" "status: final" "status: review"
-	expect_problem "report.md: the status is final, but the brief is not final yet."
-}
-
-@test "check reports a superseded artifact without a successor" {
-	swap "$V/recommendation.md" "status: final" "status: superseded"
-	expect_problem "a superseded artifact needs superseded_by"
 }
 
 # ------------------------------------------------------------ init and add
@@ -214,15 +88,26 @@ expect_problem() {
 	[ "$status" -eq 1 ]
 }
 
-@test "add refuses a required type and a type that a final brief does not request" {
+@test "add refuses an existing required type and a type that a final brief does not request" {
 	new_research
 	run "$R" add q report --title X --author A
-	[ "$status" -eq 2 ]
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"exists already."* ]]
 	swap "$RESEARCH_ROOT/q/brief.md" "status: draft" "status: final"
 	run "$R" add q experiment --title X --author A
 	[ "$status" -eq 1 ]
 	[[ "$output" == *"Ask the user to change the brief."* ]]
 	[ ! -e "$RESEARCH_ROOT/q/experiment.md" ]
+}
+
+@test "add creates a missing required file again" {
+	new_research
+	rm "$RESEARCH_ROOT/q/sources.md"
+	run "$R" add q sources --title "Queue choice" --author "Ann Lee"
+	[ "$status" -eq 0 ]
+	[ "$(yq --front-matter=extract '.artifacts | join(",")' "$RESEARCH_ROOT/q/brief.md")" = comparison ]
+	run "$R" check q
+	[ "$status" -eq 0 ]
 }
 
 # ---------------------------------------------------------------- sources

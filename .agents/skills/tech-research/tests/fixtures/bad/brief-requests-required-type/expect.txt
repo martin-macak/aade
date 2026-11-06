@@ -1,0 +1,1 @@
+cache-layer/brief.md: artifacts lists 'report', which is not an optional type. Remove it. Optional types: comparison recommendation tech-profile experiment.

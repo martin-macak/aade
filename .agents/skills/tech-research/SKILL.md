@@ -7,8 +7,10 @@ description: >-
   checks them. Use this skill whenever a user asks you to research,
   investigate, evaluate or compare a technology, library, service, vendor or
   approach, or asks "which X should we use" or "should we adopt Y". Use it
-  also for a spike and for any change to a file in docs/research/. Load it
-  before you search the web for such a question.
+  also for a spike. Use it for every task on a file in docs/research/, such
+  as a fix, a new source, a status change or a failing research-check hook
+  or research.sh check. Load it before you search the web for such a
+  question or edit such a file.
 ---
 
 # Tech research
@@ -96,8 +98,10 @@ a file. Put risks, glossaries and similar notes in a section of the report.
 
 The front matter of each file has the fields `type`, `title`, `status`,
 `created`, `updated` and `authors`. The brief adds `depth` and
-`artifacts`. A superseded file adds `superseded_by`. The tool writes all of
-them, so the dates and the quoting stay the same in every file.
+`artifacts`. A superseded file adds `superseded_by`. The check rejects any
+other key. The first heading of each file is `# <title>`. The tool writes
+all of these, so the dates and the quoting stay the same in every file.
+When a required file is lost, `$R add <slug> <type>` creates it again.
 
 ## Brief
 
@@ -183,8 +187,8 @@ file has a problem. Only a final brief lets other files move to `review`.
 A move to `superseded` needs `--by <slug>` with the slug of the newer
 research.
 
-These rules apply only to a file in `review` or `final`, so a draft can be
-committed while it is incomplete:
+These rules apply only to a file in `review`, `final` or `superseded`, so a
+draft can be committed while it is incomplete:
 
 - no `<!-- fill: -->` comment is left;
 - a file of a diagram type contains a Mermaid diagram;
@@ -205,11 +209,23 @@ other Markdown file.
 ## Tests
 
 `make -C .agents/skills/tech-research test` runs the four layers of the
-`knowledge-curator` skill. The drift layer runs `tests/research.bats`. It
-tests each command of the tool on a copy of the research in
-`tests/fixtures/valid/`, which passes the check. Each test of a check rule
-adds one defect to that copy and expects the problem line.
+`knowledge-curator` skill. Its drift layer runs these bats files:
 
-Add a test to `tests/research.bats` for each new rule or command. Keep the
-fixture valid. A defect belongs in a test, not in a tracked file, because
-the `knowledge-lint` and `vale` hooks lint every tracked Markdown file.
+- `tests/fixtures.bats` runs `$R check` against the fixtures.
+  `tests/fixtures/good/` is a research root that must pass. It holds a
+  final research with every type, a draft in progress and a quick research
+  with a superseded report. Each folder `tests/fixtures/bad/<case>/` has a
+  `defect.diff` that adds one defect to a copy of the good root. Its
+  `expect.txt` lists every problem line that the check must print, with
+  paths relative to the root. The test fails on a missing or an extra line.
+- `tests/research.bats` tests the other commands on a copy of the good
+  root, with a fixed `RESEARCH_TODAY`.
+- `tests/drift.bats` compares the facts of this file with the script, the
+  types, the templates, `mise.toml` and the hooks.
+
+For a new check rule, add a bad case. Change a copy of the good root in a
+throwaway git repository, and save `git diff` as `defect.diff`. Then write
+`expect.txt` by hand. Never copy the expected lines from the output of the check, because
+the test must catch a wrong message too. The defect stays in the diff, not
+in a tracked Markdown file, because the `knowledge-lint` and `vale` hooks
+lint every tracked Markdown file. A good fixture must pass these hooks too.

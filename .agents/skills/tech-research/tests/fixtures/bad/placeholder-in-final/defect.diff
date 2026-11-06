@@ -1,0 +1,13 @@
+diff --git a/hook-runner-choice/recommendation.md b/hook-runner-choice/recommendation.md
+index a0e88b8..884ce78 100644
+--- a/hook-runner-choice/recommendation.md
++++ b/hook-runner-choice/recommendation.md
+@@ -33,6 +33,8 @@ same hook versions.
+ 
+ ## Follow-up
+ 
++<!-- fill: the next actions. -->
++
+ - Measure the hook run time again when a new hook joins.
+ 
+ [^S1]: [S1](sources.md#s1) pre-commit maintainers, pre-commit documentation.

@@ -1,0 +1,13 @@
+diff --git a/cache-layer/sources.md b/cache-layer/sources.md
+index b1dfd1e..d9705e3 100644
+--- a/cache-layer/sources.md
++++ b/cache-layer/sources.md
+@@ -12,7 +12,7 @@ authors:
+ 
+ The register of every source that this research cites. Only
+ `research.sh source add` adds an entry. Each entry has the ID S<n>, and
+-other files cite it as a footnote.
++other files cite it as a footnote, such as [^S1].
+ 
+ ## Register
+ 

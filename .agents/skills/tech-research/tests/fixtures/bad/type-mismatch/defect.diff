@@ -1,0 +1,11 @@
+diff --git a/hook-runner-choice/comparison.md b/hook-runner-choice/comparison.md
+index 0bcc727..a9157e2 100644
+--- a/hook-runner-choice/comparison.md
++++ b/hook-runner-choice/comparison.md
+@@ -1,5 +1,5 @@
+ ---
+-type: comparison
++type: report
+ title: "pre-commit and Lefthook"
+ status: final
+ created: "2026-11-01"

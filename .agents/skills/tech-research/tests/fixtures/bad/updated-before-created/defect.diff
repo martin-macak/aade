@@ -1,0 +1,13 @@
+diff --git a/hook-runner-first-look/brief.md b/hook-runner-first-look/brief.md
+index 2cd4138..fdec11f 100644
+--- a/hook-runner-first-look/brief.md
++++ b/hook-runner-first-look/brief.md
+@@ -3,7 +3,7 @@ type: brief
+ title: "First look at hook runners"
+ status: final
+ created: "2026-10-01"
+-updated: "2026-10-01"
++updated: "2026-09-30"
+ authors:
+   - aade maintainers
+ depth: quick

@@ -1,0 +1,1 @@
+hook-runner-first-look/report.md: superseded_by 'hook-runner-v2' is not a research folder. Set it to the folder name of the research that replaces this file: cache-layer, hook-runner-choice.

@@ -1,0 +1,1 @@
+hook-runner-choice/report.md: cites S9, which sources.md does not have. Add each source with: research.sh source add hook-runner-choice, or fix the ID.

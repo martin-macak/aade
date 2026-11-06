@@ -9,6 +9,7 @@
 # Usage:
 #   research.sh init <slug> --title <t> --author <a>... [--depth <d>] [--artifact <type>]...
 #   research.sh add <slug> <type> [--name <n>] --title <t> --author <a>...
+#       (a required type only when its file is missing)
 #   research.sh source add <slug> --kind <k> --author <a> --title <t> --url <u>
 #       --evidence <e> [--published <yyyy-mm-dd>] [--archive <url>]
 #   research.sh cite sync <slug>
@@ -32,6 +33,13 @@ STATUSES="draft review final superseded"
 KINDS="primary secondary tertiary"
 DEPTHS="quick standard deep"
 SOURCE_KEYS="kind author title url published accessed archive evidence"
+# The front matter keys of every artifact, of a brief, and of a superseded
+# artifact. No other key is allowed, so the schema stays closed.
+FRONT_KEYS="type title status created updated authors"
+BRIEF_KEYS="depth artifacts"
+SUPERSEDED_KEYS="superseded_by"
+# A complete file claims an answer, so the completeness rules apply to it.
+COMPLETE="review final superseded"
 SLUG_RE='^[a-z0-9]+(-[a-z0-9]+)*$'
 DATE_RE='^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
 URL_RE='^https?://[^[:space:]]+$'
@@ -65,6 +73,7 @@ one_of() {
 
 all_types() { yq 'keys | .[]' "$TYPES_FILE"; }
 optional_types() { yq 'to_entries | .[] | select(.value.required == false) | .key' "$TYPES_FILE"; }
+repeatable_types() { yq 'to_entries | .[] | select(.value.repeatable == true) | .key' "$TYPES_FILE"; }
 required_types() { yq 'to_entries | .[] | select(.value.required == true) | .key' "$TYPES_FILE"; }
 # Print true or false: the flag $2 of the type $1.
 type_flag() { yq ".[\"$1\"].$2" "$TYPES_FILE"; }
@@ -235,109 +244,138 @@ findings() {
 }
 
 check_register() {
-	local file=$1 rows ids id key value seen_urls="" url
+	local file=$1 rows ids id key value url first
 	rows=$(register "$file")
 	ids=$(awk -F '\t' '$2 == "#" { print $1 }' <<<"$rows")
 	[[ -n "$(awk -F '\t' '$2 == "#"' <<<"$rows" | cut -f 1 | sort | uniq -d)" ]] &&
-		problem "$file" "the register holds a source ID twice."
-	for id in $ids; do
-		[[ "$id" =~ ^S[1-9][0-9]*$ ]] || problem "$file" "source heading '### $id' must be '### S<n>'."
+		problem "$file" "the register has a source ID twice. Give each '### S<n>' heading its own number."
+	while IFS= read -r id; do
+		[[ -n "$id" ]] || continue
+		[[ "$id" =~ ^S[1-9][0-9]*$ ]] || problem "$file" "source heading '### $id' must have the form '### S<n>', such as '### S1'. Rename it, and keep the ID that other files cite."
 		for key in $(awk -F '\t' -v id="$id" '$1 == id && $2 != "#" { print $2 }' <<<"$rows"); do
-			one_of "$key" $SOURCE_KEYS || problem "$file" "$id: unknown key '$key'. Keys: $SOURCE_KEYS."
+			one_of "$key" $SOURCE_KEYS || problem "$file" "$id: unknown field '$key'. Remove the row. Allowed fields: $SOURCE_KEYS."
 		done
 		for key in kind author title url published accessed evidence; do
-			[[ -n "$(source_field "$file" "$id" "$key")" ]] || problem "$file" "$id: missing '$key'."
+			[[ -n "$(source_field "$file" "$id" "$key")" ]] || problem "$file" "$id: the field '$key' is missing. Add the row '| $key | <value> |' to the table of $id."
 		done
 		value=$(source_field "$file" "$id" kind)
-		[[ -z "$value" ]] || one_of "$value" $KINDS || problem "$file" "$id: kind '$value' must be one of: $KINDS."
+		[[ -z "$value" ]] || one_of "$value" $KINDS || problem "$file" "$id: kind '$value' is not allowed. Set kind to one of: $KINDS."
 		url=$(source_field "$file" "$id" url)
-		[[ -z "$url" || "$url" =~ $URL_RE ]] || problem "$file" "$id: url must start with http:// or https://."
+		[[ -z "$url" || "$url" =~ $URL_RE ]] || problem "$file" "$id: url '$url' is not a full web address. Write it with http:// or https://."
 		value=$(source_field "$file" "$id" archive)
-		[[ -z "$value" || "$value" =~ $URL_RE ]] || problem "$file" "$id: archive must start with http:// or https://."
+		[[ -z "$value" || "$value" =~ $URL_RE ]] || problem "$file" "$id: archive '$value' is not a full web address. Write it with http:// or https://, or remove the row."
 		value=$(source_field "$file" "$id" accessed)
-		[[ -z "$value" || "$value" =~ $DATE_RE ]] || problem "$file" "$id: accessed must be YYYY-MM-DD."
+		[[ -z "$value" || "$value" =~ $DATE_RE ]] || problem "$file" "$id: accessed '$value' is not a date. Write it as YYYY-MM-DD."
 		value=$(source_field "$file" "$id" published)
 		[[ -z "$value" || "$value" == unknown || "$value" =~ $DATE_RE ]] ||
-			problem "$file" "$id: published must be YYYY-MM-DD or unknown."
+			problem "$file" "$id: published '$value' is not a date. Write it as YYYY-MM-DD, or as unknown."
 		if [[ -n "$url" ]]; then
-			one_of "$url" $seen_urls && problem "$file" "$id: the url is already in the register."
-			seen_urls+=" $url"
+			first=$(awk -F '\t' -v url="$url" '$2 == "url" && $3 == url { print $1; exit }' <<<"$rows")
+			[[ "$first" == "$id" ]] ||
+				problem "$file" "$id: the url is the same as the url of $first. Remove $id, and cite $first instead."
 		fi
-	done
-	[[ -z "$(cited_ids "$file")" ]] || problem "$file" "the register must not cite sources. Cite them in the other artifacts."
+	done <<<"$ids"
+	[[ -z "$(cited_ids "$file")" ]] || problem "$file" "the register must not cite sources. Remove each [^S<n>] reference from sources.md."
 }
 
 check_findings() {
-	local file=$1 reg=$2 item id ok count=0
+	local file=$1 reg=$2 item id kind ok count=0
 	while IFS= read -r item; do
 		count=$((count + 1))
 		[[ "$item" == *"(unverified)"* ]] && continue
 		ok=0
+		# An ID that is not in the register is reported as an unknown
+		# citation, so it does not count as a second problem here.
 		for id in $(grep -oE '\[\^S[0-9]+\]' <<<"$item" | sed -E 's/^\[\^//; s/\]$//'); do
-			[[ "$(source_field "$reg" "$id" kind)" == primary ]] && ok=1
+			kind=$(source_field "$reg" "$id" kind)
+			[[ -z "$kind" || "$kind" == primary ]] && ok=1
 		done
-		((ok)) || problem "$file" "key finding $count cites no primary source and is not marked (unverified)."
+		((ok)) || problem "$file" "key finding $count cites no source of kind primary. Cite a primary source, or end the item with (unverified)."
 	done < <(findings "$file")
-	((count > 0)) || problem "$file" "'## Key findings' holds no list item."
+	((count > 0)) || problem "$file" "'## Key findings' has no list item. Write each finding as a '- ' item with a citation."
 }
 
 # Check one artifact file $1 of the research folder $2.
 check_file() {
-	local file=$1 dir=$2 name type json status value heading by scan line tmp
+	local file=$1 dir=$2 name type json status value heading by scan line tmp allowed created slug
 	name=$(basename "$file")
+	slug=$(basename "$dir")
 	if ! type=$(file_type "$name"); then
-		problem "$file" "not an artifact name. Use <type>.md, or <type>-<name>.md for a repeatable type. Types: $(all_types | tr '\n' ' ')"
+		problem "$file" "the file name is not an artifact name. Rename it to <type>.md, or to <type>-<name>.md for a repeatable type ($(repeatable_types | paste -sd ' ' -)). Types: $(all_types | paste -sd ' ' -)."
 		return
 	fi
-	if ! json=$(front_matter "$file"); then
-		problem "$file" "no YAML front matter."
+	if [[ "$(head -n 1 "$file")" != "---" ]]; then
+		problem "$file" "no YAML front matter. The file must start with a line '---'."
+		return
+	fi
+	if ! json=$(front_matter "$file") || ! jq -e 'type == "object"' <<<"$json" >/dev/null 2>&1; then
+		value=$(yq --front-matter=extract '.' "$file" 2>&1 >/dev/null | head -n 1 | sed -E 's/.*: //')
+		problem "$file" "the front matter is not valid YAML: ${value:-it is not a list of keys and values}. Look for an unclosed quote or bracket, or a line without 'key: value', between the two '---' lines. To see the position, run: yq --front-matter=extract . $file"
 		return
 	fi
 	value=$(jq -r '.type // ""' <<<"$json")
-	[[ "$value" == "$type" ]] || problem "$file" "front matter type is '$value', but the file name gives '$type'."
-	[[ -n "$(jq -r '.title // "" | strings' <<<"$json")" ]] || problem "$file" "front matter needs a title."
+	[[ "$value" == "$type" ]] || problem "$file" "front matter type is '$value', but the file name gives '$type'. Set 'type: $type', or rename the file."
 	status=$(jq -r '.status // ""' <<<"$json")
-	one_of "$status" $STATUSES || problem "$file" "status '$status' must be one of: $STATUSES."
+	allowed=$FRONT_KEYS
+	[[ "$type" == brief ]] && allowed+=" $BRIEF_KEYS"
+	[[ "$status" == superseded ]] && allowed+=" $SUPERSEDED_KEYS"
+	for value in $(jq -r 'keys[]' <<<"$json"); do
+		one_of "$value" $allowed || problem "$file" "front matter key '$value' is not allowed here. Remove it. Allowed keys: $allowed."
+	done
+	value=$(jq -r '.title // "" | strings' <<<"$json")
+	if [[ -z "$value" ]]; then
+		problem "$file" "front matter has no title. Add 'title: <text>', and make '# <text>' the first heading."
+	elif [[ "$(prose "$file" | grep -m 1 '^# ')" != "# $value" ]]; then
+		problem "$file" "the first heading must be '# $value', the title in the front matter. Change the heading or the title so that they match."
+	fi
+	one_of "$status" $STATUSES || problem "$file" "status '$status' is not allowed. Statuses: $STATUSES. Move the status only with: research.sh status $slug $name <status>"
 	for line in created updated; do
 		value=$(jq -r --arg k "$line" '.[$k] // ""' <<<"$json")
-		[[ "$value" =~ $DATE_RE ]] || problem "$file" "$line must be YYYY-MM-DD."
+		[[ "$value" =~ $DATE_RE ]] || problem "$file" "$line '$value' is not a date. Write it as YYYY-MM-DD."
 	done
-	[[ "$(jq -r '.updated // ""' <<<"$json")" < "$(jq -r '.created // ""' <<<"$json")" ]] &&
-		problem "$file" "updated is earlier than created."
+	created=$(jq -r '.created // ""' <<<"$json")
+	value=$(jq -r '.updated // ""' <<<"$json")
+	[[ "$created" =~ $DATE_RE && "$value" =~ $DATE_RE && "$value" < "$created" ]] &&
+		problem "$file" "updated $value is earlier than created $created. Set updated to a date on or after $created."
 	jq -e '(.authors | type) == "array" and (.authors | length) > 0 and all(.authors[]; type == "string" and length > 0)' \
-		<<<"$json" >/dev/null || problem "$file" "front matter needs a list of authors."
+		<<<"$json" >/dev/null || problem "$file" "front matter needs authors as a list of one or more names, such as 'authors: [aade maintainers]'."
 	if [[ "$status" == superseded ]]; then
 		by=$(jq -r '.superseded_by // ""' <<<"$json")
-		[[ -n "$by" && -d "$(dirname "$dir")/$by" ]] ||
-			problem "$file" "a superseded artifact needs superseded_by with the slug of an existing research."
+		if [[ -z "$by" ]]; then
+			problem "$file" "the status is superseded, but superseded_by is missing. Add the line 'superseded_by: <slug>' to the front matter, with the folder name of the research that replaces this file: $(other_slugs "$dir")."
+		elif [[ ! -d "$(dirname "$dir")/$by" ]]; then
+			problem "$file" "superseded_by '$by' is not a research folder. Set it to the folder name of the research that replaces this file: $(other_slugs "$dir")."
+		fi
 	fi
 	if [[ "$type" == brief ]]; then
 		value=$(jq -r '.depth // ""' <<<"$json")
-		one_of "$value" $DEPTHS || problem "$file" "depth '$value' must be one of: $DEPTHS."
+		one_of "$value" $DEPTHS || problem "$file" "depth '$value' is not allowed. Set depth to one of: $DEPTHS."
 		for value in $(jq -r '.artifacts // [] | .[]' <<<"$json"); do
 			one_of "$value" $(optional_types) ||
-				problem "$file" "artifacts lists '$value'. Use only these types: $(optional_types | tr '\n' ' ')"
+				problem "$file" "artifacts lists '$value', which is not an optional type. Remove it. Optional types: $(optional_types | paste -sd ' ' -)."
 		done
 	elif ! one_of "$type" $(required_types); then
 		one_of "$type" $(field "$dir/brief.md" artifacts) ||
-			problem "$file" "the brief does not request the type '$type' in artifacts."
+			problem "$file" "brief.md does not list '$type' in artifacts. Add it while the brief is a draft, ask the user to change an approved brief, or delete this file."
 	fi
 
 	while IFS= read -r heading; do
-		prose "$file" | grep -qxF "$heading" || problem "$file" "missing the heading '$heading' of the template."
+		prose "$file" | grep -qxF "$heading" || problem "$file" "the heading '$heading' of the $type template is missing. Add it with this exact text, outside code blocks and comments."
 	done < <(grep -E '^#{2,3} ' "$TEMPLATES/$type.md")
 
 	scan=$(mermaid_scan "$file")
 	for line in $(grep -v '^count' <<<"$scan"); do
-		problem "$file" "the Mermaid diagram at line $line needs a prose paragraph right after it."
+		problem "$file" "the Mermaid diagram at line $line has no prose paragraph right after it. Add a paragraph that explains the diagram after its closing fence."
 	done
 
-	if one_of "$status" review final; then
-		grep -q '<!-- fill:' "$file" && problem "$file" "a '<!-- fill: -->' placeholder is left."
+	if one_of "$status" $COMPLETE; then
+		line=$(grep -n -m 1 '<!-- fill:' "$file" | cut -d : -f 1)
+		[[ -z "$line" ]] || problem "$file" "a '<!-- fill: -->' placeholder is left at line $line, but the status is $status. Replace it with content, or move the file back to draft."
 		[[ $(type_flag "$type" diagram) == true && "$scan" == *"count 0" ]] &&
-			problem "$file" "a $type needs at least one Mermaid diagram."
-		[[ "$type" == brief || "$(field "$dir/brief.md" status)" == final ]] ||
-			problem "$file" "the status is $status, but the brief is not final yet."
+			problem "$file" "a $type in status $status needs at least one Mermaid diagram. Add a mermaid code block, and a paragraph after it."
+		value=$(field "$dir/brief.md" status)
+		[[ "$type" == brief || "$value" == final ]] ||
+			problem "$file" "the status is $status, but brief.md is ${value:-missing}. Get the approval of the user and run: research.sh status $slug brief.md final"
 		[[ "$type" == report && -f "$dir/sources.md" ]] && check_findings "$file" "$dir/sources.md"
 	fi
 
@@ -346,30 +384,39 @@ check_file() {
 	elif [[ -f "$dir/sources.md" ]]; then
 		tmp=$(mktemp)
 		if ! value=$(render_citations "$file" "$dir/sources.md" "$tmp"); then
-			problem "$file" "cites sources that are not in sources.md:$value."
+			problem "$file" "cites$value, which sources.md does not have. Add each source with: research.sh source add $slug, or fix the ID."
 		elif ! cmp -s "$tmp" "$file"; then
-			problem "$file" "the footnote definitions are out of date. Run: research.sh cite sync $(basename "$dir")"
+			problem "$file" "the footnote definitions at the end of the file do not match sources.md. Do not edit them by hand. Run: research.sh cite sync $slug"
 		fi
 		rm -f "$tmp"
 	fi
 }
 
+# Print the slugs of the research folders next to the folder $1, or "none".
+other_slugs() {
+	local dir slugs=""
+	for dir in "$(dirname "$1")"/*/; do
+		[[ -d "$dir" && "${dir%/}" != "${1%/}" ]] && slugs+=" $(basename "$dir")"
+	done
+	echo "${slugs# }" | sed 's/^$/none/; s/ /, /g'
+}
+
 check_research() {
 	local dir=${1%/} slug type file
 	slug=$(basename "$dir")
-	[[ "$slug" =~ $SLUG_RE ]] || problem "$dir" "the slug must be kebab-case: lower-case letters, digits and hyphens."
+	[[ "$slug" =~ $SLUG_RE ]] || problem "$dir" "the slug '$slug' is not kebab-case. Rename the folder to lower-case letters, digits and hyphens, such as '$(tr '[:upper:]_ ' '[:lower:]--' <<<"$slug")'."
 	for type in $(required_types); do
-		[[ -f "$dir/$type.md" ]] || problem "$dir" "missing $type.md."
+		[[ -f "$dir/$type.md" ]] || problem "$dir" "the required file $type.md is missing. Run: research.sh add $slug $type --title <t> --author <a>"
 	done
 	for file in "$dir"/*.md; do
 		[[ -f "$file" ]] && check_file "$file" "$dir"
 	done
 	# A draft research may still lack some files. From review on, the
 	# report claims an answer, so every requested artifact must exist.
-	[[ -f "$dir/brief.md" ]] && one_of "$(field "$dir/report.md" status)" review final || return 0
+	[[ -f "$dir/brief.md" ]] && one_of "$(field "$dir/report.md" status)" $COMPLETE || return 0
 	for type in $(field "$dir/brief.md" artifacts); do
 		compgen -G "$dir/$type.md" >/dev/null || compgen -G "$dir/$type-*.md" >/dev/null ||
-			problem "$dir" "the brief requests the type $type, but the folder has no file of it."
+			problem "$dir" "brief.md lists '$type' in artifacts, but the folder has no $type file. Run: research.sh add $slug $type --title <t> --author <a>, or remove '$type' from artifacts while the brief is a draft."
 	done
 }
 
@@ -442,7 +489,7 @@ cmd_init() {
 		case $1 in
 		--depth) depth=${2-}; shift 2 || usage ;;
 		--artifact)
-			one_of "${2-}" $(optional_types) || die "--artifact must be one of: $(optional_types | tr '\n' ' ')" 2
+			one_of "${2-}" $(optional_types) || die "--artifact must be one of: $(optional_types | paste -sd ' ' -)." 2
 			artifacts=$(jq -c --arg a "$2" 'if index($a) then . else . + [$a] end' <<<"$artifacts")
 			shift 2
 			;;
@@ -474,8 +521,8 @@ cmd_add() {
 	done
 	dir=$(research_dir "$slug") || exit 2
 	brief="$dir/brief.md"
-	[[ -f "$brief" ]] || die "No research $slug. Run research.sh init first."
-	one_of "$type" $(optional_types) || die "The type must be one of: $(optional_types | tr '\n' ' '). init creates the others." 2
+	[[ -d "$dir" ]] || die "No research $slug. Run research.sh init first."
+	one_of "$type" $(all_types) || die "The type must be one of: $(all_types | paste -sd ' ' -)." 2
 	file="$dir/$type.md"
 	if [[ -n "$name" ]]; then
 		[[ "$name" =~ $SLUG_RE ]] || die "--name must be kebab-case." 2
@@ -483,7 +530,13 @@ cmd_add() {
 		file="$dir/$type-$name.md"
 	fi
 	[[ ! -e "$file" ]] || die "$file exists already."
-	if ! one_of "$type" $(field "$brief" artifacts); then
+	# init creates the required types. add creates one again only when its
+	# file is missing, such as after a deleted sources.md.
+	if one_of "$type" $(required_types); then
+		:
+	elif [[ ! -f "$brief" ]]; then
+		die "$brief is missing. Run: research.sh add $slug brief --title <t> --author <a>"
+	elif ! one_of "$type" $(field "$brief" artifacts); then
 		[[ "$(field "$brief" status)" == draft ]] ||
 			die "The brief does not request the type $type, and it is past draft. Ask the user to change the brief."
 		TYPE=$type set_fields "$brief" '.artifacts += [strenv(TYPE)] | .artifacts style="" | .artifacts[] style=""'
