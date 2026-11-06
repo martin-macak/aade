@@ -1,0 +1,4 @@
+A:
+A hook calls its tool through `mise exec --`, so it uses the version pinned in mise.toml.
+B:
+A hook calls the tool directly from PATH.

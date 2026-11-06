@@ -1,0 +1,8 @@
+A:
+Unique key of one payment attempt. A caller may repeat a request with the same
+key. The server then returns the first response and does not charge again. The
+key is valid for 24 hours.
+B:
+The caller sends a key that names one payment attempt. If the caller sends the
+same key again, the server charges again and returns a new response. A key
+stays valid for 24 hours.

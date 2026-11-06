@@ -1,0 +1,7 @@
+A:
+Number of items on one page. Allowed values are 1 to 100. The default is 20.
+A value outside this range gives status 400.
+B:
+This parameter sets how many items one page holds. A caller may send a number
+from 1 to 100. If the caller sends nothing, the page holds 20 items. A number
+below 1 or above 100 makes the API answer with status 400.

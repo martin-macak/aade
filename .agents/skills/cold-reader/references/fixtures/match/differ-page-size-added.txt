@@ -1,0 +1,8 @@
+A:
+Number of items on one page. Allowed values are 1 to 100. The default is 20.
+A value outside this range gives status 400.
+B:
+This parameter sets how many items one page holds, from 1 to 100, with a
+default of 20. A value outside the range gives status 400. The response also
+includes the total number of items, and the server caches each page for 5
+minutes.

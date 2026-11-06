@@ -1,0 +1,8 @@
+# Paths outside this skill that drift.bats reads. skill-drift runs the
+# file when one of them changes. A path that ends with "/" covers a folder.
+.agents/skills/
+.github/workflows/agents-check.yml
+.pre-commit-config.yaml
+mise.toml
+scripts/check-agents-md-size.sh
+scripts/lint-knowledge.sh

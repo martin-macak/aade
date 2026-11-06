@@ -1,0 +1,9 @@
+# "+" tasks must load library-docs. "-" tasks belong to other skills.
++ Find the current mise documentation for the usage field of a task.
++ Look up the current pre-commit docs for the types_or option of a local hook.
++ Find the current GitHub Actions documentation for the permissions key of a workflow.
++ Find the current AWS CLI documentation for the flags of aws s3 sync.
+- Add a new skill for database migrations to this repository.
+- Classify this review finding as blocker, major or minor: "The setup task deletes mise.local.toml."
+- Decide whether this new instruction belongs in AGENTS.md or in a skill.
+- Check this README paragraph for slop before I commit it.

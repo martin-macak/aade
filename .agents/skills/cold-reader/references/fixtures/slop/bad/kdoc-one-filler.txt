@@ -1,0 +1,7 @@
+/**
+ * Reserves stock for an order line and returns the reservation.
+ * This method is very important and is used a lot in the checkout flow.
+ * The reservation expires after 15 minutes.
+ * Throws [InsufficientStockException] when the available quantity is below
+ * [quantity].
+ */

@@ -1,0 +1,11 @@
+extends: existence
+message: "Agent voice: '%s'. State the fact."
+level: error
+ignorecase: true
+scope: text
+tokens:
+  - \blet me\b
+  - \bI'll\b
+  - \bwe (?:need to|should)\b
+  - \b(?:probably|presumably|hopefully|perhaps)\b
+  - \b(?:should|might|may) (?:probably |possibly )?(?:work|help|fix)\b

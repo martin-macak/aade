@@ -1,0 +1,4 @@
+A:
+A hook calls its tool through `mise exec --`, so it uses the version pinned in mise.toml.
+B:
+Hooks run their tools with `mise exec --`. That way the hook uses the pinned version from mise.toml, even in an IDE commit without direnv.

@@ -1,0 +1,4 @@
+# Generated from .agents/mcp.json by scripts/agents-link.sh. Do not edit.
+
+[mcp_servers."context7"]
+url = "https://mcp.context7.com/mcp"

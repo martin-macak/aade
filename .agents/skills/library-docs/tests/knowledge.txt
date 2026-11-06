@@ -1,0 +1,21 @@
+# The cold reader sees only SKILL.md. Each question has one expected answer.
+Q: Which tool resolves a library to an ID, and when can you skip it?
+A: `resolve-library-id` resolves the library ID. Skip it when you already have an ID in `/org/project` form.
+
+Q: By which criteria do you pick the right match after resolving a library?
+A: Pick the match by exact name, description, snippet count, source reputation and benchmark score.
+
+Q: How do you query the docs when a task touches several concepts of one library, and why?
+A: Make a separate `query-docs` query for each concept, because combined queries return shallow results.
+
+Q: When do you use a version-specific library ID?
+A: Use a version-specific ID when the repository pins a version of the library.
+
+Q: For which kinds of work must you not use Context7?
+A: Do not use Context7 for refactoring, scripts from scratch, business logic, code review or general programming concepts.
+
+Q: What do you do when Context7 is unavailable?
+A: Tell the user that Context7 is unavailable, and read the official documentation of the library.
+
+Q: How do you verify a claim about a tool when Context7 is unavailable?
+A: Verify the claim by running the tool when you can.

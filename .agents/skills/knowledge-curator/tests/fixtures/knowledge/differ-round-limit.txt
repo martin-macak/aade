@@ -1,0 +1,4 @@
+A:
+After 3 rounds, stop and ask the user.
+B:
+Rewrite the piece and repeat the checks until both pass.

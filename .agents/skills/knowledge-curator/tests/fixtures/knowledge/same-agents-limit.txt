@@ -1,0 +1,4 @@
+A:
+The root AGENTS.md holds at most 300 lines.
+B:
+AGENTS.md may have up to 300 lines.

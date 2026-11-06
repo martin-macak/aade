@@ -1,0 +1,7 @@
+A:
+Run `make check-health` after you change `mise.toml`. The script compares each
+pinned version with the installed version. A mismatch means that CI uses a
+different tool than your machine.
+B:
+Run make check-health before each commit. The script installs the pinned
+versions on the machine. A mismatch means that the build has failed.

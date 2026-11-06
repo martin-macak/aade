@@ -1,0 +1,4 @@
+A:
+Contributors install mise and direnv by hand.
+B:
+You install two tools yourself: mise and direnv. mise cannot manage them, because they must exist before .envrc runs.

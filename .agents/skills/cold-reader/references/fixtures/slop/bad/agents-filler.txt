@@ -1,0 +1,3 @@
+It is important to note that, in general, you should always try to make sure
+that tests are run before you push code. This can help to catch issues early
+and generally improves the overall quality of the codebase.

@@ -1,0 +1,4 @@
+Feature: Cancel an order
+  Here I have added a feature that describes how orders can be cancelled.
+  Let me explain: the customer cancels an order, and hopefully it works as
+  expected in most situations.

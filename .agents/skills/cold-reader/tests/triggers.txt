@@ -1,0 +1,13 @@
+# "+" tasks must load cold-reader. "-" tasks belong to other skills.
++ I reworded a section of the knowledge-curator skill. Check that a fresh reader still understands it before I commit.
++ Check the new README paragraph about setup for slop. Run Vale and a cold reader on it.
++ I wrote a docs page about the agent layout. Test that a reader with no context can state what it says.
++ I wrote a comment above the vale pin in mise.toml. Check that a cold reader understands why the version is pinned.
++ I added a rule to a nested AGENTS.md. Score its prose with a cold reader and decisionkit before I open the pull request.
++ Lint my wording of this docs section with Vale and fix every finding, then check that the meaning survives.
+- Where should the rule "run the linter before each commit" live: AGENTS.md, a skill or the README?
+- Which folders, files and tests must a new skill have so that the knowledge lint accepts it?
+- Triage these three pull request comments: which ones are blocking, which are nits, which are questions?
+- Classify this failing CI job as flaky, infrastructure or real, and give the probability of the top class.
+- Look up the current pre-commit documentation for the `files` and `types_or` options of a hook.
+- Find the current mise documentation for the `usage` field of a task.

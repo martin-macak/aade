@@ -1,0 +1,44 @@
+# Pre-commit is the quality gate. Each hook calls a mise task or a script
+# through `mise exec`, so it uses the tool versions pinned in mise.toml.
+# CI runs the same checks with `mise run check`.
+# Install the hooks with `mise run setup`.
+repos:
+  - repo: local
+    hooks:
+      - id: agents-check
+        name: agent symlinks and generated MCP configs
+        entry: mise run agents:check
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: agents-md-size
+        name: AGENTS.md size limit
+        entry: mise exec -- scripts/check-agents-md-size.sh
+        language: system
+        files: (^|/)AGENTS\.md$
+      - id: knowledge-lint
+        name: knowledge layer lint
+        entry: mise exec -- scripts/lint-knowledge.sh
+        language: system
+        pass_filenames: false
+        files: \.md$|^\.agents/skills/
+        # Links such as CLAUDE.md are symlinks. The default types: [file]
+        # would drop them.
+        types: []
+        types_or: [file, symlink]
+      - id: skill-drift
+        name: skill drift tests (bats)
+        entry: mise exec -- scripts/skill-drift.sh
+        language: system
+        # The union of the skill folders and each tests/*.watch file. A
+        # knowledge-curator drift test checks it and prints the value.
+        files: ^(\.agents/skills/|\.claude/skills|\.github/workflows/|\.gitignore|\.pre-commit-config\.yaml|\.vale\.ini|\.vale/styles/House/|AGENTS\.md|README\.md|mise\.toml|scripts/agents-health\.sh|scripts/check-agents-md-size\.sh|scripts/lint-knowledge\.sh)
+        types: []
+        types_or: [file, symlink]
+        # One call gets all files, so no skill runs twice.
+        require_serial: true
+      - id: vale
+        name: vale (prose lint)
+        entry: mise exec -- vale
+        language: system
+        types: [markdown]

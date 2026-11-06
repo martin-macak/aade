@@ -1,0 +1,2 @@
+Number of items on one page. Allowed values are 1 to 100. The default is 20.
+A value outside this range gives status 400.

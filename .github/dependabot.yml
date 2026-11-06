@@ -1,0 +1,9 @@
+# Keeps the commit SHAs of the pinned GitHub Actions up to date.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore(ci)

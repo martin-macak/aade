@@ -1,0 +1,2 @@
+Price in minor units of the currency, as an integer. The value 1999 with the
+currency EUR means 19.99 EUR. Zero is allowed. A negative value is not allowed.

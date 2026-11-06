@@ -1,0 +1,4 @@
+A:
+Keep SKILL.md under 500 lines and move long material to references/.
+B:
+SKILL.md must stay below 500 lines. Long material goes to the references/ folder, and SKILL.md links to it.

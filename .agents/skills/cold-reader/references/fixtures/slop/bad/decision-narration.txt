@@ -1,0 +1,4 @@
+In this ADR, I will walk through the decision that we need to make. After
+careful consideration and a thorough analysis of the many options, I believe
+that the best approach is probably to use Kotlin, which is a great, modern and
+powerful language.

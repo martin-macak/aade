@@ -1,0 +1,63 @@
+# Tool versions and tasks. Pin every tool to an exact version.
+# Add the project stack here once it is chosen.
+# Personal settings, such as DECISIONKIT_PROVIDER, go in the ignored
+# mise.local.toml under [env].
+
+[tools]
+jq = "1.8.2"
+yq = "4.54.1"
+bats = "1.14.0"
+pre-commit = "4.6.2"
+vale = "3.25.1"
+# decisionkit runs on node. The skill thresholds are calibrated on 0.4.0.
+node = "26.12.1"
+"npm:@adxtya21/decisionkit" = { version = "0.4.0", allow_low_downloads = true }
+
+[tasks.setup]
+description = "Install the tools, the Vale styles and the pre-commit hooks"
+run = ["mise install", "vale sync", "pre-commit install --install-hooks"]
+
+[tasks."agents:link"]
+description = "Create or repair agent symlinks and generated MCP configs"
+run = "scripts/agents-link.sh"
+
+[tasks."agents:check"]
+description = "Fail if agent symlinks or generated MCP configs drift"
+run = "scripts/agents-link.sh --check"
+
+[tasks."agents:health"]
+description = "Check the agent environment of this machine (decisionkit, hooks)"
+run = "scripts/agents-health.sh"
+
+[tasks."knowledge:size"]
+description = "Fail if an AGENTS.md exceeds its line limit"
+run = "scripts/check-agents-md-size.sh"
+
+[tasks."knowledge:lint"]
+description = "Lint the structure of the skills and the Markdown links"
+run = "scripts/lint-knowledge.sh"
+
+[tasks."skills:drift"]
+description = "Run the drift tests of every skill (no LLM)"
+run = "scripts/skill-drift.sh"
+
+[tasks."skills:test"]
+description = "Run every test layer of one skill, or of all skills (calls an LLM)"
+usage = 'arg "[skill]" help="Skill folder name. Omit to test every skill."'
+run = '''
+#!/usr/bin/env bash
+set -u
+status=0
+for dir in .agents/skills/${usage_skill:-*}/; do
+	make -k -C "$dir" test || status=1
+done
+exit $status
+'''
+
+[tasks."prose:lint"]
+description = "Lint the Markdown prose with Vale"
+run = "git ls-files -z '*.md' | xargs -0 vale"
+
+[tasks.check]
+description = "Run every deterministic check, as CI does"
+depends = ["agents:check", "knowledge:size", "knowledge:lint", "skills:drift", "prose:lint"]

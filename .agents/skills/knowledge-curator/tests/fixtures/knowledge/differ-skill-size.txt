@@ -1,0 +1,4 @@
+A:
+Keep SKILL.md under 500 lines and move long material to references/.
+B:
+Keep SKILL.md under 500 lines.
