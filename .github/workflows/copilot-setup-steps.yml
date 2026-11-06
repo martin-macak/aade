@@ -1,0 +1,33 @@
+# Prepares the runner of the GitHub Copilot cloud agent before it starts.
+# Copilot reads this file only from the default branch. The job must be
+# named copilot-setup-steps. Copilot ignores every job key except steps,
+# permissions, runs-on, services, snapshot and timeout-minutes.
+# The agent firewall blocks unknown hosts for the commands of the agent.
+# It does not block these steps, so install every tool here.
+# See docs/agentic-setup.md.
+name: copilot-setup-steps
+
+# These triggers run the steps as a normal check when this file changes.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/copilot-setup-steps.yml]
+  pull_request:
+    paths: [.github/workflows/copilot-setup-steps.yml]
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Copilot gets its own token for its work. The steps only read the repo.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Installs the exact tool versions of mise.toml and puts them on PATH.
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      # Downloads the Vale packages that `mise run check` needs.
+      - run: vale sync
+      # Fails the setup early when the checks cannot run on this runner.
+      - run: mise run check

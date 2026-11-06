@@ -87,7 +87,12 @@ done < <(find . "${PRUNE[@]}" -name AGENTS.md -type f -print | sort)
 # 2. Shared skills and subagents.
 ensure_link .claude/skills ../.agents/skills
 ensure_link .claude/agents ../.agents/agents
-ensure_link .github/copilot-instructions.md ../AGENTS.md
+
+# Copilot reads AGENTS.md natively. This file would load the rules twice.
+if [ -e .github/copilot-instructions.md ] || [ -L .github/copilot-instructions.md ]; then
+  echo "error: .github/copilot-instructions.md duplicates AGENTS.md for Copilot; move any unique rule to AGENTS.md, then delete it" >&2
+  exit 1
+fi
 
 # 3. MCP servers: one source, five consumers.
 jq -e '.mcpServers | type == "object"' "$MCP_SRC" >/dev/null \

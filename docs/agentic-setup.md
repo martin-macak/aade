@@ -12,7 +12,7 @@ one source of truth.
 | Codex | `AGENTS.md` | `.agents/skills` (native) | none | `.codex/config.toml` (generated) |
 | Cursor | `AGENTS.md` | `.agents/skills` (native) | `.claude/agents` (compat) | `.cursor/mcp.json` → `.agents/mcp.json` |
 | Gemini CLI | `GEMINI.md` → `AGENTS.md` | `.agents/skills` (native alias) | none | `.gemini/settings.json` (generated) |
-| GitHub Copilot | `AGENTS.md`, `.github/copilot-instructions.md` → `AGENTS.md` | `.agents/skills` (native) | none | `.vscode/mcp.json` (generated) |
+| GitHub Copilot | `AGENTS.md` | `.agents/skills` (native) | none | `.vscode/mcp.json` (generated), repo settings for the cloud agent |
 
 `→` means symlink. Nested `AGENTS.md` files get the same `CLAUDE.md` and
 `GEMINI.md` symlinks beside them. `.agents/AGENTS.md` holds the rules for
@@ -28,7 +28,6 @@ flowchart LR
   end
   A -->|symlink| C1[CLAUDE.md]
   A -->|symlink| C2[GEMINI.md]
-  A -->|symlink| C3[.github/copilot-instructions.md]
   S -->|symlink| C4[.claude/skills]
   G -->|symlink| C5[.claude/agents]
   M -->|symlink| C6[.mcp.json]
@@ -88,8 +87,69 @@ The script translates it:
 Environment variable syntax differs per tool. Check each tool's docs before you
 rely on `${VAR}` expansion.
 
+## GitHub Copilot cloud agent
+
+The Copilot cloud agent works on issues and pull requests in a GitHub
+Actions runner. It reads `AGENTS.md` and `.agents/skills` like the local
+agents. These files prepare its runner:
+
+- `.github/workflows/copilot-setup-steps.yml` installs the tools of
+  `mise.toml`, syncs the Vale styles and runs `mise run check` before the
+  agent starts. If a step fails, Copilot skips the rest and starts anyway.
+  The session log then shows the failed step.
+- `.github/hooks/agents-check.json` runs `mise run check` when the agent
+  tries to stop. On a failure, the agent gets the output and another turn.
+  Pre-commit does not run on the commits of the agent, so this hook is its
+  quality gate. The `agents-check` CI workflow stays as the backstop.
+  Copilot CLI reads the same hook, so it runs the checks locally too.
+- `.github/dependabot.yml` keeps the commit SHAs of the pinned actions up to
+  date.
+
+Copilot reads these files only from the default branch. A change takes
+effect after merge.
+
+The agent firewall blocks unknown hosts for the commands that the agent
+runs. It does not block the setup steps. So the setup steps install every
+tool. The agent then has no need for the mise download hosts.
+
+### Settings on GitHub
+
+Some settings exist only in the GitHub UI. A repository admin sets them
+once:
+
+1. **Agents secret** `DECISIONKIT_TYPESAFE_API_KEY`: the Jev (TypeSafe AI) key for
+   decisionkit. Set it in Settings → Secrets and variables → Agents. The agent
+   cannot read Actions secrets.
+2. **Agents variable** `DECISIONKIT_PROVIDER` = `jev`. Same path. Cloud
+   sandbox sessions get secrets only, so decisionkit has no provider there
+   and fails.
+3. **Firewall allowlist**: add `api.typesafe.ai`, so decisionkit reaches
+   Jev. Set it in Settings → Copilot → Internet access, in the section for
+   Copilot in the cloud.
+4. **MCP servers**: the cloud agent ignores `.agents/mcp.json`. Paste this
+   into Settings → Copilot → MCP servers:
+
+   ```json
+   {
+     "mcpServers": {
+       "context7": {
+         "type": "http",
+         "url": "https://mcp.context7.com/mcp",
+         "tools": ["*"]
+       }
+     }
+   }
+   ```
+
+   Copilot requires a `tools` list. Every Context7 tool only reads docs, so
+   `*` is safe. The `library-docs` skill names the tools. Secrets for MCP
+   servers need the `COPILOT_MCP_` prefix.
+
 ## Known limits
 
+- When `mise run check` fails on the default branch, the `agentStop` hook
+  blocks each Copilot session 3 times before it lets the agent stop. Only
+  the failed setup step in the session log shows the cause.
 - Codex loads `.codex/config.toml` only for trusted projects.
 - Subagent formats differ (Codex uses TOML, Copilot uses `.github/agents/*.agent.md`).
   Only Claude Code and Cursor share `.agents/agents/` today.

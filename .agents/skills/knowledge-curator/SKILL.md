@@ -55,7 +55,7 @@ same files. `docs/agentic-setup.md` explains how each agent finds them.
 | `README.md` | Repository summary and setup. | Humans |
 | `docs/` | Longer human docs, such as the agent setup. | Humans |
 | Config file comments | Why one setting exists. | Everyone who edits it |
-| `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md` | Symlinks to an `AGENTS.md`. Never edit or replace them. | Claude Code, Gemini CLI, Copilot |
+| `CLAUDE.md`, `GEMINI.md` | Symlinks to an `AGENTS.md`. Never edit or replace them. | Claude Code, Gemini CLI |
 
 Human docs link to skills instead of copying them. Skills are plain
 Markdown, so people can read them too.
@@ -157,8 +157,9 @@ expected values, the rule that applied, and your decision.
 7. Add its tests. See [Test a skill](#test-a-skill).
 
 Edit `AGENTS.md`, never `CLAUDE.md` or `GEMINI.md`. Writing through a
-symlink can replace it with a regular file. Never copy rules into
-`.github/copilot-instructions.md`. It is a symlink to `AGENTS.md`.
+symlink can replace it with a regular file. Never create
+`.github/copilot-instructions.md`. Copilot reads `AGENTS.md` natively, so
+that file would load the rules twice.
 
 ## Test a skill
 

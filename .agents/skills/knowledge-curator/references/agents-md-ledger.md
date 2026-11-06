@@ -17,7 +17,7 @@ decisionkit 0.4.0 with the Jev provider.
 
 | ID | Rule (short) | Class | Freq | Impact | Rule | Decision and reason | Date |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| P1 | Intro: the symlinks point here, so edit only `AGENTS.md`. Nested files add folder rules. Direct instructions win. | general 0.96 | 2.54 | 0.58 | 3 | Keep. Absorbs C1 at no new line. | 2026-11-06 |
+| P1 | Intro: the `CLAUDE.md` and `GEMINI.md` symlinks point here, so edit only `AGENTS.md`. Nested files add folder rules. Direct instructions win. | general 0.96 | 2.41 | 0.58 | 3 | Keep. Absorbs C1 at no new line. The `.github/copilot-instructions.md` link was removed, because Copilot reads `AGENTS.md` natively and loaded the rules twice. | 2026-11-06 |
 | C2 | Keep this file small. Load `knowledge-curator` before you change any instruction, skill or doc. | general 0.70 | 2.59 | 0.94 | 5 | Keep. Uncertain class, but frequent. The user asked that knowledge-curator decide where knowledge goes. | 2026-11-06 |
 | C3 | Skills in `.agents/skills/` hold task rules. Load the matching skill first. | general 0.85 | 2.53 | 0.85 | 3 | Keep. The bridge to every skill. | 2026-11-06 |
 | C4 | Use decisionkit for closed decisions. Load its skill first. | skill 0.98 | 1.14 | 0.70 | 1 | Keep one line. The user placed it in the constitution of spring-ref-arch by name, and asked for decisions to work the same way here. The user confirmed it on 2026-11-06. Details in `decisionkit`. | 2026-11-06 |

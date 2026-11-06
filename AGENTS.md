@@ -1,9 +1,9 @@
 # AGENTS.md
 
-Instructions for AI coding agents in this repository. `CLAUDE.md`,
-`GEMINI.md` and `.github/copilot-instructions.md` are symlinks to this file,
-so edit only `AGENTS.md`. Nested `AGENTS.md` files add the purpose and rules
-of their folders. Direct task instructions take precedence.
+Instructions for AI coding agents in this repository. `CLAUDE.md` and
+`GEMINI.md` are symlinks to this file, so edit only `AGENTS.md`. Nested
+`AGENTS.md` files add the purpose and rules of their folders. Direct task
+instructions take precedence.
 
 ## Project
 
