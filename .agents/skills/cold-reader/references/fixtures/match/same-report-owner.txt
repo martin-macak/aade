@@ -1,0 +1,6 @@
+A:
+Send the report to the owner before you merge. Write the summary in 3
+sentences. Do not attach logs.
+B:
+Before merging, the report goes to the owner. The summary has 3 sentences, and
+no logs are attached.

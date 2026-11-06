@@ -1,0 +1,4 @@
+A:
+Contributors install mise and direnv by hand.
+B:
+Contributors install mise by hand.

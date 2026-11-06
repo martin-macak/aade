@@ -1,0 +1,4 @@
+A:
+A piece passes when Q_MATCH is true and the Q_SLOP expected value is below SLOP_MAX.
+B:
+It passes if the Q_MATCH check is true and the expected Q_SLOP value stays under SLOP_MAX.

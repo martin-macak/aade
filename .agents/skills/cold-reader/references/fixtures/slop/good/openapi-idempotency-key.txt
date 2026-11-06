@@ -1,0 +1,3 @@
+Unique key of one payment attempt. A caller may repeat a request with the same
+key. The server then returns the first response and does not charge again. The
+key is valid for 24 hours.

@@ -1,0 +1,21 @@
+# The cold reader sees only SKILL.md. Each question has one expected answer.
+Q: What does decisionkit return, and for which kind of question must you not use it?
+A: It returns probabilities, not reasoning. Do not use it for open questions or design choices, because they need reasoning.
+
+Q: What do the exit codes 0, 1 and 2 of decisionkit mean?
+A: 0 means true or confident, 1 means false or below the --threshold, and 2 means an error.
+
+Q: What does a top probability below 0.8 mean, and what must an agent do then?
+A: A top probability below 0.8 is uncertain. Then the agent decides itself and states the reason, or asks the user. It does not present an uncertain result as a decision.
+
+Q: What must an agent do when decisionkit exits with code 2?
+A: Run `decisionkit status` and fix the cause. An error is never an answer.
+
+Q: Where does each contributor set DECISIONKIT_PROVIDER, and what must never go to the provider?
+A: Each contributor sets it in the [env] table of mise.local.toml, which Git ignores. Never send secrets, credentials, personal data, or code that is not cleared for that provider.
+
+Q: How do you phrase a question so that the probabilities are not flat?
+A: Make the options exclusive and complete, and define each option in the question. Vague options give flat probabilities.
+
+Q: Which facade command asks a question from a questions file, and what does it print?
+A: `scripts/decide.sh ask <questions-file> <name>` asks it. It prints one JSON line with `name`, `kind`, `answer`, `p`, `expected`, `threshold` and `uncertain`.

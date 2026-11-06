@@ -1,0 +1,27 @@
+# The cold reader sees only SKILL.md. Each question has one expected answer.
+Q: When does a documentation piece pass the checks?
+A: A piece passes when Q_MATCH is true and the Q_SLOP expected value is below SLOP_MAX.
+
+Q: How many rounds of fixing may you run before you must stop, and what do you do then?
+A: You may run 3 rounds, and after the third round you stop and ask the user.
+
+Q: What do you send to the Q_MATCH check, and what do you leave out?
+A: You send the line A:, the piece, the line B: and the restatement, and you leave out the list of unclear points.
+
+Q: How do you check a long piece, such as a skill or a docs page, in one cold-reader run?
+A: You cut it into one unit for each section and score each unit on its own.
+
+Q: What do you do when Vale reports a finding on a piece?
+A: You reword the text, because a rule has no exception unless a human maintainer approves it.
+
+Q: How do you lint a comment in a config file with Vale?
+A: You save the comment to a .md file in a temporary directory and lint that file, because .vale.ini covers only Markdown files.
+
+Q: When must you run scripts/calibrate.sh?
+A: You run it after you change a question, a threshold or a fixture.
+
+Q: Why does the cold reader run in an empty directory with flags such as --tools ""?
+A: The empty directory and the flags keep project rules, tools, skills and memory out of the reader.
+
+Q: What must you do with the fence name and the variables of the sh questions block?
+A: You must not rename them, because the calibration script and the knowledge-curator test runner read the block.

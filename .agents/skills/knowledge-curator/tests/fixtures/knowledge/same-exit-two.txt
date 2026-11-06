@@ -1,0 +1,4 @@
+A:
+On exit code 2, run `decisionkit status` and fix the cause.
+B:
+Exit code 2 means an error. Then you run `decisionkit status` and fix what it reports.

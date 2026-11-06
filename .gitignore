@@ -14,6 +14,10 @@ AGENTS.override.md
 mise.local.toml
 .mise.local.toml
 
+# Vale styles. `vale sync` downloads packages. Only our own styles stay.
+.vale/styles/*
+!.vale/styles/House/
+
 # OS and editor noise
 .DS_Store
 .idea/

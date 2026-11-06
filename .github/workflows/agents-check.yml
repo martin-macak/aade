@@ -14,4 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v5
-      - run: mise run agents:check
+      - run: vale sync
+      # The deterministic checks only. No LLM runs in CI.
+      - run: mise run check

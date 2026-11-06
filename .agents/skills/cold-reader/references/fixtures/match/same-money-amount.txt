@@ -1,0 +1,7 @@
+A:
+Price in minor units of the currency, as an integer. The value 1999 with the
+currency EUR means 19.99 EUR. Zero is allowed. A negative value is not allowed.
+B:
+The field holds a price as a whole number of minor currency units, such as
+cents. For example 1999 in EUR is 19.99 EUR. A caller may send 0. A caller must
+not send a negative number.

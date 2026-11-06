@@ -1,0 +1,10 @@
+# "+" tasks must load decisionkit. "-" tasks belong to other skills.
++ Triage this GitHub issue as bug, feature or question: "The export button does nothing after the upgrade to 2.3."
++ Is this issue a duplicate of an existing one? Answer yes or no. Existing: "Export button does nothing in v2.3". New: "Clicking export has no effect after the 2.3 upgrade".
++ Classify this review finding as blocker, major or minor: "The new endpoint returns the invoices of other customers when the id in the URL changes."
++ Rank these three open issues by urgency, most urgent first: "Typo in the README", "Login fails for every user since the last deploy", "Export is slow for accounts with more than 10,000 orders".
+- Add a new skill for database migrations to this repository.
+- Find the current mise documentation for configuring task dependencies.
+- Decide whether this new rule belongs in AGENTS.md or in a skill: "Pin every tool in mise.toml."
+- Write a nested AGENTS.md for the docs folder.
+- Check this README paragraph for slop before I commit it.

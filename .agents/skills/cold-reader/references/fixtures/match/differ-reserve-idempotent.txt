@@ -1,0 +1,12 @@
+A:
+/**
+ * Reserves stock for an order line and returns the reservation.
+ * The reservation expires after 15 minutes.
+ * Throws [InsufficientStockException] when the available quantity is below
+ * [quantity]. A second call with the same [orderLineId] returns the first
+ * reservation and does not reserve again.
+ */
+B:
+The function reserves stock for an order line and returns the reservation. The
+reservation expires after 15 minutes. It throws InsufficientStockException when
+the available quantity is below the requested quantity.

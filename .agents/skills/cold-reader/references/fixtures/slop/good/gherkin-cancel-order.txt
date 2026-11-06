@@ -1,0 +1,4 @@
+Feature: Cancel an order
+  As a customer
+  I want to cancel an order that has not shipped
+  So that I do not pay for goods that I no longer want

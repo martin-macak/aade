@@ -1,0 +1,6 @@
+Context: The catalog module and the pricing module both need the product
+price. A direct call between them makes a cycle.
+Decision: The catalog module publishes the event ProductPriceChanged. The
+pricing module listens and stores its own copy of the price.
+Consequence: Pricing can show an old price for up to 1 second after a change.
+Neither module calls the other.

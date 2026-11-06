@@ -1,0 +1,9 @@
+A:
+Feature: Cancel an order
+  As a customer
+  I want to cancel an order that has not shipped
+  So that I do not pay for goods that I no longer want
+B:
+The feature is for a customer who wants to cancel an order that has not
+shipped. The goal is that the customer does not pay for goods that they no
+longer want.

@@ -1,0 +1,30 @@
+# The cold reader sees only SKILL.md. Each question has one expected answer.
+Q: What is the maximum size of the root AGENTS.md, and of a nested AGENTS.md?
+A: The root AGENTS.md holds at most 50 lines, and a nested AGENTS.md holds at most 30 lines.
+
+Q: When does an instruction go into the root AGENTS.md as a guardrail?
+A: When the expected value of the impact score is 1.5 or more.
+
+Q: Which file do you edit to change the agent rules, AGENTS.md or CLAUDE.md, and why?
+A: Edit AGENTS.md, never CLAUDE.md or GEMINI.md, because writing through a symlink can replace it with a regular file.
+
+Q: Which command runs every test layer of one skill?
+A: make -C .agents/skills/<name> test
+
+Q: Does any test layer that needs an LLM run in a hook or in CI?
+A: No. Only make runs the LLM layers, because no LLM runs in hooks or CI.
+
+Q: What does a line that starts with "-" in tests/triggers.txt mean?
+A: The task on that line must not load the skill.
+
+Q: May a guardrail live only in a nested AGENTS.md, and why?
+A: No, because some agents load a nested AGENTS.md only when they work in its folder, so a guardrail stays in the root AGENTS.md.
+
+Q: What must you do after you create a nested AGENTS.md?
+A: Run `mise run agents:link`. It adds the CLAUDE.md and GEMINI.md symlinks in the same folder as the new AGENTS.md.
+
+Q: Must a new skill be linked into .claude/skills?
+A: No, because .claude/skills is a symlink to the whole .agents/skills folder, and the other agents read .agents/skills directly.
+
+Q: May an instruction file or skill list the files or classes of a module? What does it name instead?
+A: No, because a list goes stale. It names a folder pattern as the logical unit, and the doc comment in the code describes each interface.

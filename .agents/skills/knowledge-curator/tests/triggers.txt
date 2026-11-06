@@ -1,0 +1,10 @@
+# "+" tasks must load knowledge-curator. "-" tasks belong to other skills.
++ Add a new skill for database migrations to this repository.
++ Decide whether this new instruction belongs in AGENTS.md or in a skill: "Run mise run agents:health after you upgrade a tool."
++ Audit the agent instructions and the skills for duplicated or stale rules.
++ Add tests for the library-docs skill, so that it fails when it goes stale.
++ Create a nested AGENTS.md for the scripts folder that states its purpose.
+- Is this GitHub issue a duplicate of an existing one? Answer yes or no. Existing: "Export button does nothing". New: "Clicking export has no effect".
+- Find the current mise documentation for the usage field of a task.
+- Check this README paragraph for slop and vague claims before I commit it.
+- Rank these three open issues by urgency, most urgent first: "Typo in the README", "CI fails on every pull request", "The setup task is slow".

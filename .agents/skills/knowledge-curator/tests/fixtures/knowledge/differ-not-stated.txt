@@ -1,0 +1,4 @@
+A:
+On exit code 2, run `decisionkit status` and fix the cause.
+B:
+not stated

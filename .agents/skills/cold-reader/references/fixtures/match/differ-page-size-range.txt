@@ -1,0 +1,6 @@
+A:
+Number of items on one page. Allowed values are 1 to 100. The default is 20.
+A value outside this range gives status 400.
+B:
+This parameter sets how many items one page holds. Any positive number is
+allowed. If the caller sends nothing, the page holds 20 items.

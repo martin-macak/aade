@@ -1,0 +1,3 @@
+Run `make check-health` after you change `mise.toml`. The script compares each
+pinned version with the installed version. A mismatch means that CI uses a
+different tool than your machine.

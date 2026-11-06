@@ -1,0 +1,3 @@
+This field is used to specify the page size. It should typically be a
+reasonable number, and the server may possibly limit it in some cases. It
+usually works best with small values.
