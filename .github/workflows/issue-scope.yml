@@ -1,0 +1,36 @@
+# Sets the scope:<x> label of an issue from the Scope field of its form.
+# Issue forms can set only fixed labels, so the form sets type:<x> and this
+# workflow sets scope:<x>. It runs again when someone edits the body.
+name: issue-scope
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: read
+
+# The latest edit of an issue wins.
+concurrency:
+  group: issue-scope-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: gh jq yq
+      # The script reads the body through gh. The body is untrusted input,
+      # so it never goes into an expression of this file.
+      - run: scripts/issue-scope-label.sh "$ISSUE"
+        env:
+          ISSUE: ${{ github.event.issue.number }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}

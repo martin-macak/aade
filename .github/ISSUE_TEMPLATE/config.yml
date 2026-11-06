@@ -1,0 +1,3 @@
+# Only the issue forms in this folder can open an issue. Each form sets
+# the type:<x> label, and the issue-scope workflow sets scope:<x>.
+blank_issues_enabled: false

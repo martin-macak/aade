@@ -7,6 +7,8 @@
 jq = "1.8.2"
 yq = "4.54.1"
 bats = "1.14.0"
+# The GitHub CLI. The label and issue scripts call it.
+gh = "2.103.3"
 pre-commit = "4.6.2"
 vale = "3.25.1"
 # decisionkit runs on node. The skill thresholds are calibrated on 0.4.0.
@@ -54,10 +56,32 @@ done
 exit $status
 '''
 
+[tasks."taxonomy:check"]
+description = "Fail if the issue forms and .github/labels.yml differ"
+run = "scripts/taxonomy-check.sh"
+
+[tasks."labels:sync"]
+description = "Make the GitHub labels equal .github/labels.yml (--dry-run to preview)"
+run = "scripts/labels-sync.sh"
+
+[tasks."issue:new"]
+description = "Open an issue from an issue form. Fields as YAML on stdin"
+usage = '''
+arg "<type>" help="Form name in .github/ISSUE_TEMPLATE, such as bug or chore"
+flag "--dry-run" help="Print the issue and open nothing"
+'''
+run = '''
+#!/usr/bin/env bash
+if [[ ${usage_dry_run:-false} == true ]]; then
+	exec scripts/issue-new.sh "$usage_type" --dry-run
+fi
+exec scripts/issue-new.sh "$usage_type"
+'''
+
 [tasks."prose:lint"]
 description = "Lint the Markdown prose with Vale"
 run = "git ls-files -z '*.md' | xargs -0 vale"
 
 [tasks.check]
 description = "Run every deterministic check, as CI does"
-depends = ["agents:check", "knowledge:size", "knowledge:lint", "skills:drift", "prose:lint"]
+depends = ["agents:check", "knowledge:size", "knowledge:lint", "skills:drift", "taxonomy:check", "prose:lint"]

@@ -1,0 +1,45 @@
+# The label taxonomy of this repository. This file is the only source.
+# The labels-sync workflow applies it on a push to main: it creates and
+# updates each label below and deletes every label that is not listed.
+# Run `mise run labels:sync --dry-run` to see the plan.
+#
+# type:<x>   One per issue. Each issue form sets it. It maps to the
+#            Conventional Commits type of the change (enhancement -> feat).
+# scope:<x>  One per issue. The Scope dropdown of each form lists these
+#            values, and the issue-scope workflow sets the label.
+#            `mise run taxonomy:check` fails when the forms and this list
+#            differ.
+#
+# Each entry: name, color and description. The color is 6 hex digits
+# without #, in quotes, because YAML reads 5319e7 as a number. GitHub
+# allows at most 100 characters of description. To rename a label and keep
+# it on its issues, add `from: <old name>` for one sync.
+
+- name: type:bug
+  color: "d73a4a"
+  description: Something does not work as specified. Commit type fix.
+- name: type:enhancement
+  color: "a2eeef"
+  description: New or changed behaviour. Commit type feat.
+- name: type:chore
+  color: "c5def5"
+  description: Maintenance with no change in behaviour. Commit type chore.
+- name: type:ci
+  color: "fbca04"
+  description: GitHub Actions workflows and CI checks. Commit type ci.
+
+- name: scope:agents
+  color: "5319e7"
+  description: Agent instructions, skills and MCP config.
+- name: scope:github
+  color: "5319e7"
+  description: GitHub settings, templates, labels and workflows.
+- name: scope:docs
+  color: "5319e7"
+  description: Human docs and the README.
+- name: scope:repository
+  color: "5319e7"
+  description: Repository layout, git config and local environment.
+- name: scope:tooling
+  color: "5319e7"
+  description: mise tools and tasks, pre-commit hooks and scripts.

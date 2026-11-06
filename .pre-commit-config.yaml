@@ -32,11 +32,17 @@ repos:
         language: system
         # The union of the skill folders and each tests/*.watch file. A
         # knowledge-curator drift test checks it and prints the value.
-        files: ^(\.agents/skills/|\.claude/skills|\.github/workflows/|\.gitignore|\.pre-commit-config\.yaml|\.vale\.ini|\.vale/styles/House/|AGENTS\.md|README\.md|mise\.toml|scripts/agents-health\.sh|scripts/check-agents-md-size\.sh|scripts/lint-knowledge\.sh)
+        files: ^(\.agents/skills/|\.claude/skills|\.github/ISSUE_TEMPLATE/|\.github/labels\.yml|\.github/pull_request_template\.md|\.github/workflows/|\.gitignore|\.pre-commit-config\.yaml|\.vale\.ini|\.vale/styles/House/|AGENTS\.md|README\.md|mise\.toml|scripts/agents-health\.sh|scripts/check-agents-md-size\.sh|scripts/issue-new\.sh|scripts/issue-scope-label\.sh|scripts/lint-knowledge\.sh)
         types: []
         types_or: [file, symlink]
         # One call gets all files, so no skill runs twice.
         require_serial: true
+      - id: taxonomy-check
+        name: issue forms match .github/labels.yml
+        entry: mise run taxonomy:check
+        language: system
+        pass_filenames: false
+        files: ^(\.github/ISSUE_TEMPLATE/|\.github/dependabot\.yml$|\.github/labels\.yml$|scripts/taxonomy-check\.sh$)
       - id: vale
         name: vale (prose lint)
         entry: mise exec -- vale

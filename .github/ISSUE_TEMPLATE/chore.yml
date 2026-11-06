@@ -1,0 +1,43 @@
+# Issue form for a chore: maintenance with no change in behaviour. The
+# issue-authoring skill tells agents how to write the same body with
+# scripts/issue-new.sh.
+name: Chore
+description: Maintenance with no change in behaviour, such as setup, cleanup or updates.
+labels: [type:chore]
+body:
+  # The options must equal the scope:* labels in .github/labels.yml.
+  # `mise run taxonomy:check` fails when they differ.
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: The area this issue changes. It becomes the scope:<x> label.
+      options:
+        - agents
+        - github
+        - docs
+        - repository
+        - tooling
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why
+      description: The work, and the reason it is needed now.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Checkable statements. The issue is done when all hold.
+      placeholder: |
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk
+      description: What can break, and how to undo the change.
