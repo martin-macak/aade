@@ -239,6 +239,14 @@ body() {
 	[ "$(calls | tail -n 1)" = "gh issue edit 7 --remove-label scope:alphabet --add-label scope:alpha" ]
 }
 
+@test "gh: a failing issue edit exits 1, whatever its own exit code" {
+	issue "$(body alpha)"
+	gh_reply "issue edit" 4 </dev/null
+	run "$S" 7
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"gh: failed"* ]] || false
+}
+
 @test "dry-run: prints the plan and edits nothing" {
 	issue "$(body alpha)" type:task scope:beta
 	run "$S" 7 --dry-run
