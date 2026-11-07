@@ -8,11 +8,14 @@
 # reports the wrong root, so this does not ask git.
 ROOT=$(cd "$BATS_TEST_DIRNAME/../.." && pwd)
 
-# fake, unfake, calls, path_without and the fakes of gh, decisionkit and mise.
+# fake, fake_at, unfake, calls, path_without, suite_copy and the fakes of
+# gh, decisionkit and mise.
 source "${BASH_SOURCE[0]%/*}/fakes.bash"
 
-# Create the repository $SANDBOX, copy each named script of scripts/ into
-# $SANDBOX/scripts/, and cd into $SANDBOX. HOME and TMPDIR point into the
+# Create the repository $SANDBOX, link each named script of scripts/ into
+# $SANDBOX/scripts/, and cd into $SANDBOX. The link points to a read-only
+# copy of the script, made once per suite (suite_copy of fakes.bash), so a
+# test cannot change the script of the repository. HOME and TMPDIR point into the
 # test folder, so a script never sees the files of the user. The guard
 # fakes of gh, decisionkit and claude go first on PATH, so a test that
 # forgets a fake fails and never calls a real API.
@@ -32,12 +35,14 @@ sandbox() {
 	export HOME="$BATS_TEST_TMPDIR/home" TMPDIR="$BATS_TEST_TMPDIR/tmp"
 	export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 	mkdir -p "$SANDBOX/scripts" "$HOME" "$TMPDIR"
-	git init -q "$SANDBOX"
+	# An empty template skips the sample hooks, so no test writes an
+	# executable file.
+	git init -q --template= "$SANDBOX"
 	git -C "$SANDBOX" config user.name test
 	git -C "$SANDBOX" config user.email test@example.com
 	local script
 	for script in "$@"; do
-		cp "$ROOT/scripts/$script" "$SANDBOX/scripts/$script"
+		ln -s "$(suite_copy "$ROOT/scripts/$script")" "$SANDBOX/scripts/$script"
 	done
 	cd "$SANDBOX" || return 1
 }

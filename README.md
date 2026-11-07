@@ -18,8 +18,8 @@ Project purpose: to be decided.
 
 `mise run check` runs the fast structural checks that CI runs on every
 pull request. `mise run test` runs the bats suites that your changes
-affect, and `mise run test --all` runs every suite. The `ci` workflow runs
-both. The
+affect, and `mise run test --all` runs every suite. The suites run in
+parallel, one per CPU. The `ci` workflow runs both. The
 [knowledge-curator](.agents/skills/knowledge-curator/SKILL.md#check-contract)
 skill explains the check contract.
 `mise tasks` lists all tasks.

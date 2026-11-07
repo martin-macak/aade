@@ -10,6 +10,8 @@
 # the test file reads. A file matches a line that equals its path. A line
 # that ends with "/" covers a folder, and matches every file below it.
 # The knowledge-curator skill explains the layers.
+# It runs the test files in parallel through script-tests.sh bats, which
+# prints each file under a "==> <file>" header and a summary at the end.
 # Run it from the repository root. It does not ask git, because a commit
 # hook can export GIT_DIR, and git then reports the wrong root. A run
 # needs bats on PATH. --list prints the test files and runs nothing, so it
@@ -51,20 +53,17 @@ if ((!LIST)) && ! command -v bats >/dev/null; then
 	>&2 echo "skill-drift.sh needs bats on PATH. Run it through mise: mise run skills:drift"
 	exit 2
 fi
-STATUS=0
+tests=()
 for dir in .agents/skills/*/; do
 	[[ -d "$dir" ]] || continue
 	name=$(basename "$dir")
-	tests=()
 	for test in "${dir}"tests/*.bats; do
 		[[ -f "$test" ]] && affected "$name" "$test" && tests+=("$test")
 	done
-	((${#tests[@]} > 0)) || continue
-	if ((LIST)); then
-		printf '%s\n' "${tests[@]}"
-		continue
-	fi
-	echo "==> $name"
-	bats "${tests[@]}" || STATUS=1
 done
-exit $STATUS
+((${#tests[@]} > 0)) || exit 0
+if ((LIST)); then
+	printf '%s\n' "${tests[@]}"
+	exit 0
+fi
+scripts/script-tests.sh bats "${tests[@]}"

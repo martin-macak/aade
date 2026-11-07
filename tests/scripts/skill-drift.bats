@@ -4,7 +4,9 @@
 # the files it describes cannot drift apart unseen. Pre-commit passes the
 # changed files, and the script then runs only the tests that these files
 # can affect. A skill folder and the tests/<test>.watch file of a test file
-# say which files affect it. Here a fake bats records which tests run.
+# say which files affect it. Here a fake bats records which tests run. The
+# script runs the test files through script-tests.sh bats, one at a time
+# here (TEST_JOBS=1), so the calls keep their order.
 
 load helpers/common
 
@@ -25,9 +27,24 @@ watch() {
 	printf '%s\n' "$@" | fixture ".agents/skills/$name/tests/$test.watch"
 }
 
+# Print the output of a run that ran the test files $@, and passed.
+ran() {
+	local test
+	for test in "$@"; do
+		printf '==> %s\nran %s\n' "$test" "$test"
+	done
+	echo "script-tests: $# suites passed."
+}
+
+# Print the calls of the fake bats for the test files $@.
+bats_calls() {
+	printf 'bats %s\n' "$@"
+}
+
 setup() {
-	sandbox skill-drift.sh
+	sandbox skill-drift.sh script-tests.sh
 	S=scripts/skill-drift.sh
+	export TEST_JOBS=1
 	# The fake prints what it ran. A skill folder named bad makes it fail.
 	fake bats 'echo "ran $*"; case "$*" in *"/bad/tests/"*) exit 1 ;; esac'
 	A=.agents/skills/alpha/tests
@@ -41,12 +58,12 @@ setup() {
 	[ -z "$(calls)" ]
 }
 
-@test "without files, runs all test files of a skill in one call under a header" {
+@test "without files, runs each test file of a skill under its own header" {
 	skill alpha a b
 	run "$S"
 	[ "$status" -eq 0 ]
-	[ "$output" = "$(printf '==> alpha\nran %s/a.bats %s/b.bats' "$A" "$A")" ]
-	[ "$(calls)" = "bats $A/a.bats $A/b.bats" ]
+	[ "$output" = "$(ran "$A/a.bats" "$A/b.bats")" ]
+	[ "$(calls)" = "$(bats_calls "$A/a.bats" "$A/b.bats")" ]
 }
 
 @test "without files, runs every skill in name order, each under its own header" {
@@ -54,8 +71,8 @@ setup() {
 	skill alpha a
 	run "$S"
 	[ "$status" -eq 0 ]
-	[ "$output" = "$(printf '==> alpha\nran %s/a.bats\n==> beta\nran %s/c.bats' "$A" "$B")" ]
-	[ "$(calls)" = "$(printf 'bats %s/a.bats\nbats %s/c.bats' "$A" "$B")" ]
+	[ "$output" = "$(ran "$A/a.bats" "$B/c.bats")" ]
+	[ "$(calls)" = "$(bats_calls "$A/a.bats" "$B/c.bats")" ]
 }
 
 @test "skips a skill without test files, and prints no header for it" {
@@ -66,7 +83,7 @@ setup() {
 	echo scripts/foo.sh >.agents/skills/watchonly/tests/x.watch
 	run "$S"
 	[ "$status" -eq 0 ]
-	[ "$output" = "$(printf '==> alpha\nran %s/a.bats' "$A")" ]
+	[ "$output" = "$(ran "$A/a.bats")" ]
 	run "$S" .agents/skills/empty/SKILL.md scripts/foo.sh
 	[ "$status" -eq 0 ]
 	lacks "$output" "empty"
@@ -78,8 +95,8 @@ setup() {
 	skill beta c
 	run "$S" .agents/skills/alpha/SKILL.md
 	[ "$status" -eq 0 ]
-	[ "$output" = "$(printf '==> alpha\nran %s/a.bats %s/b.bats' "$A" "$A")" ]
-	[ "$(calls)" = "bats $A/a.bats $A/b.bats" ]
+	[ "$output" = "$(ran "$A/a.bats" "$A/b.bats")" ]
+	[ "$(calls)" = "$(bats_calls "$A/a.bats" "$A/b.bats")" ]
 }
 
 @test "a changed file that a .watch line names runs the test file with that .watch file" {
@@ -87,7 +104,7 @@ setup() {
 	watch alpha a scripts/foo.sh
 	run "$S" scripts/foo.sh
 	[ "$status" -eq 0 ]
-	[ "$output" = "$(printf '==> alpha\nran %s/a.bats' "$A")" ]
+	[ "$output" = "$(ran "$A/a.bats")" ]
 }
 
 @test "a .watch file does not select the sibling test files" {
@@ -141,7 +158,7 @@ setup() {
 	watch beta c .agents/skills/alpha/
 	run "$S" .agents/skills/alpha/SKILL.md
 	[ "$status" -eq 0 ]
-	[ "$(calls)" = "$(printf 'bats %s/a.bats\nbats %s/c.bats' "$A" "$B")" ]
+	[ "$(calls)" = "$(bats_calls "$A/a.bats" "$B/c.bats")" ]
 }
 
 @test "ignores comments and blank lines in a .watch file" {
@@ -165,13 +182,13 @@ setup() {
 	[ -z "$(calls)" ]
 }
 
-@test "runs the tests that any of several changed files affect, in one call per skill" {
+@test "runs the tests that any of several changed files affect" {
 	skill alpha a b
 	watch alpha a scripts/foo.sh
 	watch alpha b scripts/bar.sh
 	run "$S" README.md scripts/bar.sh scripts/foo.sh
 	[ "$status" -eq 0 ]
-	[ "$(calls)" = "bats $A/a.bats $A/b.bats" ]
+	[ "$(calls)" = "$(bats_calls "$A/a.bats" "$A/b.bats")" ]
 }
 
 @test "runs no bats and exits 0 when no file affects a test" {
@@ -191,15 +208,16 @@ setup() {
 	[ "$output" = "skill-drift.sh needs bats on PATH. Run it through mise: mise run skills:drift" ]
 }
 
-@test "exits 1 when a bats call fails, and still runs the other skills" {
+@test "exits 1 when a bats call fails, still runs the other skills, and names the failed file" {
 	skill alpha a
 	skill bad x
 	skill zeta z
 	run "$S"
 	[ "$status" -eq 1 ]
-	has "$output" "==> alpha"
-	has "$output" "==> bad"
-	has "$output" "==> zeta"
+	has "$output" "==> $A/a.bats"
+	has "$output" "==> .agents/skills/bad/tests/x.bats"
+	has "$output" "==> .agents/skills/zeta/tests/z.bats"
+	has "$output" "script-tests: 1 of 3 suites failed: .agents/skills/bad/tests/x.bats"
 	[ "$(calls | wc -l | tr -d ' ')" -eq 3 ]
 }
 

@@ -7,8 +7,13 @@
 # with defect.diff, and expect.txt lists every problem line that the check
 # must print, with paths relative to the root. No LLM, no network.
 
+ROOT=$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)
+load "$ROOT/tests/scripts/helpers/fakes"
+
 setup() {
-	SKILL_DIR=$(cd "$BATS_TEST_DIRNAME/.." && pwd)
+	# The script runs from a copy of the skill, so it cannot change the
+	# repository.
+	SKILL_DIR="$(skill_copy tech-research)/tech-research"
 	R="$SKILL_DIR/scripts/research.sh"
 	GOOD="$SKILL_DIR/tests/fixtures/good"
 	BAD="$SKILL_DIR/tests/fixtures/bad"
@@ -55,15 +60,35 @@ bad_root() {
 }
 
 @test "check prints exactly the expected problems for each bad fixture" {
+	# The checks run at the same time, one per fixture, to keep the test
+	# fast. Each writes its output and exit code to its own files.
 	failed=""
+	out="$BATS_TEST_TMPDIR/out"
+	mkdir -p "$out"
 	for dir in "$BAD"/*/; do
 		name=$(basename "$dir")
 		root=$(bad_root "$name") || {
 			failed+="$name: defect.diff does not apply."$'\n'
 			continue
 		}
-		RESEARCH_ROOT="$root" run "$R" check
-		actual=$(sed "s|$root/||g" <<<"$output" | LC_ALL=C sort)
+		# bats runs with set -e, so || keeps the exit code of a failed check.
+		(
+			code=0
+			RESEARCH_ROOT="$root" "$R" check >"$out/$name" 2>&1 || code=$?
+			echo "$code" >"$out/$name.status"
+		) &
+	done
+	wait
+	for dir in "$BAD"/*/; do
+		name=$(basename "$dir")
+		[ -d "$BATS_TEST_TMPDIR/$name" ] || continue
+		[ -f "$out/$name.status" ] || {
+			failed+="$name: the check wrote no exit code."$'\n'
+			continue
+		}
+		root="$BATS_TEST_TMPDIR/$name"
+		status=$(cat "$out/$name.status")
+		actual=$(sed "s|$root/||g" "$out/$name" | LC_ALL=C sort)
 		expected=$(LC_ALL=C sort "$dir/expect.txt")
 		if [ "$status" -ne 1 ] || [ "$actual" != "$expected" ]; then
 			failed+="$name (exit $status):"$'\n'"$(diff <(echo "$expected") <(echo "$actual") || true)"$'\n'

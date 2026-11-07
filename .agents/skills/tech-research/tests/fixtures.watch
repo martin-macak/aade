@@ -1,0 +1,3 @@
+# Paths outside this skill that fixtures.bats reads. skill-drift runs the
+# file when one of them changes. A path that ends with "/" covers a folder.
+tests/scripts/helpers/

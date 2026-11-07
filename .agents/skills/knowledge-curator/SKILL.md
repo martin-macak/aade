@@ -232,7 +232,9 @@ A skill may add a layer of its own as a target in its `Makefile`, and
 Each `scripts/<x>.sh` of a skill needs the suite `tests/<x>.bats` in the
 same skill. The suite runs the script with the fake external tools of
 `tests/scripts/helpers/fakes.bash`, and it has one test per use case and
-per exit path. The `scripts-coverage` pre-commit hook and `mise run check`
+per exit path. It runs the script from a copy of the skill folder, which
+the function `skill_copy` of `fakes.bash` makes once per suite, so no
+test can change the repository. The `scripts-coverage` pre-commit hook and `mise run check`
 fail on a script without a suite. `tests/AGENTS.md` gives the rules for
 the suites of the repository scripts.
 

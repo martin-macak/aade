@@ -122,6 +122,10 @@ jobs:
       - if: runner.os == 'macOS'
         run: echo /bin >>"$GITHUB_PATH"
       - run: bash --version | head -n 1
+      # ci-plan.sh runs the suites in parallel, one per CPU, through
+      # script-tests.sh bats. It prints the output of each suite in one
+      # block, in a fixed order. The last line gives the number of passed
+      # suites, or lists every failed suite and fails the step.
       - env:
           FULL: ${{ needs.classify.outputs.full }}
           BASE: ${{ github.event.pull_request.base.sha }}

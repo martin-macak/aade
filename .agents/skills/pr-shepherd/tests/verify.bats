@@ -17,7 +17,9 @@ ROOT=$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)
 load "$ROOT/tests/scripts/helpers/fakes"
 
 setup() {
-	SKILL_DIR=$(cd "$BATS_TEST_DIRNAME/.." && pwd)
+	# The script runs from a copy of the skill and of the decisionkit skill
+	# next to it, so it cannot change the repository.
+	SKILL_DIR="$(skill_copy pr-shepherd decisionkit)/pr-shepherd"
 	S="$SKILL_DIR/scripts/shepherd.sh"
 	export SHEPHERD=$S
 	export BASE="$SKILL_DIR/tests/fixtures/prs/base"

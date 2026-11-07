@@ -4,7 +4,7 @@
 # prose from slop, and a faithful restatement from a wrong one. Each fixture
 # must land on its expected side of a threshold. The script reads the
 # questions from SKILL.md, so the calibrated text is the committed text.
-# Each test runs a copy of the script in a throwaway skill folder. The shared
+# Each test links the script into a throwaway skill folder. The shared
 # fake decisionkit replaces the real one, so no test calls a provider.
 
 ROOT=$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)
@@ -14,7 +14,7 @@ setup() {
 	SKILL="$BATS_TEST_TMPDIR/skill"
 	FIXTURES="$SKILL/references/fixtures"
 	mkdir -p "$SKILL/scripts" "$FIXTURES/slop/good" "$FIXTURES/slop/bad" "$FIXTURES/match"
-	cp "$BATS_TEST_DIRNAME/../scripts/calibrate.sh" "$SKILL/scripts/calibrate.sh"
+	ln -s "$(suite_copy "$ROOT/.agents/skills/cold-reader/scripts/calibrate.sh")" "$SKILL/scripts/calibrate.sh"
 	SCRIPT="$SKILL/scripts/calibrate.sh"
 	# The responder reads the value of a fixture from its text: "v=<n>" is
 	# the expected level of a score, and the probability of a binary

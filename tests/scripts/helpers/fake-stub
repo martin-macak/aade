@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+# The one executable of every fake of tests/scripts/helpers/fakes.bash. A
+# fake is a symlink to a copy of this file, and its code is the file
+# <link>.fake. The stub logs the call, then sources the code with the
+# arguments in "$@". It uses only bash builtins, so it runs with any PATH.
+
+__fake_name=${0##*/}
+printf '%s\n' "$__fake_name $*" >>"$FAKE_LOG"
+{
+	[ "$#" -eq 0 ] || printf '<%s>' "$@"
+	echo
+} >>"$FAKE_DIR/$__fake_name.argv"
+unset __fake_name
+# shellcheck source=/dev/null # The code of each fake differs.
+source "$0.fake"

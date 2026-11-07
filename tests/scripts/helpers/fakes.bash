@@ -6,18 +6,72 @@
 # Each fake goes first on PATH and logs "<name> <args>" to $FAKE_LOG, one
 # line per call. `calls` prints the log. $FAKE_DIR/<name>.argv logs the same
 # calls with one <...> per argument, to show how the arguments split. The
-# files of a fake live in $BATS_TEST_TMPDIR/fake/, so each test starts clean.
+# files of a fake live in $BATS_TEST_TMPDIR, so each test starts clean.
+#
+# No test writes an executable file. macOS endpoint security can scan each
+# new executable on its first run, which costs about 0.2 s. So each fake is
+# a symlink to a read-only copy of fake-stub, made once per suite, and the
+# code of the fake goes to the file <fake>.fake next to the link. The stub
+# logs the call and sources that file. Two fakes with the same name in two
+# folders keep their own code.
+
+FAKES_HELPERS=$(cd "${BASH_SOURCE[0]%/*}" && pwd)
+
+# Print the path of a read-only copy of the file $1, made once per suite
+# in $BATS_FILE_TMPDIR. A test links to the copy, so it cannot change the
+# file of the repository, and the copy is not a new file in each test.
+suite_copy() {
+	local copy="$BATS_FILE_TMPDIR/copy$1"
+	if [[ ! -e "$copy" ]]; then
+		mkdir -p "${copy%/*}"
+		cp "$1" "$copy"
+		chmod a-w "$copy"
+	fi
+	printf '%s\n' "$copy"
+}
+
+# Copy each named folder of .agents/skills once per suite to
+# $BATS_FILE_TMPDIR/skills/, and print that folder. A skill script runs
+# from the copy: it finds its references and the skills next to it, but it
+# cannot change a file of the repository. The files outside tests/ are
+# read-only, so a test cannot change them for the next test either. The
+# test data in tests/ stays writable, because tests copy and edit it.
+# Example:
+#   S="$(skill_copy pr-shepherd decisionkit)/pr-shepherd/scripts/shepherd.sh"
+skill_copy() {
+	local root="$BATS_FILE_TMPDIR/skills" name
+	mkdir -p "$root"
+	for name in "$@"; do
+		[[ -d "$root/$name" ]] && continue
+		cp -R "$FAKES_HELPERS/../../../.agents/skills/$name" "$root/$name"
+		find "$root/$name" -type f ! -path "$root/$name/tests/*" -exec chmod a-w {} +
+	done
+	printf '%s\n' "$root"
+}
 
 # Set the paths of the fakes for the current test.
 fake_paths() {
 	FAKE_BIN="$BATS_TEST_TMPDIR/bin"
 	export FAKE_DIR="$BATS_TEST_TMPDIR/fake" FAKE_LOG="$BATS_TEST_TMPDIR/fake.log"
 	mkdir -p "$FAKE_BIN" "$FAKE_DIR"
+	[[ -n "${FAKE_STUB:-}" && -e "$FAKE_STUB" ]] || FAKE_STUB=$(suite_copy "$FAKES_HELPERS/fake-stub")
 }
 
-# Put a fake command $1 first on PATH. The bash code $2, if given, runs
-# after the log lines, with the arguments in "$@". When $2 is -, the code
-# comes from stdin. Without code the fake prints nothing and exits 0.
+# Make the path $1 a fake command. The bash code $2, if given, runs after
+# the log lines, with the arguments in "$@". When $2 is -, the code comes
+# from stdin. Without code the fake prints nothing and exits 0.
+fake_at() {
+	fake_paths
+	mkdir -p "$(dirname "$1")"
+	if [[ "${2:-}" == - ]]; then
+		cat >"$1.fake"
+	else
+		printf '%s\n' "${2:-}" >"$1.fake"
+	fi
+	ln -sf "$FAKE_STUB" "$1"
+}
+
+# Put a fake command $1 first on PATH. $2 is its code, as for fake_at.
 # Examples:
 #   fake gh 'echo "[]"'
 #   fake claude - <<'EOF'
@@ -25,24 +79,14 @@ fake_paths() {
 #   EOF
 fake() {
 	fake_paths
-	{
-		printf '#!/usr/bin/env bash\n'
-		printf 'printf "%%s\\n" "%s $*" >>"$FAKE_LOG"\n' "$1"
-		printf '{ [ "$#" -eq 0 ] || printf "<%%s>" "$@"; echo; } >>"$FAKE_DIR/%s.argv"\n' "$1"
-		if [[ "${2:-}" == - ]]; then
-			cat
-		else
-			printf '%s\n' "${2:-}"
-		fi
-	} >"$FAKE_BIN/$1"
-	chmod +x "$FAKE_BIN/$1"
+	fake_at "$FAKE_BIN/$1" "${2:-}"
 	[[ ":$PATH:" == *":$FAKE_BIN:"* ]] || PATH="$FAKE_BIN:$PATH"
 }
 
 # Remove the fake $1 from PATH, so the real command, if any, answers.
 unfake() {
 	fake_paths
-	rm -f "$FAKE_BIN/$1"
+	rm -f "$FAKE_BIN/$1" "$FAKE_BIN/$1.fake"
 	hash -r
 }
 
@@ -62,7 +106,7 @@ guard_fakes() {
 # of links to its other files. Use it to test a missing tool:
 #   run env PATH="$(path_without bats)" scripts/skill-drift.sh
 path_without() {
-	local out="" dir file name hide n=0 link
+	local out="" dir name hide n=0 link
 	local IFS=:
 	for dir in $PATH; do
 		hide=0
@@ -74,12 +118,10 @@ path_without() {
 			link="$BATS_TEST_TMPDIR/path-without/$n"
 			rm -rf "$link"
 			mkdir -p "$link"
-			for file in "$dir"/*; do
-				hide=0
-				for name in "$@"; do
-					[[ "${file##*/}" == "$name" ]] && hide=1
-				done
-				((hide)) || ln -s "$file" "$link/"
+			# One ln for the whole folder, as a folder can hold many files.
+			ln -s "$dir"/* "$link/" 2>/dev/null || true
+			for name in "$@"; do
+				rm -f "$link/$name"
 			done
 			dir=$link
 		fi
@@ -227,9 +269,10 @@ if [[ "${1:-} ${2:-}" == "exec --" ]]; then
 	PATH='"$(printf %q "$real")"'
 	exec "$@"
 fi'
-	fake mise "$body"
 	if [[ -n "${1:-}" ]]; then
-		mkdir -p "$1"
-		mv "$FAKE_BIN/mise" "$1/mise"
+		fake_at "$1/mise" "$body"
+		[[ ":$PATH:" == *":$FAKE_BIN:"* ]] || PATH="$FAKE_BIN:$PATH"
+	else
+		fake mise "$body"
 	fi
 }

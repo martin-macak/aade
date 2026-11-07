@@ -65,3 +65,55 @@ load helpers/common
 	has "$output" "mise-tasks.bats needs mise on PATH."
 	lacks "$output" "# skip"
 }
+
+@test "fake: links to the suite stub and writes no executable file" {
+	sandbox
+	fake alpha 'echo alpha'
+	[ -L "$FAKE_BIN/alpha" ]
+	[ "$(readlink "$FAKE_BIN/alpha")" = "$BATS_FILE_TMPDIR/copy$ROOT/tests/scripts/helpers/fake-stub" ]
+	[ -z "$(find "$BATS_TEST_TMPDIR" -type f -perm -u+x)" ]
+	run alpha one
+	[ "$output" = alpha ]
+	[ "$(calls)" = "alpha one" ]
+}
+
+@test "fake_mise: two fake mise in two folders keep their own code" {
+	sandbox
+	fake_mise "$BATS_TEST_TMPDIR/other"
+	fake mise 'echo first'
+	run "$BATS_TEST_TMPDIR/other/mise" exec -- echo second
+	[ "$output" = second ]
+	run mise
+	[ "$output" = first ]
+}
+
+@test "path_without: a fake that it relinks keeps its code" {
+	sandbox
+	fake alpha 'echo alpha'
+	fake beta
+	run env PATH="$(path_without beta)" bash -c alpha
+	[ "$status" -eq 0 ]
+	[ "$output" = alpha ]
+}
+
+@test "sandbox: a test cannot change a script of the repository" {
+	sandbox ci-plan.sh
+	[ -L scripts/ci-plan.sh ]
+	run bash -c 'echo broken >scripts/ci-plan.sh'
+	[ "$status" -ne 0 ]
+	cmp -s "$ROOT/scripts/ci-plan.sh" "$(readlink scripts/ci-plan.sh)"
+}
+
+@test "skill_copy: a skill script runs from a read-only copy, once per suite" {
+	dir=$(skill_copy decisionkit)
+	[ "$dir" = "$BATS_FILE_TMPDIR/skills" ]
+	cmp -s "$ROOT/.agents/skills/decisionkit/scripts/decide.sh" "$dir/decisionkit/scripts/decide.sh"
+	run bash -c "echo broken >'$dir/decisionkit/scripts/decide.sh'"
+	[ "$status" -ne 0 ]
+	run bash -c "echo broken >'$dir/decisionkit/SKILL.md'"
+	[ "$status" -ne 0 ]
+	# A second call reuses the copy.
+	touch "$dir/decisionkit/tests/marker"
+	[ "$(skill_copy decisionkit)" = "$dir" ]
+	[ -f "$dir/decisionkit/tests/marker" ]
+}
