@@ -238,6 +238,23 @@ gh_got() {
 	grep -qxF '<label><delete><good first issue><--yes>' "$FAKE_DIR/gh.argv"
 }
 
+@test "exits 2 and deletes nothing when labels.yml is empty, a comment, null or not a list" {
+	github_has <<-'EOF'
+		[{"name":"keep","color":"ffffff","description":""}]
+	EOF
+	for content in "" "# only a comment" "null" "name: type:bug"; do
+		printf '%s\n' "$content" | fixture .github/labels.yml
+		: >"$BATS_TEST_TMPDIR/fake.log"
+		run "$S"
+		[ "$status" -eq 2 ] || {
+			echo "'$content': exit $status"
+			return 1
+		}
+		[[ "$output" == *".github/labels.yml must be a list of labels."* ]] || false
+		gh_got
+	done
+}
+
 @test "deletes every label when the file lists none" {
 	# Bash 3.2 (macOS) fails on the empty array of kept labels under set -u.
 	echo '[]' | fixture .github/labels.yml
