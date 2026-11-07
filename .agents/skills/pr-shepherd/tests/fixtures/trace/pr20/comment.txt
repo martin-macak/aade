@@ -1,0 +1,62 @@
+<!-- pr-shepherd-trace:v1 -->
+## Requirement check: passed, 8 of 14 need a review
+
+This check does not block the merge. A reviewer reads each row under "Needs review".
+
+- **Plan matches issue:** the sub-tasks of the PR do the whole issue item.
+- **Proof of done:** the evidence lines show that the item works.
+
+### ⚠️ Needs review
+
+| Requirement | Plan matches issue | Proof of done | Why |
+| --- | --- | --- | --- |
+| R1: `mise run check` runs only the structural tasks. It takes under 15 s on a… | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
+| R4: One CI workflow classifies the diff. A code-only PR runs no repo job. | ⚠️ review | ✅ pass | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
+| R5: A repo-layer PR runs `check` and only the affected suites. | ⚠️ review | ✅ pass | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
+| R9: One gate job is the required check and blocks a merge when a needed job fails. | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
+| R11: copilot-setup-steps runs only `mise run check`. | ⚠️ review | ✅ pass | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. No justification from the author yet. |
+| R12: Each CI job installs only the tools that it needs. | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
+| R13: The ruleset requires the gate job. The ruleset, the knowledge-curator drift… | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
+| R14: The README, AGENTS.md files, the skills and the workflow comments describe the… | ⚠️ review | ✅ pass | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
+
+<details>
+<summary>✅ Passed: 6 of 14</summary>
+
+| Requirement | Plan matches issue | Proof of done |
+| --- | --- | --- |
+| R2: `mise run test` runs the affected bats suites, and `mise run test --all` runs… | ✅ pass | ✅ pass |
+| R3: No mise task calls pnpm. The layer rule is in the knowledge layer, at the place… | ✅ pass | ✅ pass |
+| R6: A change in a shared input or the label `ci:full` runs every suite.… | ✅ pass | ✅ pass |
+| R7: A weekly run and a manual run cover every suite on Linux and macOS. | ✅ pass | ✅ pass |
+| R8: A push to main runs only `check`. | ✅ pass | ✅ pass |
+| R10: A new push to a PR cancels its older runs. | ✅ pass | ✅ pass |
+
+</details>
+
+<details>
+<summary>Technical details</summary>
+
+decisionkit scores each check with the probability that it is true. A check fails below 43 %. From 80 % on, it passes without a review.
+
+| Requirement | Plan matches issue | Proof of done |
+| --- | --- | --- |
+| R1 | 54 % | 64 % |
+| R2 | 92 % | 85 % |
+| R3 | 86 % | 88 % |
+| R4 | 72 % | 93 % |
+| R5 | 77 % | 87 % |
+| R6 | 81 % | 86 % |
+| R7 | 96 % | 94 % |
+| R8 | 86 % | 88 % |
+| R9 | 56 % | 74 % |
+| R10 | 90 % | 92 % |
+| R11 | 71 % | 88 % |
+| R12 | 78 % | 50 % |
+| R13 | 77 % | 78 % |
+| R14 | 69 % | 88 % |
+
+Head commit `30514614`. Requirements hash `29c75f92`. Issue #18 hash `759aa2d2`. CI reads the hashes from the commit status `pr-shepherd/trace`.
+
+Run the check again: `.agents/skills/pr-shepherd/scripts/shepherd.sh verify 20`
+
+</details>

@@ -1,0 +1,138 @@
+Closes #18
+
+## Requirements
+
+- [x] R1: `mise run check` runs only the structural tasks. It takes under 15 s on a developer Mac.
+  - [x] R1.1: the `check` task depends only on the structural tasks agents:check, knowledge:size, knowledge:lint, scripts:coverage, research:check, taxonomy:check and prose:lint, and no longer runs skills:drift
+    - evidence: mise.toml
+    - evidence: `yq -p toml '.tasks.check.depends' mise.toml` -> agents:check, knowledge:size, knowledge:lint, scripts:coverage, research:check, taxonomy:check, prose:lint
+  - [x] R1.2: `mise run check` takes under 15 s on a developer Mac
+    - evidence: `time mise run check` -> passed in 1.2 s on a developer Mac (Apple silicon)
+- [x] R2: `mise run test` runs the affected bats suites, and `mise run test --all` runs every suite.
+  - [x] R2.1: the new `test` task runs scripts/ci-plan.sh test, which runs only the bats suites that the changed files affect
+    - evidence: mise.toml
+    - evidence: scripts/ci-plan.sh
+    - evidence: `bats tests/scripts/ci-plan.bats` -> 17 tests ok, including "test: runs only the affected suites"
+  - [x] R2.2: `mise run test --all` runs every bats suite
+    - evidence: `mise run test --all` -> "ci-plan: every suite runs", 720 tests ok, 0 failed
+- [x] R3: No mise task calls pnpm. The layer rule is in the knowledge layer, at the place that the knowledge-curator skill picks.
+  - [x] R3.1: no task in mise.toml calls pnpm, and a comment above the check task states the rule
+    - evidence: mise.toml
+    - evidence: `yq -p toml '.tasks[].run' mise.toml | grep -c pnpm` -> 0, no task runs pnpm
+  - [x] R3.2: the layer rule is in the "Check contract" section of the knowledge-curator skill, the home that its triage picked
+    - evidence: .agents/skills/knowledge-curator/SKILL.md
+    - evidence: `grep -n 'never calls pnpm' .agents/skills/knowledge-curator/SKILL.md` -> one match, in the section "## Check contract": "A mise task never calls pnpm, and mise only pins node and pnpm"
+    - evidence: `make -k -C .agents/skills/knowledge-curator test` -> drift, triggers, knowledge, slop and calibrate ok
+- [x] R4: One CI workflow classifies the diff. A code-only PR runs no repo job.
+  - [x] R4.1: one CI workflow, ci.yml, replaces agents-check.yml and scripts-test.yml, and its classify job classifies the diff into the repo and the code layer with scripts/ci-plan.sh plan
+    - evidence: .github/workflows/ci.yml
+    - evidence: .github/workflows/agents-check.yml
+    - evidence: .github/workflows/scripts-test.yml
+    - evidence: https://github.com/martin-macak/aade/actions/runs/42393997112
+  - [x] R4.2: a code-only PR runs no repo job: classify sets repo=false, and the check and test jobs run only when repo=true
+    - evidence: `bats tests/scripts/ci-plan.bats` -> ok "plan: a code-only change runs no repo job" (repo=false code=true)
+    - evidence: .github/workflows/ci.yml
+- [x] R5: A repo-layer PR runs `check` and only the affected suites.
+  - [x] R5.1: a repo-layer PR runs the check job
+    - evidence: `gh run view 42393997112` -> on this repo-layer PR, classify, check and test succeed
+  - [x] R5.2: on a PR, the test job runs `mise run test --base <PR base SHA>`, which runs only the affected suites
+    - evidence: .github/workflows/ci.yml
+    - evidence: `bats tests/scripts/ci-plan.bats` -> ok "test: runs only the affected suites", ok "plan: a task edit in mise.toml runs only the suites that read mise.toml"
+- [x] R6: A change in a shared input or the label `ci:full` runs every suite. `.github/labels.yml` defines `ci:full`.
+  - [x] R6.1: a change in a shared input (tests/scripts/helpers/, the [tools] table of mise.toml, ci.yml) runs every suite
+    - evidence: scripts/ci-plan.sh
+    - evidence: `bats tests/scripts/ci-plan.bats` -> ok "plan: a changed helper or the CI workflow runs every suite", ok "plan: a tool version edit in mise.toml runs every suite"
+    - evidence: https://github.com/martin-macak/aade/actions/runs/42393997112
+  - [x] R6.2: the label ci:full runs every suite: classify reads the labels and passes --full, and ci-full.yml reruns ci when the label is added
+    - evidence: .github/workflows/ci-full.yml
+    - evidence: `bats tests/scripts/ci-plan.bats` -> ok "plan --full: the ci:full label runs every suite"
+  - [x] R6.3: .github/labels.yml defines ci:full
+    - evidence: .github/labels.yml
+    - evidence: `mise run taxonomy:check` -> ok
+- [x] R7: A weekly run and a manual run cover every suite on Linux and macOS.
+  - [x] R7.1: a weekly scheduled run of ci.yml runs every suite on Linux and macOS
+    - evidence: `yq '.on.schedule[].cron' .github/workflows/ci.yml` -> "23 4 * * 1" (every Monday)
+    - evidence: `yq '.jobs.test.strategy.matrix.os' .github/workflows/ci.yml` -> ubuntu-latest, macos-latest
+  - [x] R7.2: a manual workflow_dispatch run of ci.yml runs every suite on Linux and macOS
+    - evidence: `yq '.on | keys' .github/workflows/ci.yml` -> pull_request, push, schedule, workflow_dispatch
+    - evidence: `bats tests/scripts/ci-plan.bats` -> ok "plan --all: the weekly run sets every value" (full=true test=true)
+    - evidence: `grep -n 'plan --all' .github/workflows/ci.yml` -> for schedule and workflow_dispatch the classify job runs ci-plan.sh plan --all, so the test job runs mise run test --all on ubuntu-latest and macos-latest
+- [x] R8: A push to main runs only `check`.
+  - [x] R8.1: on a push to main, classify plans repo=true and test=false, so only the check job runs
+    - evidence: .github/workflows/ci.yml
+    - evidence: `yq '.on.push.branches' .github/workflows/ci.yml` -> [main]
+    - evidence: `grep -A1 'push)' .github/workflows/ci.yml` -> classify prints repo=true code=false full=false test=false, so the test job is skipped and only check runs
+- [x] R9: One gate job is the required check and blocks a merge when a needed job fails.
+  - [x] R9.1: one gate job, ci-gate, needs classify, check and test and always runs
+    - evidence: .github/workflows/ci.yml
+    - evidence: `yq '.jobs.ci-gate.needs, .jobs.ci-gate.if' .github/workflows/ci.yml` -> [classify, check, test], always()
+    - evidence: `gh run view 42393997112 --log` -> ci-gate prints "Results: success success success" and passes
+  - [x] R9.2: ci-gate is the required check of the ci workflow in the live Main ruleset
+    - evidence: .github/rulesets/main.json
+    - evidence: `gh api repos/martin-macak/aade/rulesets/26678348` -> required checks pr-shepherd, ci-gate
+  - [x] R9.3: ci-gate fails, and so blocks the merge, when a needed job fails or is cancelled
+    - evidence: `gh run view 42387469268` -> both test jobs cancelled, ci-gate failed with exit code 1
+- [x] R10: A new push to a PR cancels its older runs.
+  - [x] R10.1: a concurrency group per PR cancels the older runs of the PR on a new push
+    - evidence: `yq '.concurrency' .github/workflows/ci.yml` -> group ci-<PR number>, cancel-in-progress true for pull_request
+    - evidence: `gh run view 42387469268` -> run cancelled when a newer push to this PR started run 42387673416
+- [x] R11: copilot-setup-steps runs only `mise run check`.
+  - evidence: .github/workflows/copilot-setup-steps.yml
+  - evidence: `grep 'run: mise' .github/workflows/copilot-setup-steps.yml` -> one line, "run: mise run check"; no mise run test and no other mise task
+- [x] R12: Each CI job installs only the tools that it needs.
+  - [x] R12.1: each ci.yml job sets install_args, and MISE_TASK_RUN_AUTO_INSTALL=false stops mise run from installing the rest
+    - evidence: `yq '.jobs[].steps[].with.install_args' .github/workflows/ci.yml` -> classify: gh yq; check: jq yq vale; test: bats gh jq yq node decisionkit
+    - evidence: `gh run view 42393997112 --log` -> the check job lists node and decisionkit as missing and installs neither, and it passes in 8 s
+- [x] R13: The ruleset requires the gate job. The ruleset, the knowledge-curator drift tests ("check runs every CI check") and the pre-commit hooks match the new tasks.
+  - [x] R13.1: the ruleset requires the gate job ci-gate and matches the new tasks: the live Main ruleset and its snapshot .github/rulesets/main.json require ci-gate, which gates the check and test jobs
+    - evidence: .github/rulesets/main.json
+    - evidence: `gh api repos/martin-macak/aade/rulesets/26678348` -> required checks pr-shepherd, ci-gate
+  - [x] R13.2: the knowledge-curator drift tests check the new check and test tasks, ci.yml and the ruleset snapshot
+    - evidence: .agents/skills/knowledge-curator/tests/drift.bats
+    - evidence: `bats .agents/skills/knowledge-curator/tests/drift.bats` -> ok "the mise tasks in the skill exist, and check runs every CI check", ok "the ruleset snapshot requires ci-gate, and the CI workflow has that job"
+  - [x] R13.3: the pre-commit hooks match the new tasks: one `test` hook runs scripts/ci-plan.sh test, the command of mise run test, and replaces the skill-drift and scripts-test hooks
+    - evidence: .pre-commit-config.yaml
+    - evidence: `pre-commit run test --files scripts/ci-plan.sh` -> Passed
+- [x] R14: The README, AGENTS.md files, the skills and the workflow comments describe the new behaviour.
+  - [x] R14.1: the README describes check, test and test --all
+    - evidence: README.md
+  - [x] R14.2: the AGENTS.md files describe the new test task and hook
+    - evidence: tests/AGENTS.md
+  - [x] R14.3: the knowledge-curator skill describes the check contract, the test hook and the drift rules
+    - evidence: .agents/skills/knowledge-curator/SKILL.md
+  - [x] R14.4: the workflow comments of ci.yml and ci-full.yml and the agent docs describe the new CI
+    - evidence: .github/workflows/ci.yml
+    - evidence: .github/workflows/ci-full.yml
+    - evidence: docs/agentic-setup.md
+
+## Summary
+
+- `mise run check` runs only the structural checks. `mise run test` runs the affected bats suites, and `--all` runs every suite.
+- scripts/ci-plan.sh sorts a change into the repo and the code layer and picks the suites from scripts/<x>.sh and the .watch files. The code layer is empty until the monorepo exists, and an unknown path counts as repo layer.
+- One `ci` workflow (classify, check, test on Linux and macOS, ci-gate) replaces agents-check and scripts-test. ci-full.yml reruns ci when someone adds ci:full. ci ignores label events, so no run creates a skipped ci-gate.
+- One `test` pre-commit hook replaces skill-drift and scripts-test. taxonomy-check accepts ci:<x> labels.
+- .github/rulesets/main.json is a snapshot of the Main ruleset with ci-gate. The refinement decisions are in [this #18 comment](https://github.com/martin-macak/aade/issues/18#issuecomment-6708666640).
+
+## Verify
+
+- [x] V1 (R1, R14): `mise run check` passes
+  - evidence: `mise run check` -> ok
+- [x] V2 (R2, R6, R13): every bats suite passes, and the ci-plan, runner and taxonomy suites pass under bash 3.2
+  - evidence: `mise run test --all` -> 720 tests ok
+- [x] V3 (R3, R14): the knowledge-curator skill tests and cold-reader pass
+  - evidence: `make -k -C .agents/skills/knowledge-curator test` -> drift 79 ok, triggers, knowledge, slop and calibrate ok
+- [x] V4 (R4, R5, R9, R12): the ci workflow runs classify, check, test and ci-gate on this PR, and check installs no node or decisionkit
+  - evidence: https://github.com/martin-macak/aade/actions/runs/42393997112
+- [x] V5 (R9, R10): a force-push cancelled the older run, and ci-gate failed on its cancelled test jobs
+  - evidence: https://github.com/martin-macak/aade/actions/runs/42387469268
+
+## Notes
+
+- Trace: R1, R4, R5, R9, R12, R13 and R14 have uncertain cells (true, but below 0.8). That is my own judgement, not a decisionkit decision: each sub-task maps to one clause of its issue item, and each clause has a changed file, a run or a command result.
+- The live Main ruleset now equals .github/rulesets/main.json and requires ci-gate. Revert: PUT the snapshot without the ci-gate entry.
+- The weekly and manual runs (R7) and the push to main (R8) can run only after the merge. I will run the workflow by hand on main and link the run here.
+- The commit also adds a "Body format" rule to the issue-authoring and pr-shepherd skills. It came from a separate amend of this branch.
+- [#16](https://github.com/martin-macak/aade/issues/16) keeps the speed fixes. `mise run test --all` takes about 6 min until then.
+
+Generated with Claude Code
+

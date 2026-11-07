@@ -42,7 +42,8 @@ EOF
 	# R1 has sub-tasks, R2 has none.
 	grep -qx -- '- add the tick rule to the check' "$FAKE_DIR/decisionkit.text"
 	grep -qx '(none)' "$FAKE_DIR/decisionkit.text"
-	[[ "$output" == *"| R1 | ok 0.95 | ok 0.95 |"* ]] || false
+	[[ "$output" == *"Requirement check: passed, all 3 pass"* ]] || false
+	[[ "$output" == *"Passed: R1 R2 R3"* ]] || false
 	# The base PR has no trace comment, so verify writes a new one.
 	grep -q '^api repos/{owner}/{repo}/issues/42/comments -f body=<!-- pr-shepherd-trace:v1 -->' "$GH_LOG"
 	grep -q '^api repos/{owner}/{repo}/statuses/0123456789abcdef0123456789abcdef01234567 -f state=success -f context=pr-shepherd/trace -f description=req=[0-9a-f]\{8\} issue=[0-9a-f]\{8\} -f target_url=https://' "$GH_LOG"
@@ -63,7 +64,8 @@ EOF
 	sed 's/R1.1: add the tick rule to the check/R1.1: add a WRONG rule/' "$BASE/body.txt" >"$CASE/body.txt"
 	run "$S" verify 42
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"| R1 | FAIL 0.1 | FAIL 0.1 |"* ]] || false
+	[[ "$output" == *"Requirement check: failed, 1 of 3 failed"* ]] || false
+	[[ "$output" == *"Failed:"*"R1: the check fails on an unticked task"*"Plan matches issue: ❌ fail, Proof of done: ❌ fail"*"a part of the item has no sub-task"* ]] || false
 	grep -q -- '-f state=failure' "$GH_LOG"
 }
 
@@ -279,16 +281,22 @@ logged_body() {
 @test "verify passes an uncertain true answer and marks the row" {
 	DK_P=0.6 run "$S" verify 42
 	[ "$status" -eq 0 ]
-	[[ "$output" == *"| R1 | uncertain 0.6 | uncertain 0.6 |"* ]] || false
+	[[ "$output" == *"Requirement check: passed, 3 of 3 need a review"* ]] || false
+	[[ "$output" == *"Needs review:"*"Plan matches issue: ⚠️ review, Proof of done: ⚠️ review"* ]] || false
+	[[ "$output" == *"Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. No justification from the author yet."* ]] || false
+	[[ "$output" != *"Failed:"* && "$output" != *"Passed:"* ]] || false
 	grep -q -- '-f state=success' "$GH_LOG"
-	logged_body | grep -q 'Sharpen each uncertain row'
+	body=$(logged_body)
+	grep -qF 'This check does not block the merge. A reviewer reads each row under "Needs review".' <<<"$body"
+	grep -qxF '| R1: the check fails on an unticked task | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. No justification from the author yet. |' <<<"$body"
 }
 
 @test "verify fails an R item without evidence and does not ask the evidence question for it" {
 	echo '/evidence: tests\/$/d' >"$CASE/body.txt.sed"
 	run "$S" verify 42
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"| R2 | ok 0.95 | FAIL - |"* ]] || false
+	[[ "$output" == *"R2: the check fails on a missing evidence line"*"Plan matches issue: ✅ pass, Proof of done: ❌ fail"*"Proof of done: the item has no evidence line."* ]] || false
+	logged_body | grep -qx '| R2 | 95 % | — |'
 	[ "$(grep -c '^Claim:$' "$FAKE_DIR/decisionkit.text")" -eq 2 ]
 	grep -q -- '-f state=failure' "$GH_LOG"
 }
@@ -302,16 +310,40 @@ logged_body() {
 	awk '/^Claim:$/ { n++ } n == 1' "$FAKE_DIR/decisionkit.text" | grep -qx '`bats tests` -> 12 ok'
 }
 
-@test "verify writes a trace comment that names the head, the hashes, each row and the verdict" {
+@test "verify writes a trace comment with the summary, the legend, the groups and the technical details" {
 	run "$S" verify 42
 	[ "$status" -eq 0 ]
 	body=$(logged_body)
 	[ "$(head -n 1 <<<"$body")" = '<!-- pr-shepherd-trace:v1 -->' ]
-	grep -qE '^Head `01234567`, Requirements `[0-9a-f]{8}`, issue #11 `[0-9a-f]{8}`\.$' <<<"$body"
-	grep -qx '| Item | Carry-over | Evidence |' <<<"$body"
-	grep -qx '| R3 | ok 0.95 | ok 0.95 |' <<<"$body"
-	grep -q 'Verdict: \*\*success\*\*. Every R item carries its issue item' <<<"$body"
+	grep -qx '## Requirement check: passed, all 3 pass' <<<"$body"
+	grep -qx 'This check does not block the merge.' <<<"$body"
+	grep -qx -- '- \*\*Plan matches issue:\*\* the sub-tasks of the PR do the whole issue item.' <<<"$body"
+	grep -qx -- '- \*\*Proof of done:\*\* the evidence lines show that the item works.' <<<"$body"
+	grep -c '^### ' <<<"$body" | grep -qx 0
+	grep -qx '<summary>✅ Passed: 3 of 3</summary>' <<<"$body"
+	grep -qx '| R3: CI runs the check | ✅ pass | ✅ pass |' <<<"$body"
+	grep -qx 'decisionkit scores each check with the probability that it is true. A check fails below 43 %. From 80 % on, it passes without a review.' <<<"$body"
+	grep -qx '| R3 | 95 % | 95 % |' <<<"$body"
+	grep -qE '^Head commit `01234567`\. Requirements hash `[0-9a-f]{8}`\. Issue #11 hash `[0-9a-f]{8}`\. ' <<<"$body"
+	grep -qxF 'Run the check again: `.agents/skills/pr-shepherd/scripts/shepherd.sh verify 42`' <<<"$body"
 	[[ "$output" == *"Trace: success on 01234567. https://github.com/acme/app/pull/42#issuecomment-9002"* ]] || false
+}
+
+@test "verify writes the trace comment of the golden file for the scores of PR #20" {
+	# The case freezes the body of PR #20, issue #18 and the 28 answers of
+	# its last trace, in the order that verify asks: carryover, then
+	# evidence, for each R item.
+	export CASE="$SKILL_DIR/tests/fixtures/trace/pr20"
+	export DK_SCORES="$CASE/scores.txt" DK_COUNT="$BATS_TEST_TMPDIR/dk.count"
+	dk_responder <<'EOF'
+n=$(($(cat "$DK_COUNT" 2>/dev/null || echo 0) + 1))
+echo "$n" >"$DK_COUNT"
+DK_P=$(sed -n "${n}p" "$DK_SCORES")
+EOF
+	run "$S" verify 20
+	[ "$status" -eq 0 ]
+	[ "$(cat "$DK_COUNT")" -eq 28 ]
+	diff -u "$CASE/comment.txt" <(logged_body)
 }
 
 @test "verify tells the author how to fix a failure trace" {
@@ -319,9 +351,32 @@ logged_body() {
 	run "$S" verify 42
 	[ "$status" -eq 1 ]
 	body=$(logged_body)
-	grep -q 'Verdict: \*\*failure\*\*. Fix each FAIL row' <<<"$body"
-	grep -qF 'shepherd.sh verify 42` again' <<<"$body"
+	grep -qx '## Requirement check: failed, 1 of 3 failed' <<<"$body"
+	grep -qx 'This check blocks the merge until each failed row passes.' <<<"$body"
+	grep -qx '### ❌ Failed' <<<"$body"
+	grep -qxF '| R1: the check fails on an unticked task | ❌ fail | ❌ fail | Plan matches issue: a part of the item has no sub-task. Proof of done: the evidence does not show that the item works. No justification from the author yet. |' <<<"$body"
 	[[ "$output" == *"Trace: failure on 01234567."* ]] || false
+}
+
+@test "verify links a review row to the Notes only when the Notes name its R item" {
+	# R1.2 names R1. R21 and R3x name neither R2 nor R3.
+	printf '%s\n' "$(cat "$BASE/body.txt")" '' '## Notes' '' '- R1.2 holds, see the test.' '- R21 and R3x are not items.' >"$CASE/body.txt"
+	DK_P=0.6 run "$S" verify 42
+	[ "$status" -eq 0 ]
+	body=$(logged_body)
+	grep -qF '| R1: the check fails on an unticked task | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. [The author explains it in the Notes of the PR](https://github.com/acme/app/pull/42). |' <<<"$body"
+	grep -q '^| R2: .*No justification from the author yet\. |$' <<<"$body"
+	grep -q '^| R3: .*No justification from the author yet\. |$' <<<"$body"
+	[[ "$output" == *"The author explains it in the Notes of the PR."* ]] || false
+}
+
+@test "short_text cuts a long requirement at a word, outside a code span, and escapes a pipe" {
+	source "$S"
+	[ "$(short_text <<<'short | text')" = 'short \| text' ]
+	long='The README, AGENTS.md files, the skills and the workflow comments describe the new behaviour.'
+	[ "$(short_text <<<"$long")" = 'The README, AGENTS.md files, the skills and the workflow comments describe the…' ]
+	code='A change in a shared input or the label `ci:full` runs every suite. `.github/labels.yml` defines it.'
+	[ "$(short_text <<<"$code")" = 'A change in a shared input or the label `ci:full` runs every suite.…' ]
 }
 
 @test "verify asks for a new run of the pr-shepherd workflow on the head" {
