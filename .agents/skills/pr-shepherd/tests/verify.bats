@@ -153,10 +153,10 @@ EOF
 	[[ "$output" == *"Fix the problems above before merge."* ]] || false
 }
 
-@test "merge turns on auto-merge with rebase when every rule holds" {
+@test "merge turns on auto-merge with squash when every rule holds" {
 	run "$S" merge 42
 	[ "$status" -eq 0 ]
-	grep -qx 'pr merge 42 --auto --rebase' "$GH_LOG"
+	grep -qx 'pr merge 42 --auto --squash' "$GH_LOG"
 }
 
 @test "disarm turns off auto-merge on each open PR that closes the issue" {
@@ -587,7 +587,7 @@ JQ
 	echo '.author = {"login": "app/dependabot"}' >"$CASE/pr.json.jq"
 	run "$S" merge 42
 	[ "$status" -eq 0 ]
-	grep -qx 'pr merge 42 --auto --rebase' "$GH_LOG"
+	grep -qx 'pr merge 42 --auto --squash' "$GH_LOG"
 	jq '. + [{bucket: "fail", link: "https://ci.example.com/1", name: "lint", workflow: ""}]' "$BASE/checks.json" >"$CASE/checks.json"
 	rm "$GH_LOG"
 	run "$S" merge 42

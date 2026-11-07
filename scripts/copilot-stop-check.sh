@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# agentStop hook of the GitHub Copilot cloud agent (.github/hooks/agents-check.json).
+# agentStop hook of the GitHub Copilot cloud agent (.github/hooks/quality-gate.json).
 #
 # Pre-commit does not run on the commits of the cloud agent, so this hook is
 # its quality gate. It runs `mise run check`. On a failure it prints

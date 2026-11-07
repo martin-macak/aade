@@ -102,7 +102,7 @@ agents. These files prepare its runner:
   `mise.toml`, syncs the Vale styles and runs `mise run check` before the
   agent starts. If a step fails, Copilot skips the rest and starts anyway.
   The session log then shows the failed step.
-- `.github/hooks/agents-check.json` runs `mise run check` when the agent
+- `.github/hooks/quality-gate.json` runs `mise run check` when the agent
   tries to stop. On a failure, the agent gets the output and another turn.
   Pre-commit does not run on the commits of the agent, so this hook is its
   quality gate. The hook skips the bats suites, so the `ci` workflow is

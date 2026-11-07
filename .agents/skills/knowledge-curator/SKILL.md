@@ -322,4 +322,7 @@ could not skip the repo jobs for a change that touches only code.
   required check. `.github/rulesets/main.json` is a snapshot of the
   ruleset. GitHub does not read it, so apply a change with
   `gh api -X PUT repos/{owner}/{repo}/rulesets/<id> --input .github/rulesets/main.json`.
-  `gh api repos/{owner}/{repo}/rulesets` lists the ids.
+  `gh api repos/{owner}/{repo}/rulesets` lists the ids. Change the
+  ruleset only through the file and this command, never in the GitHub UI.
+  No check compares the live ruleset with the file, because that read
+  needs an admin token.
