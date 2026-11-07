@@ -1,28 +1,57 @@
-# Runs the bats suites of scripts/*.sh (tests/scripts/). The path filter
-# runs it only when a script, a suite or the tool versions change. No ruleset
-# requires this check, so a skipped run does not block a merge. The suites
-# of the skill scripts run in agents-check, through `mise run check`.
+# Runs the bats suites of scripts/*.sh (tests/scripts/) and every test file
+# of the skills (.agents/skills/*/tests/) on Linux and macOS. The ruleset
+# of main requires the job "ci-gate", so the workflow runs on every pull
+# request and every push to main. A path filter on the trigger would leave
+# the required check pending. The job "changes" filters the paths instead:
+# "bats" runs only when scripts/, tests/scripts/, .agents/skills/,
+# mise.toml (the tool versions) or this file changes. "ci-gate" passes when
+# "bats" passed or was skipped.
 name: scripts-test
 
 on:
   push:
     branches: [main]
-    paths: [scripts/**, tests/scripts/**, mise.toml, .github/workflows/scripts-test.yml]
   pull_request:
-    paths: [scripts/**, tests/scripts/**, mise.toml, .github/workflows/scripts-test.yml]
 
 permissions:
   contents: read
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.filter.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The diff needs the base commit, which a push can leave far behind.
+          fetch-depth: 0
+      - id: filter
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # An unknown base, such as the first push of a branch, runs the suites.
+          if [[ -z "$BASE" || "$BASE" =~ ^0+$ ]] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo run=true >>"$GITHUB_OUTPUT"
+          elif git diff --name-only "$BASE" HEAD |
+            grep -qE '^(scripts/|tests/scripts/|\.agents/skills/|mise\.toml$|\.github/workflows/scripts-test\.yml$)'; then
+            echo run=true >>"$GITHUB_OUTPUT"
+          else
+            echo run=false >>"$GITHUB_OUTPUT"
+          fi
+
   bats:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     strategy:
       fail-fast: false
       matrix:
         # Developers run the scripts on macOS too, with bash 3.2 and BSD tools.
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -39,3 +68,22 @@ jobs:
       - run: bash --version | head -n 1
       # Not `mise run`: it would want every tool of mise.toml.
       - run: scripts/script-tests.sh run
+      # Every test file of every skill: the suites of the skill scripts and
+      # the drift tests. agents-check runs them on Linux only.
+      - if: always()
+        run: scripts/skill-drift.sh
+
+  # The required check. A skipped "bats" passes, a failed or cancelled one
+  # fails.
+  ci-gate:
+    needs: [changes, bats]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          CHANGES: ${{ needs.changes.result }}
+          BATS: ${{ needs.bats.result }}
+        run: |
+          echo "changes: $CHANGES, bats: $BATS"
+          [[ "$CHANGES" == success && ("$BATS" == success || "$BATS" == skipped) ]]
