@@ -15,10 +15,8 @@
 # .agents/skills/<skill>/scripts/<x>.sh needs a tests/<x>.bats in its skill.
 # Each tests/scripts/<x>.bats needs scripts/<x>.sh, except mise-tasks.bats,
 # which tests the inline tasks of mise.toml, and helpers.bats, which tests
-# tests/scripts/helpers/. No test file may hold a check
-# that cannot fail: a whole line of [[ ]] or (( )) is ignored by bash 3.2
-# unless it is the last command of a test, and a line that starts with !
-# never fails a test on any bash. Such a line needs `|| false`.
+# tests/scripts/helpers/. No test file may hold a check that cannot fail.
+# silent_checks below lists the rules.
 # Run it from the repository root. It does not ask git, because a commit
 # hook can export GIT_DIR, and git then reports the wrong root.
 # Exit codes: 0 pass or nothing affected, 1 a test or the check failed,
@@ -103,7 +101,16 @@ coverage() {
 	return $status
 }
 
-# Print each line of a test file that holds a check that cannot fail.
+# Print each line of a test file that holds a check that cannot fail. The
+# rules read one statement per line, after a trailing ";" or "# comment".
+# A [[ that does not close on its line runs on to the line with "]]".
+# - A whole [[ ]] or (( )) is ignored by bash 3.2 in the middle of a test.
+# - A line of tests joined by && passes when an early test fails, because
+#   only the last command of a && list can fail a test.
+# - ! cmd never fails a test, so it needs || with false, return, exit,
+#   fail or a { } block.
+# - An arithmetic statement such as ((n++)) fails a test when its value is
+#   0, so it must be an assignment such as n=$((n + 1)).
 silent_checks() {
 	local files=() file
 	for file in "$SUITES"/*.bats "$SUITES"/helpers/* .agents/skills/*/tests/*.bats .agents/skills/*/tests/helpers/*; do
@@ -111,10 +118,49 @@ silent_checks() {
 	done
 	((${#files[@]} > 0)) || return 0
 	awk '
-		{ line = $0; sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line) }
-		(line ~ /^\[\[ / && line ~ / \]\]$/) || (line ~ /^\(\(/ && line ~ /\)\)$/) || (line ~ /^! / && line !~ /\|\|/) {
-			printf "%s:%d: this check cannot fail a test. Add || false.\n", FILENAME, FNR
+		function report(at, why) {
+			printf "%s:%d: %s\n", FILENAME, at, why
 			found = 1
+		}
+		function test_chain(stmt,   parts, n, i) {
+			if (stmt ~ /\|\|/ || index(stmt, " && ") == 0) return 0
+			n = split(stmt, parts, / && /)
+			for (i = 1; i <= n; i++)
+				if (parts[i] !~ /^(\[\[? |\(\(|test )/) return 0
+			return 1
+		}
+		function check(stmt, at,   tail, inner) {
+			if (stmt ~ /^\(\(/ && stmt ~ /\)\)$/) {
+				inner = substr(stmt, 3, length(stmt) - 4)
+				if (inner ~ /\+\+|--/ || inner ~ /(^|[^=!<>])=([^=]|$)/)
+					report(at, "this (( )) statement fails a test when its value is 0. Write an assignment, such as n=$((n + 1)).")
+				else
+					report(at, CANNOT)
+			} else if (stmt ~ /^\[\[ / && stmt ~ / \]\]$/) {
+				report(at, CANNOT)
+			} else if (stmt ~ /^! /) {
+				tail = stmt
+				if (sub(/.*\|\|[ \t]*/, "", tail) == 0 || tail !~ /^(false|return|exit|fail|\{)([ \t;]|$)/)
+					report(at, CANNOT)
+			} else if (test_chain(stmt)) {
+				report(at, CANNOT)
+			}
+		}
+		BEGIN { CANNOT = "this check cannot fail a test. Add || false." }
+		FNR == 1 { open = "" }
+		{
+			line = $0
+			sub(/^[ \t]+/, "", line)
+			sub(/[ \t]+#[^"'\''`]*$/, "", line)
+			sub(/[ \t]*;$/, "", line)
+			sub(/[ \t]+$/, "", line)
+			if (open != "") {
+				open = open " " line
+				if (line ~ /\]\]/) { check(open, start); open = "" }
+				next
+			}
+			if (line ~ /^\[\[ / && line !~ /\]\]/) { open = line; start = FNR; next }
+			check(line, FNR)
 		}
 		END { exit found }' "${files[@]}" >&2
 }

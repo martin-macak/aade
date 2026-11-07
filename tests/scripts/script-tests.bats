@@ -169,6 +169,69 @@ silent() {
 	done
 }
 
+@test "coverage: a trailing ; or # comment does not hide a check" {
+	for check in '[[ a == b ]];' '[[ a == b ]] # why' '((1 > 2)) ;' '! grep -q x file # why'; do
+		silent "$check"
+		run "$S" coverage
+		[ "$status" -eq 1 ]
+		[ "$output" = "tests/scripts/alpha.bats:2: this check cannot fail a test. Add || false." ]
+	done
+}
+
+@test "coverage: a [[ ]] check over several lines fails, at its first line" {
+	silent $'[[ a == b &&\n\tc == d ]]'
+	run "$S" coverage
+	[ "$status" -eq 1 ]
+	[ "$output" = "tests/scripts/alpha.bats:2: this check cannot fail a test. Add || false." ]
+}
+
+@test "coverage: a chain of tests joined by && fails, because only its last test counts" {
+	for check in '[ a = b ] && [ c = d ]' '[ -f x ] && [[ y == z ]]' 'test -f x && test -f y'; do
+		silent "$check"
+		run "$S" coverage
+		[ "$status" -eq 1 ]
+		[ "$output" = "tests/scripts/alpha.bats:2: this check cannot fail a test. Add || false." ]
+	done
+}
+
+@test "coverage: ! cmd || <x> fails unless <x> ends the test" {
+	silent '! grep -q x file || true'
+	run "$S" coverage
+	[ "$status" -eq 1 ]
+	[ "$output" = "tests/scripts/alpha.bats:2: this check cannot fail a test. Add || false." ]
+	for end in false 'return 1' 'exit 1' 'fail "x"' '{ echo x; return 1; }'; do
+		silent "! grep -q x file || $end"
+		run "$S" coverage
+		[ "$status" -eq 0 ]
+	done
+}
+
+@test "coverage: an arithmetic statement fails, with advice to assign" {
+	for check in '((i++))' '((n += 2))' '((--n))' '((x = 1))'; do
+		silent "$check"
+		run "$S" coverage
+		[ "$status" -eq 1 ]
+		[ "$output" = "tests/scripts/alpha.bats:2: this (( )) statement fails a test when its value is 0. Write an assignment, such as n=\$((n + 1))." ]
+	done
+}
+
+@test "coverage: a comparison in (( )) is a check, not an arithmetic statement" {
+	for check in '((a == b))' '((a <= b))' '((a >= b))' '((a != b))'; do
+		silent "$check"
+		run "$S" coverage
+		[ "$status" -eq 1 ]
+		[ "$output" = "tests/scripts/alpha.bats:2: this check cannot fail a test. Add || false." ]
+	done
+}
+
+@test "coverage: control flow and checks that end the test pass" {
+	for check in '[[ a == b ]] || false # why' '[ -f x ] && rm x' '[ a = b ] && [ c = d ] || false' 'echo "# [[ x ]]"' '[ "$status" -eq 0 ]'; do
+		silent "$check"
+		run "$S" coverage
+		[ "$status" -eq 0 ]
+	done
+}
+
 @test "coverage: the silent-check rule also reads skill tests and helpers" {
 	mkdir -p .agents/skills/demo/tests/helpers
 	echo '[[ a == b ]]' >.agents/skills/demo/tests/drift.bats
