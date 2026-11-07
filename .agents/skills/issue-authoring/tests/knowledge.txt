@@ -16,3 +16,6 @@ A: Add `from: <old name>` to the label entry in `.github/labels.yml`.
 
 Q: When are the labels in `.github/labels.yml` applied to GitHub, and why must you not run the sync yourself?
 A: The `labels-sync` workflow applies them after merge to `main`. Running `mise run labels:sync` without `--dry-run` changes the live labels before review.
+
+Q: How do you break lines in the body of a GitHub issue, PR or comment, and why?
+A: Each paragraph, list item and reference to an issue or PR goes on one line, because GitHub renders each newline in such a body as a line break. Markdown files in the repository keep their hard wraps.

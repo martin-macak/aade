@@ -107,6 +107,10 @@ The Verify section looks like this:
   `V1 (R1, R3)`. The PR has at least one V item.
 - **Ticks.** Every checkbox in the body is ticked before merge. The check
   ignores HTML comments and fenced code blocks, so examples do not count.
+- **One line per paragraph.** GitHub renders each newline in a PR body,
+  review reply or PR comment as a line break. Write each paragraph and
+  list item of such a text on one line. The rule is defined in the "Body
+  format" section of the `issue-authoring` skill.
 
 ## Evidence
 
