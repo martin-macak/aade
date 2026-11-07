@@ -159,6 +159,13 @@ add_label() {
 	[ "$output" == ".github/ISSUE_TEMPLATE/bug.yml: label ghost is not in .github/labels.yml." ]
 }
 
+@test "forms: reports a pr:* label on a form, because pr:* labels flag pull requests" {
+	form bug "type:bug, pr:needs-review" "ci, docs"
+	run "$S"
+	[ "$status" -eq 1 ]
+	[ "$output" == ".github/ISSUE_TEMPLATE/bug.yml: label pr:needs-review flags pull requests, so no form may set it." ]
+}
+
 @test "forms: reports a form with no type label, and the type that then has no form" {
 	form bug "scope:ci" "ci, docs"
 	run "$S"

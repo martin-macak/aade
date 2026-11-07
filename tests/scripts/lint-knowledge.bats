@@ -74,6 +74,17 @@ setup() {
 	has "$output" "$D: missing SKILL.md."
 }
 
+@test "skill: no skill folder is no problem, and names no glob" {
+	rm -rf .agents/skills/*
+	run "$S"
+	[ "$status" -eq 0 ]
+	[ -z "$output" ]
+	rm -rf .agents
+	run "$S"
+	[ "$status" -eq 0 ]
+	[ -z "$output" ]
+}
+
 @test "skill: reports the problems of every skill, not only the first" {
 	rm "$D/SKILL.md"
 	skill_md "$CURATOR" 5

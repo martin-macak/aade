@@ -101,9 +101,11 @@ jq -e '.mcpServers | type == "object"' "$MCP_SRC" >/dev/null \
 ensure_link .mcp.json "$MCP_SRC"                 # Claude Code (same schema)
 ensure_link .cursor/mcp.json "../$MCP_SRC"       # Cursor (same schema)
 
-# Gemini CLI: remote servers use httpUrl.
+# Gemini CLI: an SSE server uses url, every other remote server httpUrl
+# (streamable HTTP).
 ensure_file .gemini/settings.json "$(jq '{mcpServers: (.mcpServers | map_values(
-  if .url then {httpUrl: .url} + (if .headers then {headers: .headers} else {} end)
+  if .url then (if .type == "sse" then {url: .url} else {httpUrl: .url} end)
+    + (if .headers then {headers: .headers} else {} end)
   else del(.type) end))}' "$MCP_SRC")"
 
 # VS Code / GitHub Copilot: top-level key is "servers" and type is required.

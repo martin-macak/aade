@@ -5,9 +5,10 @@
 # Without files, it runs every tests/*.bats of every skill. With files, as
 # pre-commit passes them, it runs only the test files that the files can
 # affect. A file affects tests/<test>.bats of a skill when it is in the
-# skill folder .agents/skills/<name>/, or when it starts with a line of
+# skill folder .agents/skills/<name>/, or when it matches a line of
 # tests/<test>.watch. A line of the .watch file is a repository path that
-# the test file reads. A path that ends with "/" covers a folder.
+# the test file reads. A file matches a line that equals its path. A line
+# that ends with "/" covers a folder, and matches every file below it.
 # The knowledge-curator skill explains the layers.
 # Run it from the repository root. It does not ask git, because a commit
 # hook can export GIT_DIR, and git then reports the wrong root. It needs
@@ -16,6 +17,10 @@
 
 if [[ ! -d .agents/skills ]]; then
 	>&2 echo "Run skill-drift.sh from the repository root."
+	exit 2
+fi
+if ! command -v bats >/dev/null; then
+	>&2 echo "skill-drift.sh needs bats on PATH. Run it through mise: mise run skills:drift"
 	exit 2
 fi
 
@@ -27,14 +32,14 @@ watched() {
 	grep -vE '^(#|[[:space:]]*$)' "$watch"
 }
 
-# Succeed when no files were given, or when one of them starts with a
-# watched path.
+# Succeed when no files were given, or when one of them matches a watched
+# path: the same path, or a path below a watched folder.
 affected() {
 	local path file
 	((${#FILES[@]} == 0)) && return 0
 	while IFS= read -r path; do
 		for file in "${FILES[@]}"; do
-			[[ "$file" == "$path"* ]] && return 0
+			[[ "$file" == "$path" || ("$path" == */ && "$file" == "$path"*) ]] && return 0
 		done
 	done < <(watched "$1" "$2")
 	return 1

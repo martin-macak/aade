@@ -42,6 +42,7 @@ for form in "$FORMS"/*.yml; do
 	while IFS= read -r label; do
 		[[ -z "$label" ]] && continue
 		grep -qx "$label" <<<"$names" || fail "$form: label $label is not in $LABELS."
+		[[ "$label" == pr:* ]] && fail "$form: label $label flags pull requests, so no form may set it."
 	done <<<"$labels"
 	own=$(grep '^type:' <<<"$labels")
 	if [[ $(grep -c . <<<"$own") -ne 1 ]]; then

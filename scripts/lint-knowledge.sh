@@ -24,6 +24,8 @@ front_matter() {
 # limit, and the tests that the "Test a skill" section requires. Fewer
 # cases cannot show that the description tells the skills apart.
 for dir in .agents/skills/*/; do
+	# Without a skill folder the glob stays as it is.
+	[[ -d "$dir" ]] || continue
 	dir=${dir%/}
 	name=$(basename "$dir")
 	skill="$dir/SKILL.md"

@@ -124,6 +124,17 @@ setup() {
 	[ -z "$(calls)" ]
 }
 
+@test "a .watch line without a slash matches only that path, not a longer name" {
+	skill alpha a
+	watch alpha a scripts/foo.sh
+	run "$S" scripts/foo.sh.bak scripts/foo.shx
+	[ "$status" -eq 0 ]
+	[ -z "$(calls)" ]
+	run "$S" scripts/foo.sh
+	[ "$status" -eq 0 ]
+	[ "$(calls)" = "bats $A/a.bats" ]
+}
+
 @test "a .watch line can name the folder of another skill" {
 	skill alpha a
 	skill beta c
@@ -170,6 +181,14 @@ setup() {
 	[ "$status" -eq 0 ]
 	[ -z "$output" ]
 	[ -z "$(calls)" ]
+}
+
+@test "exits 2 and runs no test when bats is missing" {
+	skill alpha a
+	unfake bats
+	run env PATH="$(path_without bats)" "$S"
+	[ "$status" -eq 2 ]
+	[ "$output" = "skill-drift.sh needs bats on PATH. Run it through mise: mise run skills:drift" ]
 }
 
 @test "exits 1 when a bats call fails, and still runs the other skills" {
