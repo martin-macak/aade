@@ -1,0 +1,6 @@
+Claim:
+R4: add a label for PRs without an issue
+R4.1: add pr:no-issue to labels.yml
+
+Evidence:
+.github/labels.yml

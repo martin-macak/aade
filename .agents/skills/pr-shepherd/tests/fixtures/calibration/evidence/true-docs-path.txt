@@ -1,0 +1,8 @@
+Claim:
+R3: the retry limit is configurable and documented
+R3.1: read RETRY_LIMIT from the config file
+R3.2: describe RETRY_LIMIT in docs/config.md
+
+Evidence:
+src/config.ts
+docs/config.md

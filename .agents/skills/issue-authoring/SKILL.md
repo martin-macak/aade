@@ -70,8 +70,11 @@ Fill in `.github/pull_request_template.md` and pass it with
 
 - Title: `type(scope): summary` in Conventional Commits form. Take the
   type from the issue type and the scope from its scope label.
-- First line: `Closes #<issue>`.
+- First line: `Closes #<issue>`. A PR without an issue gets the label
+  `pr:no-issue` instead.
 - Keep the template sections. Delete `Notes` when you have nothing to add.
+- The `pr-shepherd` skill defines the format of the Requirements and Verify
+  sections, and the rules until merge. Load it before you fill them.
 
 ## Change the taxonomy
 

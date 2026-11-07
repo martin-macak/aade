@@ -1,0 +1,8 @@
+## Summary
+
+- Fix a typo in the README.
+
+## Verify
+
+- [x] `mise run check` passes
+  - evidence: `mise run check` -> ok

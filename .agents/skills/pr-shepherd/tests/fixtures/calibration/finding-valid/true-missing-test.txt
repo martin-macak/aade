@@ -1,0 +1,2 @@
+Finding on scripts/check.sh:
+The new SHA rule has no test. A regression in the regex would pass CI. Add a bad fixture with a 7-char SHA.

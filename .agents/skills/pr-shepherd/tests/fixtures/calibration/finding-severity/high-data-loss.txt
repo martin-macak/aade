@@ -1,0 +1,2 @@
+Finding on scripts/cleanup.sh:
+rm -rf "$DIR/" runs with an empty DIR when the env var is unset, which deletes the root of the runner.

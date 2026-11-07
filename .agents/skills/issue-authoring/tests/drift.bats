@@ -87,6 +87,11 @@ example() {
 	grep -qx '## Notes' "$PR_TEMPLATE"
 	grep -qF 'type(scope): summary' "$PR_TEMPLATE"
 	[[ "$TEXT" == *'`type(scope): summary`'* && "$TEXT" == *'`Closes #<issue>`'* ]]
+	# pr-shepherd defines the Requirements format, so this skill only points there.
+	grep -qx '## Requirements' "$PR_TEMPLATE"
+	[ -f "$ROOT/.agents/skills/pr-shepherd/SKILL.md" ]
+	[[ "$TEXT" == *'The `pr-shepherd` skill defines the format of the Requirements and Verify sections'* ]]
+	! grep -qE '^- \[.\] R[0-9]' "$SKILL"
 }
 
 @test "the helper renders the headings that the scope workflow reads" {

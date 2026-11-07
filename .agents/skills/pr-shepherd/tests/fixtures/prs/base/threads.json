@@ -1,0 +1,18 @@
+{
+  "reviewThreads": {"nodes": [
+    {"id": "PRRT_bot", "isResolved": true, "path": "scripts/check.sh", "line": 3,
+     "comments": {"nodes": [
+       {"author": {"login": "codex[bot]", "__typename": "Bot"}, "body": "The loop skips the last item."},
+       {"author": {"login": "alice", "__typename": "User"}, "body": "triage: accepted\nreason: real off-by-one\nfix: scripts/check.sh"}]}},
+    {"id": "PRRT_human", "isResolved": true, "path": "tests/check.bats", "line": 9,
+     "comments": {"nodes": [
+       {"author": {"login": "bob", "__typename": "User"}, "body": "Rename this test?"},
+       {"author": {"login": "alice", "__typename": "User"}, "body": "triage: rejected\nreason: the name matches the rule\nconfirmed-by-user: yes"}]}}
+  ]},
+  "reviews": {"nodes": [
+    {"databaseId": 501, "state": "COMMENTED", "body": "Overall: add a test for the empty body.", "author": {"login": "codex[bot]", "__typename": "Bot"}},
+    {"databaseId": 502, "state": "COMMENTED", "body": "", "author": {"login": "alice", "__typename": "User"}},
+    {"databaseId": 503, "state": "CHANGES_REQUESTED", "body": "", "author": {"login": "bob", "__typename": "User"}},
+    {"databaseId": 504, "state": "APPROVED", "body": "", "author": {"login": "bob", "__typename": "User"}}
+  ]}
+}

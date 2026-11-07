@@ -1,0 +1,3 @@
+scripts/check.sh
+tests/check.bats
+.github/workflows/ci.yml

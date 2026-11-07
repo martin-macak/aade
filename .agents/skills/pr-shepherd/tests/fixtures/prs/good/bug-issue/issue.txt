@@ -1,0 +1,33 @@
+### Scope
+
+tooling
+
+### Summary
+
+The check passes a PR with open tasks.
+
+### Steps to reproduce
+
+1. Open a PR with an unticked task.
+
+### Expected behaviour
+
+The check fails.
+
+### Actual behaviour
+
+The check passes.
+
+### Severity
+
+high
+
+### Done when
+
+- [ ] the check fails on an unticked task
+- [ ] the check fails on a missing evidence line
+- [ ] CI runs the check
+
+### Version or commit
+
+_No response_

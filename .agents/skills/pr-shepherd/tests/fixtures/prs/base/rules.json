@@ -1,0 +1,4 @@
+[
+  {"type": "pull_request", "parameters": {"required_review_thread_resolution": true}},
+  {"type": "required_status_checks", "parameters": {"required_status_checks": [{"context": "pr-shepherd"}]}}
+]

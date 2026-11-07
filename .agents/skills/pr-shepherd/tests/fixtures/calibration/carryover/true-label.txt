@@ -1,0 +1,5 @@
+Issue item:
+add a label for PRs without an issue
+
+Sub-tasks of the PR item:
+- add pr:no-issue to labels.yml

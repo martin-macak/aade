@@ -1,0 +1,1 @@
+.reviewThreads.nodes[0].comments.nodes = [.reviewThreads.nodes[0].comments.nodes[0], {"author": {"login": "alice", "__typename": "User"}, "body": "triage: accepted\nreason: real"}, .reviewThreads.nodes[0].comments.nodes[1]]

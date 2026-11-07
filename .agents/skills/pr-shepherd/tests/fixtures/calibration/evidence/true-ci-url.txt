@@ -1,0 +1,6 @@
+Claim:
+R5: CI fails when a PR has an unticked task
+
+Evidence:
+.github/workflows/pr-shepherd.yml
+https://github.com/acme/app/actions/runs/123 (failed on an unticked task, as expected)

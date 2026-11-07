@@ -1,0 +1,29 @@
+Closes #11
+
+## Requirements
+
+<!-- Copy each issue item verbatim. -->
+
+- [x] R1: the check fails on an unticked task
+  - [x] R1.1: add the tick rule to the check
+    - evidence: scripts/check.sh
+  - [x] R1.2: test the tick rule
+    - evidence: `bats tests` -> 12 ok
+- [x] R2: the check fails on a missing evidence line
+  - evidence: tests/
+- [x] R3: CI runs the check
+  - evidence: https://github.com/acme/app/actions/runs/1
+
+## Summary
+
+- Adds the check.
+- [ ] update the docs
+
+```sh
+- [ ] this example in a code block does not count
+```
+
+## Verify
+
+- [x] V1 (R1, R3): `mise run check` passes
+  - evidence: `mise run check` -> ok

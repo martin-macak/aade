@@ -1,0 +1,5 @@
+Claim:
+R2: the export endpoint returns CSV and JSON
+
+Evidence:
+`npm test -- export` -> 12 passed, 2 failed

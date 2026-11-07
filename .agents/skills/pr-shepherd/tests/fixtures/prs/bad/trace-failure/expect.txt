@@ -1,0 +1,1 @@
+Trace: the pr-shepherd/trace status is failure. Read https://github.com/acme/app/pull/42#issuecomment-9002, fix the items, then run: shepherd.sh verify 42

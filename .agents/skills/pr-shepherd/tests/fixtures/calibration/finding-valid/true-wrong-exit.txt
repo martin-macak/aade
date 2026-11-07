@@ -1,0 +1,2 @@
+Finding on scripts/merge.sh:
+The script exits 0 when gh fails, so CI shows green although nothing merged. Propagate the gh exit code.

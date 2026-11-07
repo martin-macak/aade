@@ -1,0 +1,5 @@
+Issue item:
+the setup task installs the Vale styles
+
+Sub-tasks of the PR item:
+(none)

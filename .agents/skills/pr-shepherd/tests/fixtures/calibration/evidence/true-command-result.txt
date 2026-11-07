@@ -1,0 +1,6 @@
+Claim:
+R1: the CLI prints a clear error when the config file is missing
+
+Evidence:
+`app run --config nope.yml` -> "config.yml not found, run init", exit 2
+tests/cli_missing_config.bats

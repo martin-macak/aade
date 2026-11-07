@@ -1,0 +1,2 @@
+Finding on .github/workflows/ci.yml:
+The PR title goes straight into a run: expression, so anyone who opens a PR can run shell code with the repository token.

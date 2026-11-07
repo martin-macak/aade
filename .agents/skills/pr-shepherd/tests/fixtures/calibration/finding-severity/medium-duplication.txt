@@ -1,0 +1,2 @@
+Finding on src/export:
+The CSV and JSON serializers copy the same 40 lines of field mapping. A change to one will miss the other.

@@ -1,0 +1,6 @@
+Issue item:
+every review finding is triaged and answered before merge
+
+Sub-tasks of the PR item:
+- triage the findings of bots
+- human findings are optional and may stay open

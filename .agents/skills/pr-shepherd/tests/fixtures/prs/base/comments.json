@@ -1,0 +1,4 @@
+[
+  {"id": 9001, "html_url": "https://github.com/acme/app/pull/42#issuecomment-9001", "user": {"login": "alice"},
+   "body": "review: 501\ntriage: accepted\nreason: a real gap\nfix: tests/check.bats"}
+]

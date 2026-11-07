@@ -1,0 +1,69 @@
+# Enforces the pr-shepherd rules on each pull request. The pr-shepherd
+# skill explains them. The check is deterministic: no LLM runs in CI. It
+# reads the trace that `shepherd.sh verify` writes as a commit status.
+# A resolved thread and a new status fire no workflow event, so verify
+# re-runs this workflow itself.
+name: pr-shepherd
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled, ready_for_review]
+  pull_request_review:
+    types: [submitted, dismissed]
+  pull_request_review_comment:
+  # An edited issue makes the trace of each PR that closes it stale.
+  issues:
+    types: [edited]
+
+permissions:
+  contents: read
+
+# The newest event of a PR or an issue wins.
+concurrency:
+  group: pr-shepherd-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  # The rulesets require this job by its name, pr-shepherd.
+  pr-shepherd:
+    if: github.event_name != 'issues'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: read
+      issues: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: gh jq yq
+      # The script reads the body through gh. The body is untrusted input,
+      # so it never goes into an expression of this file.
+      - run: mise run pr:check "$PR"
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+
+  # Turn off auto-merge on the open PRs that close the edited issue, so
+  # none merges with a stale trace.
+  disarm:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: gh jq yq
+      - run: mise run pr:shepherd disarm "$ISSUE"
+        env:
+          ISSUE: ${{ github.event.issue.number }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}

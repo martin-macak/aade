@@ -1,0 +1,6 @@
+Issue item:
+the skill is covered by tests for every script
+
+Sub-tasks of the PR item:
+- add tests for check.sh
+- skip tests for merge.sh, it is hard to stub
