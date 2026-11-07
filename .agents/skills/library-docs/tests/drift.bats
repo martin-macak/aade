@@ -21,15 +21,15 @@ setup() {
 }
 
 @test "the description names Context7 and the workflow names its two tools in call order" {
-	[[ "$DESCRIPTION" == *"Context7"* ]]
-	[[ "$TEXT" == *"\`resolve-library-id\`"*"\`query-docs\`"* ]]
-	[[ "$TEXT" == *"\`/org/project\`"* ]]
+	[[ "$DESCRIPTION" == *"Context7"* ]] || false
+	[[ "$TEXT" == *"\`resolve-library-id\`"*"\`query-docs\`"* ]] || false
+	[[ "$TEXT" == *"\`/org/project\`"* ]] || false
 }
 
 @test "only this skill holds the Context7 workflow, and nothing uses the retired tool name" {
 	# Context7 renamed get-library-docs to query-docs. The other skills and
 	# docs must not repeat the workflow, because a fact lives in one place.
-	! grep -q 'get-library-docs' "$SKILL"
+	! grep -q 'get-library-docs' "$SKILL" || false
 	others=$(git -C "$ROOT" grep -lE 'resolve-library-id|query-docs|get-library-docs' -- . ':!.agents/skills/library-docs' || true)
 	[ -z "$others" ] || {
 		echo "These files repeat the Context7 tool names: $others"
@@ -67,7 +67,7 @@ setup() {
 		echo "These tools have no exact version: $loose"
 		return 1
 	}
-	[[ "$TEXT" == *"Use a version-specific ID when the repository pins a version."* ]]
+	[[ "$TEXT" == *"Use a version-specific ID when the repository pins a version."* ]] || false
 }
 
 @test "the knowledge curator still names this skill and Context7" {

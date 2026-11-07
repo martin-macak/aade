@@ -1,53 +1,48 @@
 #!/usr/bin/env bats
 
-# Tests for the shepherd commands that call decisionkit or write to GitHub:
-# verify, findings, reply, merge and disarm. The fake gh of helpers/gh
-# serves the base PR fixture and logs each write. A fake decisionkit
-# answers true, unless the text holds the word WRONG. The real decide.sh
-# runs between them, so the tests also cover the questions file.
+# The steps from a PR that passes check to a PR that merges. verify writes
+# the trace that check demands. findings and reply triage the reviews.
+# checks and merge guard the merge. disarm takes the merge back when the
+# issue changes. The usage errors and check are in shepherd.bats.
+
+# run --separate-stderr needs bats 1.5 or later.
+bats_require_minimum_version 1.5.0
+
+# The fake gh of helpers/gh serves the base PR fixture and logs each write.
+# The shared fake decisionkit answers true, unless the text holds the word
+# WRONG. DK_P sets another probability, and DK_FAIL=1 makes it fail. The
+# real decide.sh runs between them, so the tests also cover the questions
+# file.
+ROOT=$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)
+load "$ROOT/tests/scripts/helpers/fakes"
 
 setup() {
 	SKILL_DIR=$(cd "$BATS_TEST_DIRNAME/.." && pwd)
 	S="$SKILL_DIR/scripts/shepherd.sh"
 	export SHEPHERD=$S
 	export BASE="$SKILL_DIR/tests/fixtures/prs/base"
+	GOOD="$SKILL_DIR/tests/fixtures/prs/good"
 	export CASE="$BATS_TEST_TMPDIR/case"
 	mkdir -p "$CASE" "$BATS_TEST_TMPDIR/bin"
 	export GH_LOG="$BATS_TEST_TMPDIR/gh.log"
-	export DK_LOG="$BATS_TEST_TMPDIR/dk.log"
 	ln -s "$SKILL_DIR/tests/helpers/gh" "$BATS_TEST_TMPDIR/bin/gh"
-	cat >"$BATS_TEST_TMPDIR/bin/decisionkit" <<'STUB'
-#!/usr/bin/env bash
-kind=$1 text=""
-prev=""
-for arg in "$@"; do
-	[[ "$prev" == --context ]] && text=$arg
-	prev=$arg
-done
-printf '%s\n---\n' "$text" >>"$DK_LOG"
-p=0.95
-[[ "$text" == *WRONG* ]] && p=0.1
-if [[ "$kind" == score ]]; then
-	printf '{"answers":{"q":{"type":"score","expected_level":0.2,"most_likely":"low","probabilities":{"low":0.85,"medium":0.1,"high":0.05}}}}\n'
-	exit 0
-fi
-printf '{"answers":{"q":{"type":"binary","probability_true":%s}}}\n' "$p"
-[[ "$p" == 0.95 ]]
-STUB
-	chmod +x "$BATS_TEST_TMPDIR/bin/decisionkit"
-	PATH="$BATS_TEST_TMPDIR/bin:$PATH"
+	export DK_P=0.95
+	fake_decisionkit
+	dk_responder <<'EOF'
+[[ "$text" == *WRONG* ]] && DK_P=0.1
+EOF
 }
 
 @test "verify asks both questions for each R item and writes a success trace" {
 	echo '7001 completed' >"$CASE/runs.txt"
 	run "$S" verify 42
 	[ "$status" -eq 0 ]
-	[ "$(grep -c '^Issue item:$' "$DK_LOG")" -eq 3 ]
-	[ "$(grep -c '^Claim:$' "$DK_LOG")" -eq 3 ]
+	[ "$(grep -c '^Issue item:$' "$FAKE_DIR/decisionkit.text")" -eq 3 ]
+	[ "$(grep -c '^Claim:$' "$FAKE_DIR/decisionkit.text")" -eq 3 ]
 	# R1 has sub-tasks, R2 has none.
-	grep -qx -- '- add the tick rule to the check' "$DK_LOG"
-	grep -qx '(none)' "$DK_LOG"
-	[[ "$output" == *"| R1 | ok 0.95 | ok 0.95 |"* ]]
+	grep -qx -- '- add the tick rule to the check' "$FAKE_DIR/decisionkit.text"
+	grep -qx '(none)' "$FAKE_DIR/decisionkit.text"
+	[[ "$output" == *"| R1 | ok 0.95 | ok 0.95 |"* ]] || false
 	# The base PR has no trace comment, so verify writes a new one.
 	grep -q '^api repos/{owner}/{repo}/issues/42/comments -f body=<!-- pr-shepherd-trace:v1 -->' "$GH_LOG"
 	grep -q '^api repos/{owner}/{repo}/statuses/0123456789abcdef0123456789abcdef01234567 -f state=success -f context=pr-shepherd/trace -f description=req=[0-9a-f]\{8\} issue=[0-9a-f]\{8\} -f target_url=https://' "$GH_LOG"
@@ -68,7 +63,7 @@ STUB
 	sed 's/R1.1: add the tick rule to the check/R1.1: add a WRONG rule/' "$BASE/body.txt" >"$CASE/body.txt"
 	run "$S" verify 42
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"| R1 | FAIL 0.1 | FAIL 0.1 |"* ]]
+	[[ "$output" == *"| R1 | FAIL 0.1 | FAIL 0.1 |"* ]] || false
 	grep -q -- '-f state=failure' "$GH_LOG"
 }
 
@@ -78,23 +73,23 @@ STUB
 	run "$S" verify 42
 	[ "$status" -eq 0 ]
 	grep -q '^api -X PATCH repos/{owner}/{repo}/issues/comments/9002 -f body=' "$GH_LOG"
-	! grep -q 'issues/42/comments -f body' "$GH_LOG"
+	run ! grep -q 'issues/42/comments -f body' "$GH_LOG"
 }
 
 @test "verify writes no trace when the R items do not match the issue" {
 	sed 's/R2: the check fails on/R2: the check warns on/' "$BASE/body.txt" >"$CASE/body.txt"
 	run "$S" verify 42
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"R2: the text differs from item 2 of issue #11."* ]]
-	[ ! -f "$DK_LOG" ]
-	! grep -q statuses "$GH_LOG" 2>/dev/null
+	[[ "$output" == *"R2: the text differs from item 2 of issue #11."* ]] || false
+	[ ! -f "$FAKE_DIR/decisionkit.text" ]
+	run ! grep -q statuses "$GH_LOG" 2>/dev/null
 }
 
 @test "verify skips an exempt PR" {
 	echo '.labels = [{"name": "pr:no-issue"}]' >"$CASE/pr.json.jq"
 	run "$S" verify 42
 	[ "$status" -eq 0 ]
-	[[ "$output" == *"exempt"* ]]
+	[[ "$output" == *"exempt"* ]] || false
 	[ ! -f "$GH_LOG" ]
 }
 
@@ -114,7 +109,7 @@ STUB
 @test "reply refuses to reject a human finding without the user" {
 	run "$S" reply 42 PRRT_human rejected --reason "the name is right"
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"Ask the user"* ]]
+	[[ "$output" == *"Ask the user"* ]] || false
 	[ ! -f "$GH_LOG" ]
 	run "$S" reply 42 PRRT_human rejected --reason "the name is right" --confirmed-by-user
 	[ "$status" -eq 0 ]
@@ -130,7 +125,7 @@ STUB
 	[ "$status" -eq 2 ]
 	run "$S" reply 42 PRRT_bot accepted --reason "real" --fix 5bcce5c
 	[ "$status" -eq 2 ]
-	[[ "$output" == *"commit SHA"* ]]
+	[[ "$output" == *"commit SHA"* ]] || false
 	run "$S" reply 42 PRRT_none accepted --reason "real" --fix scripts/check.sh
 	[ "$status" -eq 2 ]
 }
@@ -147,15 +142,15 @@ STUB
 	echo '[{"type": "pull_request", "parameters": {}}]' >"$CASE/rules.json"
 	run "$S" merge 42
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"do not require the pr-shepherd check"* ]]
-	! grep -q 'pr merge' "$GH_LOG" 2>/dev/null
+	[[ "$output" == *"do not require the pr-shepherd check"* ]] || false
+	run ! grep -q 'pr merge' "$GH_LOG" 2>/dev/null
 }
 
 @test "merge refuses a PR that fails check" {
 	echo '[]' >"$CASE/statuses.json"
 	run "$S" merge 42
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"Fix the problems above before merge."* ]]
+	[[ "$output" == *"Fix the problems above before merge."* ]] || false
 }
 
 @test "merge turns on auto-merge with rebase when every rule holds" {
@@ -173,7 +168,7 @@ STUB
 	rm "$CASE/closing.txt"
 	run "$S" disarm 11
 	[ "$status" -eq 0 ]
-	[[ "$output" == *"No open PR with auto-merge closes issue #11."* ]]
+	[[ "$output" == *"No open PR with auto-merge closes issue #11."* ]] || false
 }
 
 @test "checks passes when every other check passed or was skipped, and leaves out its own" {
@@ -209,6 +204,417 @@ STUB
 		"$BASE/checks.json" >"$CASE/checks.json"
 	run "$S" merge 42
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"Check ci/lint: failed."* ]]
-	! grep -q 'pr merge' "$GH_LOG" 2>/dev/null
+	[[ "$output" == *"Check ci/lint: failed."* ]] || false
+	run ! grep -q 'pr merge' "$GH_LOG" 2>/dev/null
+}
+
+# ---------------------------------------------------------------- helpers
+
+# Print the body of the first write in the gh log, without the flags that
+# follow it. A body can span lines.
+logged_body() {
+	awk '
+		!inside && /-f body=/ { inside = 1; sub(/^.*-f body=/, "") }
+		inside {
+			if ((i = index($0, " -f query=")) > 0) { print substr($0, 1, i - 1); exit }
+			if ($0 ~ /^(api|pr|run) /) exit
+			print
+		}' "$GH_LOG" | sed -E 's/ (--silent|--jq \.html_url)$//'
+}
+
+# ----------------------------------------------------------------- verify
+
+@test "verify exempts a Dependabot PR" {
+	echo '.author = {"login": "dependabot[bot]"}' >"$CASE/pr.json.jq"
+	run "$S" verify 42
+	[ "$status" -eq 0 ]
+	[ "$output" = "PR #42 is exempt. It needs no trace." ]
+	[ ! -f "$GH_LOG" ]
+	[ ! -f "$FAKE_DIR/decisionkit.text" ]
+}
+
+@test "verify exits 1 and writes nothing when the body has no closing line" {
+	echo '/^Closes #11$/d' >"$CASE/body.txt.sed"
+	run "$S" verify 42
+	[ "$status" -eq 1 ]
+	[[ "$output" == *'The body has no "Closes #<issue>" line.'* ]] || false
+	[ ! -f "$GH_LOG" ]
+	[ ! -f "$FAKE_DIR/decisionkit.text" ]
+}
+
+@test "verify exits 1 and writes no trace while R or V items are wrong" {
+	echo '/V1 \(R1, R3\)/,$d' >"$CASE/body.txt.sed"
+	run "$S" verify 42
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"Verify: the PR has no V item."* ]] || false
+	[[ "$output" == *"Fix the R and V items first. verify wrote no trace."* ]] || false
+	[ ! -f "$FAKE_DIR/decisionkit.text" ]
+	[ ! -f "$GH_LOG" ]
+}
+
+@test "verify exits 2 and says which read failed" {
+	for pair in "pr view|Cannot read PR #42." \
+		"issue view|Cannot read issue #11." \
+		"issues/42/comments?per_page|Cannot read the comments of PR #42."; do
+		GH_FAIL=${pair%%|*} run "$S" verify 42
+		[ "$status" -eq 2 ] || {
+			echo "${pair%%|*}: exit $status"
+			return 1
+		}
+		[[ "$output" == *"${pair#*|}"* ]] || {
+			echo "${pair%%|*}: output '$output'"
+			return 1
+		}
+	done
+	run ! grep -q 'statuses' "$GH_LOG"
+}
+
+@test "verify exits 2 and writes no trace when decisionkit fails" {
+	DK_FAIL=1 run "$S" verify 42
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"decisionkit failed. Run: decisionkit status"* ]] || false
+	run ! grep -q 'statuses\|comments -f body' "$GH_LOG" 2>/dev/null
+}
+
+@test "verify passes an uncertain true answer and marks the row" {
+	DK_P=0.6 run "$S" verify 42
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"| R1 | uncertain 0.6 | uncertain 0.6 |"* ]] || false
+	grep -q -- '-f state=success' "$GH_LOG"
+	logged_body | grep -q 'Sharpen each uncertain row'
+}
+
+@test "verify fails an R item without evidence and does not ask the evidence question for it" {
+	echo '/evidence: tests\/$/d' >"$CASE/body.txt.sed"
+	run "$S" verify 42
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"| R2 | ok 0.95 | FAIL - |"* ]] || false
+	[ "$(grep -c '^Claim:$' "$FAKE_DIR/decisionkit.text")" -eq 2 ]
+	grep -q -- '-f state=failure' "$GH_LOG"
+}
+
+@test "verify gives the evidence of the sub-tasks to the evidence question of their item" {
+	run "$S" verify 42
+	[ "$status" -eq 0 ]
+	# The claim of R1 holds its sub-tasks, and the evidence below them.
+	awk '/^Claim:$/ { n++ } n == 1' "$FAKE_DIR/decisionkit.text" | grep -qx 'R1.1: add the tick rule to the check'
+	awk '/^Claim:$/ { n++ } n == 1' "$FAKE_DIR/decisionkit.text" | grep -qx 'scripts/check.sh'
+	awk '/^Claim:$/ { n++ } n == 1' "$FAKE_DIR/decisionkit.text" | grep -qx '`bats tests` -> 12 ok'
+}
+
+@test "verify writes a trace comment that names the head, the hashes, each row and the verdict" {
+	run "$S" verify 42
+	[ "$status" -eq 0 ]
+	body=$(logged_body)
+	[ "$(head -n 1 <<<"$body")" = '<!-- pr-shepherd-trace:v1 -->' ]
+	grep -qE '^Head `01234567`, Requirements `[0-9a-f]{8}`, issue #11 `[0-9a-f]{8}`\.$' <<<"$body"
+	grep -qx '| Item | Carry-over | Evidence |' <<<"$body"
+	grep -qx '| R3 | ok 0.95 | ok 0.95 |' <<<"$body"
+	grep -q 'Verdict: \*\*success\*\*. Every R item carries its issue item' <<<"$body"
+	[[ "$output" == *"Trace: success on 01234567. https://github.com/acme/app/pull/42#issuecomment-9002"* ]] || false
+}
+
+@test "verify tells the author how to fix a failure trace" {
+	sed 's/R1.1: add the tick rule to the check/R1.1: add a WRONG rule/' "$BASE/body.txt" >"$CASE/body.txt"
+	run "$S" verify 42
+	[ "$status" -eq 1 ]
+	body=$(logged_body)
+	grep -q 'Verdict: \*\*failure\*\*. Fix each FAIL row' <<<"$body"
+	grep -qF 'shepherd.sh verify 42` again' <<<"$body"
+	[[ "$output" == *"Trace: failure on 01234567."* ]] || false
+}
+
+@test "verify asks for a new run of the pr-shepherd workflow on the head" {
+	echo '7001 completed' >"$CASE/runs.txt"
+	run "$S" verify 42
+	grep -qxF 'run list --workflow pr-shepherd.yml --commit 0123456789abcdef0123456789abcdef01234567 --limit 1 --json databaseId,status --jq .[0] | "\(.databaseId) \(.status)"' "$GH_LOG"
+	[[ "$output" == *"Re-ran run 7001."* ]] || false
+	run ! grep -q '^run watch' "$GH_LOG"
+}
+
+@test "verify waits for a run that is still going before it re-runs it" {
+	echo '7002 in_progress' >"$CASE/runs.txt"
+	run "$S" verify 42
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"Waiting for run 7002 to end."* ]] || false
+	grep -qx 'run watch 7002' "$GH_LOG"
+	grep -qx 'run rerun 7002' "$GH_LOG"
+}
+
+@test "verify says so when no run exists yet, and does not fail" {
+	run "$S" verify 42
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"No pr-shepherd run on 01234567 yet. The next run reads the trace."* ]] || false
+	echo 'null null' >"$CASE/runs.txt"
+	run "$S" verify 42
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"No pr-shepherd run on 01234567 yet."* ]] || false
+	run ! grep -q '^run rerun' "$GH_LOG"
+}
+
+@test "verify points to the Actions tab when the re-run fails, and does not fail" {
+	echo '7001 completed' >"$CASE/runs.txt"
+	GH_FAIL="run rerun" run "$S" verify 42
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"Could not re-run run 7001. Re-run it in the Actions tab."* ]] || false
+}
+
+@test "verify exits 2 when a write fails, and says which" {
+	GH_FAIL="issues/42/comments -f body" run "$S" verify 42
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot write the trace comment."* ]] || false
+	run ! grep -q -- '-f state=' "$GH_LOG"
+	jq '. + [{"id": 9002, "html_url": "https://x/9002", "body": "<!-- pr-shepherd-trace:v1 -->\nold"}]' \
+		"$BASE/comments.json" >"$CASE/comments.json"
+	GH_FAIL="-X PATCH" run "$S" verify 42
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot update the trace comment 9002."* ]] || false
+	GH_FAIL="-f state=" run "$S" verify 42
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot write the pr-shepherd/trace status."* ]] || false
+}
+
+# --------------------------------------------------------------- findings
+
+@test "findings prints nothing when every finding is triaged" {
+	run "$S" findings 42
+	[ "$status" -eq 0 ]
+	[ -z "$output" ]
+	[ ! -f "$FAKE_DIR/decisionkit.text" ]
+}
+
+@test "findings reports the thread, the author and the place of each finding" {
+	cat >"$CASE/threads.json.jq" <<'JQ'
+.reviewThreads.nodes[1].comments.nodes |= .[0:1]
+| .reviewThreads.nodes[1].comments.nodes[0].author = null
+JQ
+	run "$S" findings 42 --no-advice
+	[ "$status" -eq 0 ]
+	jq -e '.type == "thread" and .target == "PRRT_human" and .author == "ghost" and .kind == "human"
+		and .path == "tests/check.bats" and .line == 9 and .text == "Rename this test?"' <<<"$output"
+}
+
+@test "findings gives decisionkit the place and the text of each finding" {
+	jq '.reviewThreads.nodes[0].comments.nodes |= .[0:1]' "$BASE/threads.json" >"$CASE/threads.json"
+	echo '[]' >"$CASE/comments.json"
+	run "$S" findings 42
+	[ "$status" -eq 0 ]
+	grep -qx 'Finding on scripts/check.sh:' "$FAKE_DIR/decisionkit.text"
+	grep -qx 'The loop skips the last item.' "$FAKE_DIR/decisionkit.text"
+	grep -qx 'Finding on the PR:' "$FAKE_DIR/decisionkit.text"
+	grep -qx 'Overall: add a test for the empty body.' "$FAKE_DIR/decisionkit.text"
+	# Two questions for each of the two findings.
+	[ "$(grep -c '^---$' "$FAKE_DIR/decisionkit.text")" -eq 4 ]
+}
+
+@test "findings exits 2 when decisionkit fails or a read fails" {
+	jq '.reviewThreads.nodes[0].comments.nodes |= .[0:1]' "$BASE/threads.json" >"$CASE/threads.json"
+	DK_FAIL=1 run "$S" findings 42
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"decisionkit failed. Run: decisionkit status"* ]] || false
+	GH_FAIL="reviewThreads" run "$S" findings 42
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot read the reviews of PR #42."* ]] || false
+	GH_FAIL="issues/42/comments?per_page" run "$S" findings 42
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot read the comments of PR #42."* ]] || false
+}
+
+# ------------------------------------------------------------------ reply
+
+@test "reply writes the triage on the thread, resolves it and says so" {
+	run "$S" reply 42 PRRT_bot accepted --reason "real off-by-one" --fix scripts/check.sh
+	[ "$status" -eq 0 ]
+	[ "$output" = "Triaged thread PRRT_bot as accepted, and resolved it." ]
+	[ "$(logged_body)" = "$(printf '%s\n' 'triage: accepted' 'reason: real off-by-one' 'fix: scripts/check.sh')" ]
+	grep -q '^api graphql -f id=PRRT_bot -f body=triage: accepted' "$GH_LOG"
+	# The reply comes first, then the resolve.
+	[ "$(grep -n 'addPullRequestReviewThreadReply' "$GH_LOG" | cut -d : -f 1)" -lt "$(grep -n 'resolveReviewThread' "$GH_LOG" | cut -d : -f 1)" ]
+}
+
+@test "reply lets a human finding be accepted without the user" {
+	run "$S" reply 42 PRRT_human accepted --reason "good point" --fix tests/check.bats
+	[ "$status" -eq 0 ]
+	run ! grep -q 'confirmed-by-user' "$GH_LOG"
+}
+
+@test "reply asks the user before it rejects a human review, and then records the user" {
+	run "$S" reply 42 503 rejected --reason "out of scope"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"A human wrote this finding. Ask the user to confirm the rejection"* ]] || false
+	[ ! -f "$GH_LOG" ]
+	run "$S" reply 42 503 rejected --reason "out of scope" --confirmed-by-user
+	[ "$status" -eq 0 ]
+	[ "$output" = "Triaged review 503 as rejected." ]
+	[ "$(logged_body)" = "$(printf '%s\n' 'review: 503' 'triage: rejected' 'reason: out of scope' 'confirmed-by-user: yes')" ]
+}
+
+@test "reply folds a reason of several lines into one line" {
+	run "$S" reply 42 PRRT_bot rejected --reason $'a false\n  alarm,   truly\n'
+	[ "$status" -eq 0 ]
+	[ "$(logged_body)" = "$(printf '%s\n' 'triage: rejected' 'reason: a false alarm, truly')" ]
+}
+
+@test "reply needs a reason, and a fix for an accepted finding" {
+	run "$S" reply 42 PRRT_bot rejected
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Give a reason with --reason."* ]] || false
+	run "$S" reply 42 PRRT_bot rejected --reason "  "
+	[ "$status" -eq 2 ]
+	run "$S" reply 42 PRRT_bot accepted --reason "real"
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"An accepted finding needs --fix"* ]] || false
+	run "$S" reply 42 PRRT_bot accepted --reason "real" --fix deadbeef
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"--fix names a commit SHA."* ]] || false
+	[ ! -f "$GH_LOG" ]
+}
+
+@test "reply exits 2 when the target is no thread and no review of the PR" {
+	run "$S" reply 42 PRRT_none rejected --reason r
+	[ "$status" -eq 2 ]
+	[ "$output" = "PR #42 has no review thread or review PRRT_none." ]
+	run "$S" reply 42 999 rejected --reason r
+	[ "$status" -eq 2 ]
+	[ "$output" = "PR #42 has no review thread or review 999." ]
+	[ ! -f "$GH_LOG" ]
+}
+
+@test "reply exits 2 and says which call failed" {
+	GH_FAIL="reviewThreads" run "$S" reply 42 PRRT_bot rejected --reason r
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot read the reviews of PR #42."* ]] || false
+	GH_FAIL="issues/42/comments -f body" run "$S" reply 42 501 rejected --reason r
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot write the triage comment."* ]] || false
+	GH_FAIL="addPullRequestReviewThreadReply" run "$S" reply 42 PRRT_bot rejected --reason r
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot reply to thread PRRT_bot."* ]] || false
+	run ! grep -q 'resolveReviewThread' "$GH_LOG"
+	GH_FAIL="resolveReviewThread" run "$S" reply 42 PRRT_bot rejected --reason r
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot resolve thread PRRT_bot."* ]] || false
+}
+
+@test "check reads back the triage that reply writes on a thread" {
+	echo '.reviewThreads.nodes[0].comments.nodes |= .[0:1]' >"$CASE/threads.json.jq"
+	run "$S" check 42
+	[ "$status" -eq 1 ]
+	run "$S" reply 42 PRRT_bot accepted --reason "real off-by-one" --fix scripts/check.sh
+	[ "$status" -eq 0 ]
+	jq --arg b "$(logged_body)" '.reviewThreads.nodes[0].comments.nodes[1] = {"author": {"login": "alice", "__typename": "User"}, "body": $b}' \
+		"$BASE/threads.json" >"$CASE/threads.json"
+	run "$S" check 42
+	[ "$status" -eq 0 ]
+}
+
+@test "check reads back the triage that reply writes on a review body" {
+	echo '[]' >"$CASE/comments.json"
+	run "$S" check 42
+	[ "$status" -eq 1 ]
+	run "$S" reply 42 501 accepted --reason "a real gap" --fix tests/check.bats
+	[ "$status" -eq 0 ]
+	jq -n --arg b "$(logged_body)" '[{id: 9001, body: $b}]' >"$CASE/comments.json"
+	run "$S" check 42
+	[ "$status" -eq 0 ]
+}
+
+# ----------------------------------------------------------------- checks
+
+@test "checks exits 2 when it cannot read the checks" {
+	GH_FAIL="pr checks" run "$S" checks 42
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot read the checks of PR #42."* ]] || false
+}
+
+@test "checks reads the list although gh exits non-zero while a check fails or runs" {
+	jq '. + [{bucket: "fail", link: "https://github.com/acme/app/actions/runs/702/job/4", name: "lint", workflow: "ci"}]' \
+		"$BASE/checks.json" >"$CASE/checks.json"
+	for code in 1 8; do
+		GH_CHECKS_EXIT=$code run "$S" checks 42
+		[ "$status" -eq 1 ] || {
+			echo "gh exit $code: status $status"
+			return 1
+		}
+		[[ "$output" == *"Check ci/lint: failed."* ]] || false
+	done
+}
+
+@test "checks --watch still reports a check that failed after the wait" {
+	jq '. + [{bucket: "fail", link: "https://github.com/acme/app/actions/runs/702/job/4", name: "lint", workflow: "ci"}]' \
+		"$BASE/checks.json" >"$CASE/checks.json"
+	run "$S" checks 42 --watch
+	[ "$status" -eq 1 ]
+	grep -qx 'pr checks 42 --watch' "$GH_LOG"
+	[[ "$output" == *"Check ci/lint: failed."* ]] || false
+}
+
+# ------------------------------------------------------------------ merge
+
+@test "merge reads the rules of the base branch of the PR" {
+	echo '.baseRefName = "release"' >"$CASE/pr.json.jq"
+	echo '[]' >"$CASE/rules-release.json"
+	run "$S" merge 42
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"The rules of release do not require the pr-shepherd check"* ]] || false
+}
+
+@test "merge refuses a ruleset that requires other checks and not pr-shepherd" {
+	echo '[{"type": "required_status_checks", "parameters": {"required_status_checks": [{"context": "ci"}]}}]' >"$CASE/rules.json"
+	run "$S" merge 42
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"do not require the pr-shepherd check"* ]] || false
+	run ! grep -q 'pr merge' "$GH_LOG" 2>/dev/null
+}
+
+@test "merge exits 2 when it cannot read the rules or cannot turn on auto-merge" {
+	GH_FAIL="rules/branches" run "$S" merge 42
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot read the rules of main."* ]] || false
+	GH_FAIL="pr merge" run "$S" merge 42
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot turn on auto-merge for PR #42."* ]] || false
+}
+
+@test "merge says that GitHub merges the PR when every required check passes" {
+	run "$S" merge 42
+	[ "$status" -eq 0 ]
+	[ "$output" = "Auto-merge is on for PR #42. GitHub merges it when every required check passes." ]
+}
+
+@test "merge needs no trace for a Dependabot PR, but still wants the other checks and the ruleset" {
+	cp "$GOOD/dependabot/body.txt" "$GOOD/dependabot/statuses.json" "$GOOD/dependabot/threads.json" "$CASE/"
+	echo '.author = {"login": "app/dependabot"}' >"$CASE/pr.json.jq"
+	run "$S" merge 42
+	[ "$status" -eq 0 ]
+	grep -qx 'pr merge 42 --auto --rebase' "$GH_LOG"
+	jq '. + [{bucket: "fail", link: "https://ci.example.com/1", name: "lint", workflow: ""}]' "$BASE/checks.json" >"$CASE/checks.json"
+	rm "$GH_LOG"
+	run "$S" merge 42
+	[ "$status" -eq 1 ]
+	run ! grep -q 'pr merge' "$GH_LOG" 2>/dev/null
+}
+
+# ----------------------------------------------------------------- disarm
+
+@test "disarm tells the author which PR it turned off and what to run next" {
+	echo 42 >"$CASE/closing.txt"
+	run "$S" disarm 11
+	[ "$status" -eq 0 ]
+	[ "$output" = "PR #42: auto-merge is off, because issue #11 changed. Run shepherd.sh verify 42 again." ]
+}
+
+@test "disarm exits 1 when it cannot turn off one PR, and still tries the others" {
+	printf '42\n43\n' >"$CASE/closing.txt"
+	GH_FAIL="pr merge 42 --disable-auto" run "$S" disarm 11
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"PR #42: could not turn off auto-merge."* ]] || false
+	[[ "$output" == *"PR #43: auto-merge is off, because issue #11 changed."* ]] || false
+	grep -qx 'pr merge 43 --disable-auto' "$GH_LOG"
+}
+
+@test "disarm exits 2 when it cannot read the PRs of the issue" {
+	GH_FAIL="closedByPullRequestsReferences" run "$S" disarm 11
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot read the PRs that close issue #11."* ]] || false
 }

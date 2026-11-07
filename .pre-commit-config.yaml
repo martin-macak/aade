@@ -32,11 +32,25 @@ repos:
         language: system
         # The union of the skill folders and each tests/*.watch file. A
         # knowledge-curator drift test checks it and prints the value.
-        files: ^(\.agents/skills/|\.claude/skills|\.github/ISSUE_TEMPLATE/|\.github/labels\.yml|\.github/pull_request_template\.md|\.github/workflows/|\.gitignore|\.pre-commit-config\.yaml|\.vale\.ini|\.vale/styles/House/|AGENTS\.md|README\.md|mise\.toml|scripts/agents-health\.sh|scripts/check-agents-md-size\.sh|scripts/issue-new\.sh|scripts/issue-scope-label\.sh|scripts/lint-knowledge\.sh)
+        files: ^(\.agents/skills/|\.claude/skills|\.github/ISSUE_TEMPLATE/|\.github/labels\.yml|\.github/pull_request_template\.md|\.github/workflows/|\.gitignore|\.pre-commit-config\.yaml|\.vale\.ini|\.vale/styles/House/|AGENTS\.md|README\.md|mise\.toml|scripts/agents-health\.sh|scripts/check-agents-md-size\.sh|scripts/issue-new\.sh|scripts/issue-scope-label\.sh|scripts/lint-knowledge\.sh|tests/scripts/helpers/)
         types: []
         types_or: [file, symlink]
         # One call gets all files, so no skill runs twice.
         require_serial: true
+      - id: scripts-test
+        name: script suites (bats)
+        entry: mise exec -- scripts/script-tests.sh run
+        language: system
+        # scripts/<x>.sh runs tests/scripts/<x>.bats. script-tests.sh maps
+        # the files, so one call gets them all.
+        files: ^(scripts/|tests/scripts/|mise\.toml$)
+        require_serial: true
+      - id: scripts-coverage
+        name: every shell script has a bats suite
+        entry: mise run scripts:coverage
+        language: system
+        pass_filenames: false
+        files: ^(scripts/|tests/scripts/|\.agents/skills/[^/]+/(scripts|tests)/)
       - id: taxonomy-check
         name: issue forms match .github/labels.yml
         entry: mise run taxonomy:check

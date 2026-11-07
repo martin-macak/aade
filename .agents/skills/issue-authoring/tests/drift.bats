@@ -33,7 +33,7 @@ example() {
 			echo "mise.toml has no task $task."
 			return 1
 		}
-		[[ "$TEXT" == *"mise run $task"* ]]
+		[[ "$TEXT" == *"mise run $task"* ]] || false
 	done
 	yq -p toml '.tasks.check.depends[]' "$MISE" | grep -qx taxonomy:check
 }
@@ -41,19 +41,19 @@ example() {
 @test "the workflows that the skill names exist and call the scripts" {
 	grep -qF 'scripts/issue-scope-label.sh' "$ROOT/.github/workflows/issue-scope.yml"
 	grep -qF 'scripts/labels-sync.sh' "$ROOT/.github/workflows/labels-sync.yml"
-	[[ "$TEXT" == *'`issue-scope` workflow'* && "$TEXT" == *'`labels-sync` workflow'* ]]
+	[[ "$TEXT" == *'`issue-scope` workflow'* && "$TEXT" == *'`labels-sync` workflow'* ]] || false
 }
 
 @test "the type mapping in the skill matches labels.yml" {
 	for pair in enhancement:feat bug:fix; do
 		desc=$(yq ".[] | select(.name == \"type:${pair%%:*}\") | .description" "$LABELS")
-		[[ "$desc" == *"Commit type ${pair#*:}."* ]]
-		[[ "$TEXT" == *"\`type:${pair%%:*}\` becomes \`${pair#*:}\`"* ]]
+		[[ "$desc" == *"Commit type ${pair#*:}."* ]] || false
+		[[ "$TEXT" == *"\`type:${pair%%:*}\` becomes \`${pair#*:}\`"* ]] || false
 	done
 }
 
 @test "every type label has a form at the path the skill names" {
-	[[ "$TEXT" == *'`.github/ISSUE_TEMPLATE/<type>.yml`'* ]]
+	[[ "$TEXT" == *'`.github/ISSUE_TEMPLATE/<type>.yml`'* ]] || false
 	for type in $(yq '.[].name | select(test("^type:")) | sub("^type:"; "")' "$LABELS"); do
 		[ -f "$FORMS/$type.yml" ]
 	done
@@ -86,64 +86,22 @@ example() {
 	grep -qx 'Closes #' "$PR_TEMPLATE"
 	grep -qx '## Notes' "$PR_TEMPLATE"
 	grep -qF 'type(scope): summary' "$PR_TEMPLATE"
-	[[ "$TEXT" == *'`type(scope): summary`'* && "$TEXT" == *'`Closes #<issue>`'* ]]
+	[[ "$TEXT" == *'`type(scope): summary`'* && "$TEXT" == *'`Closes #<issue>`'* ]] || false
 	# pr-shepherd defines the Requirements format, so this skill only points there.
 	grep -qx '## Requirements' "$PR_TEMPLATE"
 	[ -f "$ROOT/.agents/skills/pr-shepherd/SKILL.md" ]
-	[[ "$TEXT" == *'The `pr-shepherd` skill defines the format of the Requirements and Verify sections'* ]]
-	! grep -qE '^- \[.\] R[0-9]' "$SKILL"
+	[[ "$TEXT" == *'The `pr-shepherd` skill defines the format of the Requirements and Verify sections'* ]] || false
+	! grep -qE '^- \[.\] R[0-9]' "$SKILL" || false
 }
 
+# The behavior of the two scripts has its own suites in tests/scripts. This
+# test only checks that the real chore form and the scope script still agree.
 @test "the helper renders the headings that the scope workflow reads" {
 	cd "$ROOT"
 	body=$(printf 'title: t\nscope: %s\nwhat: w\ndone: d\n' "$(yq '.[].name | select(test("^scope:")) | sub("^scope:"; "")' "$LABELS" | head -n 1)" |
 		scripts/issue-new.sh chore --dry-run)
 	grep -qx '### Scope' <<<"$body"
 	grep -q '^Labels: type:chore scope:' <<<"$body"
-}
-
-@test "the helper rejects a missing required field and an unknown key" {
-	cd "$ROOT"
-	run scripts/issue-new.sh chore --dry-run <<<$'title: t\nbogus: 1'
-	[ "$status" -eq 2 ]
-	[[ "$output" == *"bogus: the chore form has no such field."* ]]
-	[[ "$output" == *"what: required."* ]]
-}
-
-# A stub gh on PATH returns the issue JSON in $ISSUE_JSON and records its
-# other calls in $BATS_TEST_TMPDIR/gh.log.
-stub_gh() {
-	mkdir -p "$BATS_TEST_TMPDIR/bin"
-	cat >"$BATS_TEST_TMPDIR/bin/gh" <<'STUB'
-#!/usr/bin/env bash
-if [[ "$1 $2" == "issue view" ]]; then
-	printf '%s' "$ISSUE_JSON"
-else
-	echo "$*" >>"$BATS_TEST_TMPDIR/gh.log"
-fi
-STUB
-	chmod +x "$BATS_TEST_TMPDIR/bin/gh"
-	PATH="$BATS_TEST_TMPDIR/bin:$PATH"
-}
-
-@test "the scope script swaps the scope label for the Scope section of the body" {
-	cd "$ROOT"
-	stub_gh
-	scope=$(yq '.[].name | select(test("^scope:")) | sub("^scope:"; "")' "$LABELS" | head -n 1)
-	ISSUE_JSON=$(jq -n --arg body $'### Scope\n\n'"$scope"$'\n\n### What and why\n\nw' \
-		'{body: $body, labels: [{name: "type:chore"}, {name: "scope:old"}]}')
-	export ISSUE_JSON
-	run scripts/issue-scope-label.sh 7
-	[ "$status" -eq 0 ]
-	grep -qx "issue edit 7 --remove-label scope:old --add-label scope:$scope" "$BATS_TEST_TMPDIR/gh.log"
-}
-
-@test "the scope script rejects a Scope section that is not a scope name" {
-	cd "$ROOT"
-	stub_gh
-	ISSUE_JSON=$(jq -n --arg body $'### Scope\n\nx") | del(.)\n' '{body: $body, labels: []}')
-	export ISSUE_JSON
-	run scripts/issue-scope-label.sh 7
-	[ "$status" -eq 1 ]
-	[ ! -f "$BATS_TEST_TMPDIR/gh.log" ]
+	# The scope script matches this exact heading.
+	grep -qF '"### Scope"' "$ROOT/scripts/issue-scope-label.sh"
 }

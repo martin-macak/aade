@@ -56,4 +56,4 @@ if ((${#args[@]} == 0)); then
 fi
 echo "Issue #$issue: ${args[*]}"
 $DRY_RUN && exit 0
-gh issue edit "$issue" "${args[@]}"
+gh issue edit "$issue" "${args[@]}" || exit 1

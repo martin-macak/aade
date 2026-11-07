@@ -16,7 +16,11 @@ Project purpose: to be decided.
 
 4. Run `mise run agents:health` to verify the setup.
 
-`mise run check` runs every check that CI runs. `mise tasks` lists all tasks.
+`mise run check` runs the checks that CI runs on every pull request.
+`mise run scripts:test` runs the bats suites of the scripts, which the
+`scripts-test` CI workflow runs only when a script, a suite or `mise.toml`
+changes.
+`mise tasks` lists all tasks.
 
 ## Working with AI agents
 

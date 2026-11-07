@@ -67,7 +67,8 @@ for ((i = 0; i < count; i++)); do
 		if [[ "$(yq "(.[\"$id\"] // false) | tag" "$input")" == "!!seq" ]]; then
 			checked=$(value "$id" '| .[]')
 			while IFS= read -r c; do
-				grep -qxF -- "$c" <<<"$options" || error "$id: '$c' is not an option."
+				# An empty list gives one empty line.
+				[[ -z "$c" ]] || grep -qxF -- "$c" <<<"$options" || error "$id: '$c' is not an option."
 			done <<<"$checked"
 		elif [[ "$(value "$id")" == true ]]; then
 			checked=$options
@@ -116,4 +117,6 @@ if $DRY_RUN; then
 	printf '%s' "$body"
 	exit 0
 fi
-printf '%s' "$body" | gh issue create --title "$title" --body-file - "${label_args[@]}" || exit 1
+# The ${label_args[@]+...} form keeps an empty array legal under set -u in
+# bash 3.2, for a form without labels and an issue without a scope.
+printf '%s' "$body" | gh issue create --title "$title" --body-file - ${label_args[@]+"${label_args[@]}"} || exit 1

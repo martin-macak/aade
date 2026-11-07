@@ -46,7 +46,7 @@ URL_RE='^https?://[^[:space:]]+$'
 FENCE='```'
 
 usage() {
-	>&2 sed -n '/^# Usage:/,/^# Run it/p' "${BASH_SOURCE[0]}" | sed '$d; s/^# \{0,1\}//'
+	{ sed -n '/^# Usage:/,/^# Run it/p' "${BASH_SOURCE[0]}" | sed '$d; s/^# \{0,1\}//'; } >&2
 	exit 2
 }
 
@@ -664,6 +664,12 @@ cmd_status() {
 
 command=${1-}
 (($#)) && shift
+# Stop on a bad RESEARCH_TODAY before an action that writes. A die inside
+# "$(today)" ends only its subshell, so the action would write empty dates.
+# check and the usage write no date, so they ignore it.
+case $command in
+init | add | source | cite | status) today >/dev/null ;;
+esac
 case $command in
 init) cmd_init "$@" ;;
 add) cmd_add "$@" ;;

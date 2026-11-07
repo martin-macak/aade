@@ -38,6 +38,12 @@ run() {
 
 current=$(gh label list --limit 1000 --json name,color,description) || exit 1
 desired=$(yq -o json -I 0 '.' "$LABELS") || exit 2
+# An empty file reads as null. jq would then fail in silence, the file
+# would list no label, and the sync would delete every label.
+if ! jq -e 'type == "array"' <<<"$desired" >/dev/null 2>&1; then
+	>&2 echo "$LABELS must be a list of labels."
+	exit 2
+fi
 
 # Print the current label with the name $1 as compact JSON, or nothing.
 current_label() {
@@ -64,7 +70,8 @@ while IFS= read -r label; do
 done < <(jq -c '.[]' <<<"$desired")
 
 while IFS= read -r name; do
-	for keep in "${kept[@]}"; do
+	# The ${kept[@]+...} form keeps an empty array legal under set -u in bash 3.2.
+	for keep in ${kept[@]+"${kept[@]}"}; do
 		[[ "$name" == "$keep" ]] && continue 2
 	done
 	run "delete $name" gh label delete "$name" --yes
