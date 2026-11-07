@@ -66,6 +66,9 @@ Pre-commit hooks and the `agents-check` CI workflow run the same checks:
 `mise run check`. The [knowledge-curator](../.agents/skills/knowledge-curator/SKILL.md)
 skill lists each hook and the size limits of the `AGENTS.md` files. The LLM
 test layers of the skills run only on demand with `mise run skills:test`.
+The bats suites of `scripts/` run in the `scripts-test` pre-commit hook and
+in the `scripts-test` CI workflow, not in `mise run check`.
+[tests/AGENTS.md](../tests/AGENTS.md) gives their rules.
 
 ## MCP server format
 
@@ -102,7 +105,9 @@ agents. These files prepare its runner:
 - `.github/hooks/agents-check.json` runs `mise run check` when the agent
   tries to stop. On a failure, the agent gets the output and another turn.
   Pre-commit does not run on the commits of the agent, so this hook is its
-  quality gate. The `agents-check` CI workflow stays as the backstop.
+  quality gate. The `agents-check` CI workflow stays as the backstop. The
+  hook skips the suites of `scripts/`, so the `scripts-test` CI workflow
+  is their only gate for a commit of the agent.
   Copilot CLI reads the same hook, so it runs the checks locally too.
 - `.github/dependabot.yml` keeps the commit SHAs of the pinned actions up to
   date.

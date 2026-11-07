@@ -1,9 +1,11 @@
 #!/usr/bin/env bats
 
-# Run research.sh check against the fixtures. fixtures/good is a research
-# root that must pass. Each fixtures/bad/<case>/ adds one defect to a copy
-# of it with defect.diff, and expect.txt lists every problem line that the
-# check must print, with paths relative to the root. No LLM, no network.
+# The check of research.sh keeps every research folder well formed, so that
+# a reader can trust a finding, its source and its status. This file pins
+# each rule of the check to one fixture. fixtures/good is a research root
+# that must pass. Each fixtures/bad/<case>/ adds one defect to a copy of it
+# with defect.diff, and expect.txt lists every problem line that the check
+# must print, with paths relative to the root. No LLM, no network.
 
 setup() {
 	SKILL_DIR=$(cd "$BATS_TEST_DIRNAME/.." && pwd)

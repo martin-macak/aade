@@ -60,8 +60,8 @@ need_decisionkit() {
 	load_questions
 	[ -n "$Q_MATCH" ]
 	[ -n "$Q_SLOP" ]
-	[[ "$MATCH_MIN" =~ ^0\.[0-9]+$ ]]
-	[[ "$SLOP_MAX" =~ ^[0-2](\.[0-9]+)?$ ]]
+	[[ "$MATCH_MIN" =~ ^0\.[0-9]+$ ]] || false
+	[[ "$SLOP_MAX" =~ ^[0-2](\.[0-9]+)?$ ]] || false
 	# Q_SLOP is rated on a 0 to 2 scale, so the limit lies inside it.
 	less_than 0 "$SLOP_MAX"
 	less_than "$SLOP_MAX" 2
@@ -80,20 +80,20 @@ need_decisionkit() {
 	grep -q 'Q_SLOP' "$RUNNER"
 	grep -q 'SLOP_MAX' "$RUNNER"
 	# The skill warns about the fence and names the runner layer.
-	[[ "$TEXT" == *"Do not rename the fence"* ]]
-	[[ "$TEXT" == *'`slop` layer of the knowledge-curator test runner'* ]]
+	[[ "$TEXT" == *"Do not rename the fence"* ]] || false
+	[[ "$TEXT" == *'`slop` layer of the knowledge-curator test runner'* ]] || false
 	grep -q '^layer_slop()' "$RUNNER"
 }
 
 @test "the skill states MATCH_MIN as the block sets it" {
 	load_questions
-	[[ "$TEXT" == *"\`MATCH_MIN\` is $MATCH_MIN by design"* ]]
+	[[ "$TEXT" == *"\`MATCH_MIN\` is $MATCH_MIN by design"* ]] || false
 }
 
 @test "Q_SLOP defines the levels that every score command names" {
 	load_questions
 	for level in none some heavy; do
-		[[ "$Q_SLOP" == *"$level: "* ]]
+		[[ "$Q_SLOP" == *"$level: "* ]] || false
 	done
 	for file in "$SKILL" "$CALIBRATE" "$RUNNER"; do
 		grep -qF 'decisionkit score "$Q_SLOP" none some heavy' "$file"
@@ -139,7 +139,7 @@ need_decisionkit() {
 	[ -z "$(find "$FIXTURES/slop" -type f ! -name '*.txt')" ]
 	[ -z "$(ls "$FIXTURES/match" | grep -vE '^(same|differ)-.*\.txt$')" ]
 	for path in 'slop/good' 'slop/bad' 'match/same-*' 'match/differ-*'; do
-		[[ "$TEXT" == *"\`$path\`"* ]]
+		[[ "$TEXT" == *"\`$path\`"* ]] || false
 	done
 }
 
@@ -160,7 +160,7 @@ need_decisionkit() {
 		[ "$b" -gt $((a + 1)) ]
 		[ -n "$(tail -n +"$((b + 1))" "$file" | tr -d '[:space:]')" ]
 		# The skill says: do not send the list of unclear points.
-		! grep -qiE '^(unclear|restatement):' "$file"
+		! grep -qiE '^(unclear|restatement):' "$file" || false
 	done
 }
 
@@ -178,7 +178,7 @@ need_decisionkit() {
 	[ -f "$SKILL_MK" ]
 	grep -q '^calibrate:' "$DIR/Makefile"
 	grep -qF 'scripts/calibrate.sh' "$DIR/Makefile"
-	[[ "$TEXT" == *'`make -C .agents/skills/cold-reader calibrate`'* ]]
+	[[ "$TEXT" == *'`make -C .agents/skills/cold-reader calibrate`'* ]] || false
 }
 
 @test "every relative link in the skill resolves" {
@@ -236,7 +236,7 @@ need_decisionkit() {
 			return 1
 		}
 	done
-	[[ "$commands" == *'decisionkit binary "$Q_MATCH" --threshold "$MATCH_MIN" --quiet'* ]]
+	[[ "$commands" == *'decisionkit binary "$Q_MATCH" --threshold "$MATCH_MIN" --quiet'* ]] || false
 }
 
 @test "the check commands use options that decisionkit has" {
@@ -275,11 +275,11 @@ need_decisionkit() {
 	proc=$(section Procedure | tr '\n' ' ' | tr -s ' ')
 	steps=$(section Procedure | grep -cE '^[0-9]+\. \*\*')
 	last=$(section Procedure | grep -E '^[0-9]+\. \*\*' | tail -n 1)
-	[[ "$last" == "$steps. **Fix and repeat.**"* ]]
-	[[ "$proc" =~ run\ steps\ 1\ to\ ([0-9]+)\ again ]]
+	[[ "$last" == "$steps. **Fix and repeat.**"* ]] || false
+	[[ "$proc" =~ run\ steps\ 1\ to\ ([0-9]+)\ again ]] || false
 	[ "${BASH_REMATCH[1]}" = $((steps - 1)) ]
-	[[ "$proc" == *"$((steps - 1)). **Score each piece with decisionkit.**"* ]]
-	[[ "$proc" == *"A piece passes when \`Q_MATCH\` is true and the \`Q_SLOP\` expected value is below \`SLOP_MAX\`."* ]]
+	[[ "$proc" == *"$((steps - 1)). **Score each piece with decisionkit.**"* ]] || false
+	[[ "$proc" == *"A piece passes when \`Q_MATCH\` is true and the \`Q_SLOP\` expected value is below \`SLOP_MAX\`."* ]] || false
 }
 
 @test "the prompt block has the parts that the procedure reads" {
@@ -288,18 +288,18 @@ need_decisionkit() {
 	grep -q '^Restatement:' <<<"$prompt"
 	grep -q '^Unclear:' <<<"$prompt"
 	# The skill describes the blocks that follow the prompt.
-	[[ "$TEXT" == *"\`N. Path: <value>\`"* ]]
-	[[ "$TEXT" == *"\`Piece:\`"* ]]
+	[[ "$TEXT" == *"\`N. Path: <value>\`"* ]] || false
+	[[ "$TEXT" == *"\`Piece:\`"* ]] || false
 }
 
 @test "the Vale step names a command and a task that mise.toml supports" {
-	[[ "$TEXT" == *'`mise exec -- vale <file>`'* ]]
+	[[ "$TEXT" == *'`mise exec -- vale <file>`'* ]] || false
 	grep -qE '^vale = "[0-9]' "$MISE"
 	# The step sends a missing-package error to vale sync. The setup task runs it.
-	[[ "$TEXT" == *'`mise exec -- vale sync`'* ]]
+	[[ "$TEXT" == *'`mise exec -- vale sync`'* ]] || false
 	yq '.tasks.setup.run[]' "$MISE" | grep -qx 'vale sync'
 	# The skill points to the task that lints every tracked Markdown file.
-	[[ "$TEXT" == *'`mise run prose:lint`'* ]]
+	[[ "$TEXT" == *'`mise run prose:lint`'* ]] || false
 	[ "$(yq '.tasks."prose:lint".description != null' "$MISE")" = true ]
 	yq '.tasks."prose:lint".run' "$MISE" | grep -q 'vale'
 }
@@ -307,8 +307,8 @@ need_decisionkit() {
 @test ".vale.ini sets the ai-tells package and the House styles that the skill names" {
 	[ -f "$VALE_INI" ]
 	# Vale reads the config from the repository root, so step 1 starts there.
-	[[ "$TEXT" == *'From the repository root, run `mise exec -- vale <file>`'* ]]
-	[[ "$TEXT" == *'the `ai-tells` package and the `House` styles'* ]]
+	[[ "$TEXT" == *'From the repository root, run `mise exec -- vale <file>`'* ]] || false
+	[[ "$TEXT" == *'the `ai-tells` package and the `House` styles'* ]] || false
 	grep -qE '^Packages = .*ai-tells' "$VALE_INI"
 	grep -qE '^BasedOnStyles = .*ai-tells.*House' "$VALE_INI"
 	# The House styles are our own and are committed, unlike the package.
@@ -321,7 +321,7 @@ need_decisionkit() {
 	hook='.repos[].hooks[] | select(.id == "vale")'
 	[ "$(yq "$hook | .entry" "$HOOKS")" = "mise exec -- vale" ]
 	[ "$(yq "$hook | .types[0]" "$HOOKS")" = markdown ]
-	[[ "$TEXT" == *'The `vale` pre-commit hook lints each staged `.md` file'* ]]
+	[[ "$TEXT" == *'The `vale` pre-commit hook lints each staged `.md` file'* ]] || false
 }
 
 @test "Vale covers the file type of each piece, or step 1 says how to lint it" {
