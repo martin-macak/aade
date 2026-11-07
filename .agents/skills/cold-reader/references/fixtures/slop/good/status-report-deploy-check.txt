@@ -1,0 +1,12 @@
+## Deploy check: failed, 2 of 9 services are unhealthy
+
+This check blocks the merge until every service is healthy.
+
+- **Health:** the service answers GET /health with status 200 within 2 s.
+- **Version:** the running image tag equals the tag of the head commit.
+
+The table under "Failed" lists each service that failed a check.
+
+The score of each check is the share of 20 probes that passed. A check fails below 90 %.
+
+Run the check again: `scripts/deploy-check.sh 412`

@@ -1,0 +1,8 @@
+## Coverage check: results are in
+
+The coverage of this pull request may or may not be enough, depending on several factors.
+
+- **Line coverage:** an important metric that reflects overall quality.
+- **Branch coverage:** another key metric worth keeping in mind.
+
+Some packages could probably use more tests. Please review as appropriate.

@@ -1,0 +1,8 @@
+## Deploy check: here is your summary!
+
+Let me walk you through the results of this automated check. Overall, things look mostly good, but a few services might possibly need some attention.
+
+- **Health:** this hopefully tells you how healthy each service is.
+- **Version:** this shows version information, which can be useful in some cases.
+
+We recommend that you take a look at the table below when you have a moment. In general, most items should be fine.

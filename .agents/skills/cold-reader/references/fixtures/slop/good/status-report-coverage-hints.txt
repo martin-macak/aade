@@ -1,0 +1,11 @@
+## Coverage check: passed, 3 of 12 packages need a review
+
+This check does not block the merge. A reviewer reads each row under "Needs review".
+
+- **Line coverage:** the share of lines that the tests run.
+- **Branch coverage:** the share of branches that the tests take.
+
+A check fails below 60 %. From 80 % on, it passes without a review. Each row under "Needs review" gives the hint of each check that scored from 60 % to 80 %:
+
+- Line coverage: the tests skip some new lines of the package.
+- Branch coverage: the tests skip some error branches of the package.

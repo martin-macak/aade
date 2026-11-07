@@ -25,3 +25,6 @@ A: The empty directory and the flags keep project rules, tools, skills and memor
 
 Q: What must you do with the fence name and the variables of the sh questions block?
 A: You must not rename them, because the calibration script and the knowledge-curator test runner read the block.
+
+Q: How do you gate a status report that a script writes from data, such as a PR comment?
+A: You run Vale and Q_SLOP on the fixed text of the script only, with each hint written once, you do not score the data for slop, and you score Q_MATCH on the whole report.
