@@ -1,0 +1,5 @@
+The body has no R item. Run: shepherd.sh requirements 11, and paste its output as the "## Requirements" section.
+R1 is missing. Add it: - [ ] R1: the check fails on an unticked task
+R2 is missing. Add it: - [ ] R2: the check fails on a missing evidence line
+R3 is missing. Add it: - [ ] R3: CI runs the check
+V1: R1 is not an R item of this PR.

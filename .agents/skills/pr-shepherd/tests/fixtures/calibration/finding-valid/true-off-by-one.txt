@@ -1,0 +1,2 @@
+Finding on src/page.ts:
+The loop uses <= length, so the last page reads one item past the end and returns undefined.

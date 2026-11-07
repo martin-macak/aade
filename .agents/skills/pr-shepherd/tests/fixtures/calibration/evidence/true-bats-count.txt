@@ -1,0 +1,7 @@
+Claim:
+R2: the skill is covered by tests
+R2.1: bats tests for the scripts
+
+Evidence:
+.agents/skills/pr-shepherd/tests/shepherd.bats
+`bats .agents/skills/pr-shepherd/tests` -> 31 tests, 0 failures

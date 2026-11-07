@@ -1,0 +1,2 @@
+Finding on README.md:
+Typo: "recieve" should be "receive".

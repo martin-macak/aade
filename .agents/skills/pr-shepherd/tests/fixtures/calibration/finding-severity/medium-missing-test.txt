@@ -1,0 +1,2 @@
+Finding on scripts/check.sh:
+The new SHA rule has no test, so a regression would pass CI.

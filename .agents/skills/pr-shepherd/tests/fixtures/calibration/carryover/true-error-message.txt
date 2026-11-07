@@ -1,0 +1,6 @@
+Issue item:
+the CLI prints a clear error when the config file is missing
+
+Sub-tasks of the PR item:
+- print "config.yml not found, run init" and exit 2
+- test the missing-file case

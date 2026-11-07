@@ -1,0 +1,5 @@
+Issue item:
+CI fails when a PR has an unticked task
+
+Sub-tasks of the PR item:
+- the check prints a warning for an unticked checkbox and exits 0

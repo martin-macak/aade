@@ -1,0 +1,2 @@
+Finding on .github/workflows/ci.yml:
+The PR title goes straight into a run: expression, so a crafted title runs shell code. Pass it through env instead.

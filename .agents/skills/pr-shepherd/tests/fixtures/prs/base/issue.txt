@@ -1,0 +1,17 @@
+### Scope
+
+agents
+
+### What and why
+
+The check must enforce the PR rules.
+
+### Done when
+
+- [ ] the check fails on an unticked task
+- [ ] the   check fails on a missing evidence line  
+- [ ] CI runs the check
+
+### Risk
+
+_No response_

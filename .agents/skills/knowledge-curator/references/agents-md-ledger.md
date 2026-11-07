@@ -27,7 +27,7 @@ decisionkit 0.4.0 with the Jev provider.
 | V1 | Conventional Commits. | general 0.55 | 2.01 | 0.21 | 5 | Keep. Uncertain class, but frequent. | 2026-11-06 |
 | V2 | Linear history. Rebase, do not merge. | general 0.65 | 2.15 | 1.17 | 5 | Keep. Uncertain class, but frequent. | 2026-11-06 |
 | V3 | Write prose in short, active sentences. | general 0.71 | 1.68 | 0.15 | 5 | Keep. Uncertain class, but frequent. Vale checks only parts of it. | 2026-11-06 |
-| V4 | Open issues and PRs only through the forms, template and labels in `.github/`. Load `issue-authoring` first. | skill 0.73 | 1.48 | 0.53 | 1 | Keep one line. The user asked for agents to respect the templates, with a skill, a helper script and a pointer in `AGENTS.md`. Details in `issue-authoring`. | 2026-11-06 |
+| V4 | Open issues and PRs only through the forms, template and labels in `.github/`. Load `issue-authoring` first. Load `pr-shepherd` before you change, answer or merge a PR. | skill 0.62 | 1.76 | 0.88 | 5 | Keep, one sentence longer. Uncertain class, but frequent. The first part came in by rule 1, because the user asked for it. The `pr-shepherd` part extends it for issue #11, because a PR merged without the shepherd skips its rules. Details in both skills. Earlier triage of the first part alone: skill 0.73, 1.48, 0.53. | 2026-11-07 |
 
 ## Moved out of AGENTS.md
 

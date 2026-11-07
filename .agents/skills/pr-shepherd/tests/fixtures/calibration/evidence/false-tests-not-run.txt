@@ -1,0 +1,5 @@
+Claim:
+R2: the skill is covered by tests
+
+Evidence:
+`bats .agents/skills/pr-shepherd/tests` -> 0 tests

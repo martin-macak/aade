@@ -1,0 +1,5 @@
+Claim:
+R5: CI fails when a PR has an unticked task
+
+Evidence:
+https://example.com/blog/why-checklists-matter

@@ -1,0 +1,2 @@
+Finding on src/page.ts:
+An empty list returns page 1 of 0 instead of an empty page. Only callers with no data hit it.

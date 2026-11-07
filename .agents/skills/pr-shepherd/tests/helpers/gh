@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+# A fake gh for the shepherd tests. It serves the reads of shepherd.sh from
+# the fixture case $CASE, and falls back to $BASE for each missing file. A
+# case file <name>.sed or <name>.jq edits the base file instead of
+# replacing it. It logs every other call in $GH_LOG, one line each.
+# statuses.json may hold @REQ@ and @ISSUE@. The stub swaps them for the
+# hashes of the served body and issue, so a trace is fresh unless a case
+# says otherwise.
+
+set -u -o pipefail
+
+# Print the fixture file $1 of the case.
+fixture() {
+	if [[ -f "$CASE/$1" ]]; then
+		cat "$CASE/$1"
+	elif [[ -f "$CASE/$1.sed" ]]; then
+		sed -E -f "$CASE/$1.sed" "$BASE/$1"
+	elif [[ -f "$CASE/$1.jq" ]]; then
+		jq -f "$CASE/$1.jq" "$BASE/$1"
+	elif [[ -f "$BASE/$1" ]]; then
+		cat "$BASE/$1"
+	else
+		return 1
+	fi
+}
+
+pr_json() {
+	jq --arg body "$(fixture body.txt)" '.body = $body' <(fixture pr.json)
+}
+
+issue_json() {
+	jq --arg body "$(fixture issue.txt)" '.body = $body' <(fixture issue.json)
+}
+
+args=" $* "
+case $args in
+" pr view "*) pr_json ;;
+" issue view "*) issue_json ;;
+" api repos/{owner}/{repo}/pulls/"*"/files"*) fixture files.txt ;;
+" api graphql "*"reviewThreads"*) fixture threads.json ;;
+" api graphql "*"closedByPullRequestsReferences"*) fixture closing.txt || true ;;
+" api repos/{owner}/{repo}/issues/"*"/comments?per_page=100 "*) fixture comments.json ;;
+" api repos/{owner}/{repo}/commits/"*"/statuses"*)
+	# shellcheck source=../../scripts/shepherd.sh
+	source "$SHEPHERD"
+	req=$(pr_json | jq -r .body | clean_body | requirements_section | sha8)
+	issue=$(issue_json | jq -r .body | issue_items | sha8)
+	fixture statuses.json | sed "s/@REQ@/$req/g; s/@ISSUE@/$issue/g"
+	;;
+" api repos/{owner}/{repo}/rules/branches/"*) fixture rules.json ;;
+" pr checks "*" --watch"*) echo "$*" >>"$GH_LOG" ;;
+" pr checks "*) fixture checks.json ;;
+" run list "*)
+	echo "$*" >>"$GH_LOG"
+	fixture runs.txt || true
+	;;
+*)
+	echo "$*" >>"$GH_LOG"
+	# A comment write returns its URL, as --jq .html_url does.
+	[[ "$args" == *"/comments"* ]] && echo "https://github.com/acme/app/pull/42#issuecomment-9002"
+	exit 0
+	;;
+esac

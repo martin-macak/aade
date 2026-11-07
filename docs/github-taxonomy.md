@@ -8,10 +8,10 @@ belongs to a user account.
 
 | File | Role |
 | --- | --- |
-| `.github/labels.yml` | The only list of labels: `type:<x>` and `scope:<x>`. |
+| `.github/labels.yml` | The only list of labels: `type:<x>` and `scope:<x>` for issues, `pr:<x>` flags for pull requests. |
 | `.github/ISSUE_TEMPLATE/<type>.yml` | One issue form per type. It sets the type label and asks for the fields of that type. |
 | `.github/ISSUE_TEMPLATE/config.yml` | Turns blank issues off. The web UI offers only the forms. |
-| `.github/pull_request_template.md` | The body of every pull request. |
+| `.github/pull_request_template.md` | The body of every pull request, with the Requirements and Verify sections that the `pr-shepherd` check reads. |
 | `.github/dependabot.yml` | Sets taxonomy labels on the Dependabot pull requests. |
 
 ## Automation
@@ -35,6 +35,10 @@ flowchart LR
   this workflow sets the scope.
 - **`taxonomy:check`** fails pre-commit and CI when the Scope dropdown of
   a form differs from the scope labels, or when a type has no form.
+- **`pr-shepherd`** checks each pull request: every issue item is carried
+  over and ticked with evidence, and every review finding is triaged. The
+  [pr-shepherd](../.agents/skills/pr-shepherd/SKILL.md) skill explains
+  the rules.
 
 ## Tasks
 

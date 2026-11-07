@@ -1,0 +1,6 @@
+[
+  {"bucket": "fail", "link": "https://github.com/acme/app/actions/runs/700/job/1", "name": "pr-shepherd", "state": "FAILURE", "workflow": "pr-shepherd"},
+  {"bucket": "fail", "link": "https://github.com/acme/app/pull/42#issuecomment-9002", "name": "pr-shepherd/trace", "state": "FAILURE", "workflow": ""},
+  {"bucket": "skipping", "link": "https://github.com/acme/app/actions/runs/700/job/2", "name": "disarm", "state": "SKIPPED", "workflow": "pr-shepherd"},
+  {"bucket": "pass", "link": "https://github.com/acme/app/actions/runs/701/job/3", "name": "check", "state": "SUCCESS", "workflow": "agents-check"}
+]

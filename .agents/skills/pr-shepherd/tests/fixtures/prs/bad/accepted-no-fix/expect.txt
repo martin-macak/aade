@@ -1,0 +1,1 @@
+Thread PRRT_bot (codex[bot]): the accepted triage has no "fix:" line. Fix the finding, then reply again with --fix.

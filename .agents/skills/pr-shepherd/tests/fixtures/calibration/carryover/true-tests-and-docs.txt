@@ -1,0 +1,6 @@
+Issue item:
+the retry limit is configurable and documented
+
+Sub-tasks of the PR item:
+- read RETRY_LIMIT from the config file
+- describe RETRY_LIMIT in docs/config.md

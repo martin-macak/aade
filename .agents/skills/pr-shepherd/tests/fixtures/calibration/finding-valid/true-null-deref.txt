@@ -1,0 +1,2 @@
+Finding on src/user.ts:
+`user.profile.name` throws when profile is null, and getUser returns null profiles for new accounts. Guard it or default the name.

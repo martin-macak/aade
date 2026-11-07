@@ -1,0 +1,4 @@
+Finding on src/user.ts:
+What happens when profile is null?
+
+(The line above it already returns early when profile is null.)

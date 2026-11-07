@@ -1,0 +1,14 @@
+# "+" tasks must load pr-shepherd. "-" tasks belong to other skills.
++ The pr-shepherd check failed on my pull request 14. Fix it.
++ Codex left three review comments on PR #12. Address them and resolve the threads.
++ Tick the done tasks in the Requirements section of my PR and add the evidence lines.
++ Is PR #20 ready to merge? Turn on auto-merge if it is.
++ A reviewer asked for changes on my PR, but I think the finding is wrong. What do I do?
++ Carry the Done when items of issue #11 over into the body of my open pull request.
++ The agents-check CI job is red on my PR #12. Watch the checks and fix what fails.
+- Open a GitHub issue for the flaky drift test in the decisionkit skill.
+- Which labels should the new issue about the Vale config get?
+- Add a new scope called api to the issue labels and the forms.
+- Research which Mermaid diagram types GitHub renders, with sources.
+- Check this README paragraph for slop before I commit it.
+- Decide whether this new instruction belongs in AGENTS.md or in a skill.

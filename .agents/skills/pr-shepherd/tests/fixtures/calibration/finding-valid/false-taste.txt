@@ -1,0 +1,2 @@
+Finding on src/user.ts:
+I would personally name this variable usr instead of user.

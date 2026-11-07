@@ -1,0 +1,3 @@
+{"number": 42, "author": {"login": "alice", "is_bot": false}, "labels": [],
+ "headRefOid": "0123456789abcdef0123456789abcdef01234567", "baseRefName": "main",
+ "url": "https://github.com/acme/app/pull/42"}

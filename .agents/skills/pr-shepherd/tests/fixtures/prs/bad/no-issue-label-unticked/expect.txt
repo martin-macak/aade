@@ -1,0 +1,2 @@
+PR #42 has the label pr:no-issue. It needs no issue items and no trace.
+R1.1: not ticked. Finish the task, then tick it, or remove it.

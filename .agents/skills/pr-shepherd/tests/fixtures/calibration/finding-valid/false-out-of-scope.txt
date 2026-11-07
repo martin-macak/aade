@@ -1,0 +1,2 @@
+Finding on the PR:
+While you are here, could we also rewrite the whole build in Bazel?

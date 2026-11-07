@@ -1,0 +1,2 @@
+Finding on src/user.ts:
+Nit: the helper name fmt is short. formatUser would read better.

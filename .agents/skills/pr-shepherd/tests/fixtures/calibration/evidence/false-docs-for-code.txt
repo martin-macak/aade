@@ -1,0 +1,5 @@
+Claim:
+R1: the CLI prints a clear error when the config file is missing
+
+Evidence:
+docs/roadmap.md

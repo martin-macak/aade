@@ -1,0 +1,2 @@
+Verify: "V1: `mise run check` passes" is not a V item. Write "V<n> (R<k>): <check>".
+Verify: the PR has no V item. Add at least one: - [ ] V1 (R1): <check>

@@ -1,0 +1,2 @@
+Finding on src/cache.ts:
+Two requests can both miss the cache and both write it. The second write overwrites a newer value. Use a lock or compare-and-set.

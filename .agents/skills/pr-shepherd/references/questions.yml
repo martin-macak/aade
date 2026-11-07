@@ -1,0 +1,52 @@
+# The decisionkit questions of the pr-shepherd skill. scripts/shepherd.sh
+# asks them through .agents/skills/decisionkit/scripts/decide.sh, and
+# `make calibrate` scores the fixtures in tests/fixtures/calibration.
+# The decisionkit skill explains the format in the section "Facade".
+# Each threshold sits in the middle of the gap that calibration printed
+# with decisionkit 0.4.0 and the Jev provider: carryover 0.30 to 0.55,
+# evidence 0.11 to 0.75, finding-valid 0.48 to 0.79. Run
+# `make -C .agents/skills/pr-shepherd calibrate` after every change here.
+questions:
+  - name: carryover
+    kind: binary
+    text: >-
+      The text has an issue item and the sub-tasks that a pull request
+      lists for it. Does the work of the sub-tasks, taken together, deliver
+      every part of the issue item, without changing what it asks? True
+      means each part of the issue item has a sub-task that does it, and no
+      sub-task narrows, weakens or skips a part. Also true when the
+      sub-tasks are "(none)", because then the PR item is the issue item
+      word for word. False means a part of the issue item has no sub-task,
+      or a sub-task does other work, or a sub-task weakens the issue item.
+    threshold: 0.43
+  - name: evidence
+    kind: binary
+    text: >-
+      The text has a claim (a PR item with its sub-tasks) and its evidence
+      lines. You cannot open files or links, so judge by names and stated
+      results. An evidence line is a file path that the PR changes, an
+      https URL, or a command with its result. Does the evidence cover the
+      claim? True means each part of the claim has a changed file whose
+      path fits that part, a link to a matching run or page, or a command
+      whose stated result is a success. False means a part of the claim has
+      no fitting evidence, or a file or link is about something else, or a
+      command result shows a failure or zero tests.
+    threshold: 0.43
+  - name: finding-valid
+    kind: binary
+    text: >-
+      The text is a code review finding on a pull request. Is it a valid
+      finding that the author should act on? True means it names a
+      concrete defect, risk or missing piece that a change can fix. False
+      means it is a matter of taste, a question already answered by the
+      code, a false alarm, or so vague that no change can satisfy it.
+    threshold: 0.63
+  - name: finding-severity
+    kind: score
+    text: >-
+      The text is a code review finding on a pull request. How severe is
+      the problem it names? low means style, wording or a nit with no
+      effect on behaviour. medium means wrong behaviour in an edge case, a
+      missing test or a maintainability cost. high means data loss, a
+      security hole, a broken build or wrong behaviour in the main path.
+    options: [low, medium, high]

@@ -1,0 +1,9 @@
+Claim:
+R2: the export endpoint returns CSV and JSON
+R2.1: add a CSV serializer
+R2.2: add a JSON serializer
+
+Evidence:
+src/export/csv.ts
+src/export/json.ts
+`npm test -- export` -> 14 passed

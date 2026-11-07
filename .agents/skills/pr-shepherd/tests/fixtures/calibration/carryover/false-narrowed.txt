@@ -1,0 +1,6 @@
+Issue item:
+the export endpoint returns CSV and JSON
+
+Sub-tasks of the PR item:
+- add a CSV serializer to the export endpoint
+- test the CSV format

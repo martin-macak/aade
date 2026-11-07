@@ -1,0 +1,6 @@
+Claim:
+R3: the retry limit is configurable and documented
+
+Evidence:
+README.md
+.gitignore

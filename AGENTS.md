@@ -31,4 +31,5 @@ aade. The purpose and the stack are not decided yet.
 - Write prose in short, active sentences.
 - Open GitHub issues and pull requests only through the forms, the
   template and the labels in `.github/`. Load the `issue-authoring` skill
-  first.
+  first. Load the `pr-shepherd` skill before you change, answer or merge
+  a pull request.

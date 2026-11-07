@@ -1,0 +1,10 @@
+Closes #11
+
+## Summary
+
+- Adds the check.
+
+## Verify
+
+- [x] V1 (R1): `mise run check` passes
+  - evidence: `mise run check` -> ok

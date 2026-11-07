@@ -1,0 +1,1 @@
+Trace: the Requirements section changed after verify. Run: shepherd.sh verify 42
