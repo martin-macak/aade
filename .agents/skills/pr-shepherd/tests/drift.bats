@@ -109,17 +109,17 @@ section() {
 	[ "$(yq '.jobs.disarm.steps[-1].run' "$WORKFLOW")" = 'mise run pr:shepherd disarm "$ISSUE"' ]
 	# The job may only read. A write would let a PR change its own trace.
 	[ -z "$(yq '.jobs["pr-shepherd"].permissions | to_entries | .[] | select(.value != "read") | .key' "$WORKFLOW")" ]
-	[[ "$TEXT" == *'The `pr-shepherd` workflow runs `mise run pr:check`'* ]]
+	[[ "$TEXT" == *'The `pr-shepherd` workflow runs `mise run pr:check`'* ]] || false
 }
 
 @test "the mise tasks run the script, and check does not depend on them" {
 	[ "$(yq -p toml '.tasks["pr:check"].run' "$MISE")" = ".agents/skills/pr-shepherd/scripts/shepherd.sh check" ]
 	[ "$(yq -p toml '.tasks["pr:shepherd"].run' "$MISE")" = ".agents/skills/pr-shepherd/scripts/shepherd.sh" ]
-	! yq -p toml '.tasks.check.depends[]' "$MISE" | grep -q '^pr:'
-	[[ "$TEXT" == *'mise run pr:check <pr>'* && "$TEXT" == *'mise run pr:shepherd'* ]]
+	! yq -p toml '.tasks.check.depends[]' "$MISE" | grep -q '^pr:' || false
+	[[ "$TEXT" == *'mise run pr:check <pr>'* && "$TEXT" == *'mise run pr:shepherd'* ]] || false
 }
 
 @test "the Makefile calibrates with the decisionkit facade" {
 	grep -qF '../decisionkit/scripts/decide.sh calibrate references/questions.yml tests/fixtures/calibration' "$DIR/Makefile"
-	[[ "$TEXT" == *'make -C .agents/skills/pr-shepherd calibrate'* ]]
+	[[ "$TEXT" == *'make -C .agents/skills/pr-shepherd calibrate'* ]] || false
 }

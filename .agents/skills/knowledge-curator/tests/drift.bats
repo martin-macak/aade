@@ -53,18 +53,18 @@ skill_tests() {
 	nested=$(sed -n 's/^MAX_NESTED_LINES=//p' "$SIZE")
 	[ -n "$root" ]
 	[ -n "$nested" ]
-	[[ "$TEXT" == *"The constitution and guardrails. At most $root lines."* ]]
-	[[ "$TEXT" == *"exceeds \`MAX_LINES\` ($root today)"* ]]
-	[[ "$TEXT" == *"Purpose, intent and local rules of one folder. At most $nested lines."* ]]
-	[[ "$TEXT" == *"exceeds \`MAX_NESTED_LINES\` ($nested today)"* ]]
+	[[ "$TEXT" == *"The constitution and guardrails. At most $root lines."* ]] || false
+	[[ "$TEXT" == *"exceeds \`MAX_LINES\` ($root today)"* ]] || false
+	[[ "$TEXT" == *"Purpose, intent and local rules of one folder. At most $nested lines."* ]] || false
+	[[ "$TEXT" == *"exceeds \`MAX_NESTED_LINES\` ($nested today)"* ]] || false
 }
 
 @test "the SKILL.md limit matches lint-knowledge.sh" {
 	limit=$(sed -n 's/^MAX_SKILL_LINES=//p' "$LINT")
 	[ -n "$limit" ]
-	[[ "$TEXT" == *"Rules and procedures for one domain. At most $limit lines."* ]]
-	[[ "$TEXT" == *"Keep \`SKILL.md\` under $limit lines."* ]]
-	[[ "$TEXT" == *"a \`description\`, at most $limit lines;"* ]]
+	[[ "$TEXT" == *"Rules and procedures for one domain. At most $limit lines."* ]] || false
+	[[ "$TEXT" == *"Keep \`SKILL.md\` under $limit lines."* ]] || false
+	[[ "$TEXT" == *"a \`description\`, at most $limit lines;"* ]] || false
 }
 
 @test "the hooks run the scripts and tasks that the skill names" {
@@ -72,9 +72,9 @@ skill_tests() {
 	[ "$(hook agents-check)" = "mise run agents:check" ]
 	[ "$(hook agents-md-size)" = "mise exec -- scripts/check-agents-md-size.sh" ]
 	[ "$(hook knowledge-lint)" = "mise exec -- scripts/lint-knowledge.sh" ]
-	[[ "$TEXT" == *'runs `scripts/check-agents-md-size.sh`'* ]]
-	[[ "$TEXT" == *'runs `scripts/lint-knowledge.sh`'* ]]
-	[[ "$TEXT" == *'runs `mise run agents:check`'* ]]
+	[[ "$TEXT" == *'runs `scripts/check-agents-md-size.sh`'* ]] || false
+	[[ "$TEXT" == *'runs `scripts/lint-knowledge.sh`'* ]] || false
+	[[ "$TEXT" == *'runs `mise run agents:check`'* ]] || false
 }
 
 @test "the mise tasks in the skill exist, and check runs every CI check" {
@@ -84,7 +84,7 @@ skill_tests() {
 			return 1
 		}
 	done
-	[[ "$TEXT" == *'mise run skills:drift'* && "$TEXT" == *'mise run skills:test'* && "$TEXT" == *'mise run agents:link'* ]]
+	[[ "$TEXT" == *'mise run skills:drift'* && "$TEXT" == *'mise run skills:test'* && "$TEXT" == *'mise run agents:link'* ]] || false
 	deps=$(yq -p toml '.tasks.check.depends[]' "$MISE")
 	for task in agents:check knowledge:size knowledge:lint skills:drift prose:lint; do
 		grep -qx "$task" <<<"$deps" || {
@@ -112,7 +112,7 @@ skill_tests() {
 
 @test "the test layers in the skill match the runner" {
 	for layer in drift triggers knowledge slop; do
-		[[ "$TEXT" == *"| \`$layer\` |"* ]]
+		[[ "$TEXT" == *"| \`$layer\` |"* ]] || false
 		grep -qE "^$layer\) layer_$layer ;;" "$RUNNER"
 	done
 }
@@ -122,15 +122,15 @@ skill_tests() {
 		name=${pair%%:*}
 		value=${pair#*:}
 		grep -qF "$name=\${SKILL_TEST_$name:-$value}" "$RUNNER"
-		[[ "$TEXT" =~ \`SKILL_TEST_$name\`\ \(default\ \`?$value\`?\) ]]
+		[[ "$TEXT" =~ \`SKILL_TEST_$name\`\ \(default\ \`?$value\`?\) ]] || false
 	done
-	[[ "$TEXT" == *"Each task runs 3 times"* ]]
+	[[ "$TEXT" == *"Each task runs 3 times"* ]] || false
 }
 
 @test "the case minimum in the skill matches lint-knowledge.sh" {
 	min=$(sed -n 's/^MIN_CASES=//p' "$LINT")
 	[ -n "$min" ]
-	[[ "$TEXT" == *"at least $min \`+\` and $min \`-\` tasks, and at least $min questions in each skill"* ]]
+	[[ "$TEXT" == *"at least $min \`+\` and $min \`-\` tasks, and at least $min questions in each skill"* ]] || false
 }
 
 @test "the skill-drift hook runs only the drift tests that a change affects" {
