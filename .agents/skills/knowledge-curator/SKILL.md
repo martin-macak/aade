@@ -229,6 +229,13 @@ A skill may add a layer of its own as a target in its `Makefile`, and
 `test` then runs it too. `knowledge-curator` and `cold-reader` add
 `calibrate`, which scores their grader fixtures with decisionkit.
 
+Each `scripts/<x>.sh` of a skill needs the suite `tests/<x>.bats` in the
+same skill. The suite runs the script with the fake external tools of
+`tests/scripts/helpers/fakes.bash`, and it has one test per use case and
+per exit path. The `scripts-coverage` pre-commit hook and `mise run check`
+fail on a script without a suite. `tests/AGENTS.md` gives the rules for
+the suites of the repository scripts.
+
 ### Knowledge grading
 
 `scripts/test-skill.sh` reads this block. Do not rename the fence.

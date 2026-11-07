@@ -1,0 +1,39 @@
+# Runs the bats suites of scripts/*.sh (tests/scripts/). The path filter
+# runs it only when a script, a suite or the tool versions change. No ruleset
+# requires this check, so a skipped run does not block a merge. The suites
+# of the skill scripts run in agents-check, through `mise run check`.
+name: scripts-test
+
+on:
+  push:
+    branches: [main]
+    paths: [scripts/**, tests/scripts/**, mise.toml, .github/workflows/scripts-test.yml]
+  pull_request:
+    paths: [scripts/**, tests/scripts/**, mise.toml, .github/workflows/scripts-test.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  bats:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Developers run the scripts on macOS too, with bash 3.2 and BSD tools.
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Only the tools that the scripts and the suites need.
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: bats gh jq yq
+      # The runner image puts Homebrew bash 5 first on PATH. Put /bin first,
+      # so `#!/usr/bin/env bash` finds the bash 3.2 of macOS, as on a Mac
+      # without Homebrew bash.
+      - if: runner.os == 'macOS'
+        run: echo /bin >>"$GITHUB_PATH"
+      - run: bash --version | head -n 1
+      # Not `mise run`: it would want every tool of mise.toml.
+      - run: scripts/script-tests.sh run

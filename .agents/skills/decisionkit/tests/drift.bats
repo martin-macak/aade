@@ -58,7 +58,7 @@ facade_value() {
 		}
 	done
 	# The skill sends the user to this command when decisionkit fails.
-	[[ "$TEXT" == *'run `decisionkit status`'* ]]
+	[[ "$TEXT" == *'run `decisionkit status`'* ]] || false
 }
 
 @test "the options in the skill exist in decisionkit" {
@@ -96,18 +96,18 @@ facade_value() {
 @test "the exit codes in the skill match decisionkit" {
 	need_decisionkit
 	grep -qF 'Exit codes: 0 = true / confident, 1 = false / below threshold, 2 = error.' <<<"$HELP"
-	[[ "$TEXT" == *'`0` means true or confident, `1` means false or below `--threshold`, and `2` means an error.'* ]]
+	[[ "$TEXT" == *'`0` means true or confident, `1` means false or below `--threshold`, and `2` means an error.'* ]] || false
 }
 
 @test "decisionkit reads the provider variable that the skill names" {
 	need_decisionkit
 	grep -qF 'DECISIONKIT_PROVIDER' <<<"$HELP"
-	[[ "$TEXT" == *'in `DECISIONKIT_PROVIDER`'* ]]
+	[[ "$TEXT" == *'in `DECISIONKIT_PROVIDER`'* ]] || false
 }
 
 @test "mise run agents:health runs the decisionkit checks" {
 	[ "$(yq -p toml '.tasks["agents:health"].run' "$ROOT/mise.toml")" = scripts/agents-health.sh ]
-	[[ "$TEXT" == *'`mise run agents:health` also checks decisionkit.'* ]]
+	[[ "$TEXT" == *'`mise run agents:health` also checks decisionkit.'* ]] || false
 	checks=$(awk '/^CHECKS=\(/ { inside = 1; next } inside && /^\)/ { exit } inside { gsub(/[ \t]/, ""); print }' "$HEALTH")
 	for check in check_decisionkit_installed check_decisionkit_provider check_decisionkit_status; do
 		grep -qx "$check" <<<"$checks" || {
@@ -129,12 +129,12 @@ facade_value() {
 	grep -qF 'DECISIONKIT_PROVIDER' "$ROOT/README.md"
 	grep -qF 'mise.local.toml' "$ROOT/README.md"
 	health_body check_decisionkit_provider | grep -qF 'Set it in mise.local.toml'
-	[[ "$TEXT" == *'Each contributor sets it in the `[env]` table of `mise.local.toml`, which Git ignores.'* ]]
+	[[ "$TEXT" == *'Each contributor sets it in the `[env]` table of `mise.local.toml`, which Git ignores.'* ]] || false
 }
 
 @test "AGENTS.md sends agents to this skill for closed decisions" {
 	agents=$(tr '\n' ' ' <"$ROOT/AGENTS.md" | tr -s ' ')
-	[[ "$agents" == *'Load the `decisionkit` skill first.'* ]]
+	[[ "$agents" == *'Load the `decisionkit` skill first.'* ]] || false
 	[ "$(sed -n 's/^name: //p' "$SKILL")" = decisionkit ]
 }
 
@@ -143,7 +143,7 @@ facade_value() {
 	tie=$(facade_value RANK_TIE)
 	[ -n "$min" ]
 	[ -n "$tie" ]
-	[[ "$TEXT" == *"**Below $min is uncertain.**"* ]]
+	[[ "$TEXT" == *"**Below $min is uncertain.**"* ]] || false
 	for name in UNCERTAIN_MIN RANK_TIE; do
 		grep -qF "\$$name" "$FACADE" || {
 			echo "decide.sh does not use $name."
