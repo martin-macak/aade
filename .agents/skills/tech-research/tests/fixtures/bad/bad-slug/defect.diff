@@ -2,6 +2,18 @@ diff --git a/cache-layer/brief.md b/Cache_Layer/brief.md
 similarity index 100%
 rename from cache-layer/brief.md
 rename to Cache_Layer/brief.md
+diff --git a/cache-layer/redis-cluster/brief.md b/Cache_Layer/redis-cluster/brief.md
+similarity index 100%
+rename from cache-layer/redis-cluster/brief.md
+rename to Cache_Layer/redis-cluster/brief.md
+diff --git a/cache-layer/redis-cluster/report.md b/Cache_Layer/redis-cluster/report.md
+similarity index 100%
+rename from cache-layer/redis-cluster/report.md
+rename to Cache_Layer/redis-cluster/report.md
+diff --git a/cache-layer/redis-cluster/sources.md b/Cache_Layer/redis-cluster/sources.md
+similarity index 100%
+rename from cache-layer/redis-cluster/sources.md
+rename to Cache_Layer/redis-cluster/sources.md
 diff --git a/cache-layer/report.md b/Cache_Layer/report.md
 similarity index 100%
 rename from cache-layer/report.md

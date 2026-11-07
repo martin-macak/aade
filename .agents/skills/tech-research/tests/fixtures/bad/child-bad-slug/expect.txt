@@ -1,0 +1,1 @@
+hook-runner-choice/CI_Cache: the slug 'CI_Cache' is not kebab-case. Rename the folder to lower-case letters, digits and hyphens, such as 'ci-cache'.

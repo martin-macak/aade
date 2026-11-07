@@ -73,7 +73,7 @@ problems() {
 	run "$R"
 	[ "$status" -eq 2 ]
 	for cmd in "init <slug>" "add <slug> <type>" "source add <slug>" "cite sync <slug>" \
-		"status <slug> <file> <status>" "check [<slug>...]"; do
+		"status <slug> <file> <status>" "check [<slug>...]" "progress <slug>" "reopen <slug>"; do
 		[[ "$output" == *"research.sh $cmd"* ]] || {
 			echo "the usage lacks: $cmd"
 			return 1
@@ -124,6 +124,13 @@ problems() {
 	usage_error status q report.md review --by
 }
 
+@test "progress and reopen: a missing slug or an extra argument exit 2" {
+	usage_error progress
+	usage_error progress q extra
+	usage_error reopen
+	usage_error reopen q extra
+}
+
 @test "a bad RESEARCH_TODAY exits 2 before an action writes a file" {
 	RESEARCH_TODAY=06.11.2026 run "$R" init q --title T --author A
 	[ "$status" -eq 2 ]
@@ -134,7 +141,7 @@ problems() {
 @test "a bad RESEARCH_TODAY stops each action that writes, and changes no file" {
 	new_research
 	before=$(find "$RESEARCH_ROOT" -type f -exec cksum {} + | sort)
-	for args in "add q report" "source add q" "cite sync q" "status q brief.md review"; do
+	for args in "add q report" "source add q" "cite sync q" "status q brief.md review" "reopen hook-runner-choice"; do
 		RESEARCH_TODAY=bad run "$R" $args
 		[ "$status" -eq 2 ] || {
 			echo "$args: exit $status"
@@ -145,8 +152,10 @@ problems() {
 	[ "$(find "$RESEARCH_ROOT" -type f -exec cksum {} + | sort)" = "$before" ]
 }
 
-@test "check and the usage ignore RESEARCH_TODAY, because they write no date" {
+@test "check, progress and the usage ignore RESEARCH_TODAY, because they write no date" {
 	RESEARCH_TODAY=bad run "$R" check
+	[ "$status" -eq 0 ]
+	RESEARCH_TODAY=bad run "$R" progress hook-runner-choice
 	[ "$status" -eq 0 ]
 	RESEARCH_TODAY=bad run "$R"
 	[ "$status" -eq 2 ]
@@ -328,7 +337,7 @@ diagram_problems() {
 	cp "$BATS_TEST_TMPDIR/r.md" "$RESEARCH_ROOT/hook-runner-first-look/report.md"
 	problems
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"with the folder name of the research that replaces this file: none."* ]] || false
+	[[ "$output" == *"with the slug of the research that replaces this file: none."* ]] || false
 }
 
 # ------------------------------------------------------------ init and add
@@ -869,4 +878,317 @@ diagram_problems() {
 	[[ "$output" == *"$RESEARCH_ROOT/q: the required file sources.md is missing."* ]] || false
 	[[ "$output" == *"The status stays draft. Fix the problems above first."* ]] || false
 	[ "$(yq --front-matter=extract '.status' "$RESEARCH_ROOT/q/brief.md")" = draft ]
+}
+
+# ------------------------------------------------------ sub-slugs and progress
+
+# Print a checksum of every file below the folder $1, except the subfolder
+# $2 when it is given.
+tree_sum() {
+	(cd "$1" && find . ${2:+-path "./$2" -prune -o} -type f -print | LC_ALL=C sort | xargs cksum)
+}
+
+# Set the status line of the file $1 to $2, by hand.
+set_status() {
+	swap "$1" "status: $(yq --front-matter=extract '.status' "$1")" "status: $2"
+}
+
+@test "progress prints the files, the placeholders, the sources and the sub-slugs of a parent" {
+	run "$R" progress hook-runner-choice
+	[ "$status" -eq 0 ]
+	[ "$output" = "$(printf '%s\n' \
+		"research: hook-runner-choice" \
+		"parent: none" \
+		"files:" \
+		"  brief.md: final" \
+		"  comparison.md: final" \
+		"  experiment-install-time.md: final" \
+		"  recommendation.md: final" \
+		"  report.md: final" \
+		"  sources.md: final" \
+		"  tech-profile-lefthook.md: final" \
+		"placeholders: none" \
+		"sources: 4" \
+		"sub-slugs:" \
+		"  ci-cache (report: final)")" ]
+}
+
+@test "progress of a sub-slug names its parent and lists each open placeholder" {
+	run "$R" progress cache-layer/redis-cluster
+	[ "$status" -eq 0 ]
+	[ "${lines[0]}" = "research: cache-layer/redis-cluster" ]
+	[ "${lines[1]}" = "parent: cache-layer (report: draft)" ]
+	[[ "$output" == *$'\nplaceholders:\n  brief.md:24\n'* ]] || false
+	[ "$(grep -c '^  report.md:[0-9]*$' <<<"$output")" -eq 6 ]
+	[ "${lines[${#lines[@]} - 2]}" = "sources: 0" ]
+	[ "${lines[${#lines[@]} - 1]}" = "sub-slugs: none" ]
+}
+
+@test "progress counts the sources after source add, and reports a missing register or report" {
+	"$R" source add cache-layer/redis-cluster --kind primary --author A --title T \
+		--url https://example.com/a --evidence E >/dev/null
+	run "$R" progress cache-layer/redis-cluster
+	[[ "$output" == *$'\nsources: 1\n'* ]] || false
+	rm "$RESEARCH_ROOT/cache-layer/redis-cluster/sources.md" "$RESEARCH_ROOT/cache-layer/redis-cluster/report.md"
+	run "$R" progress cache-layer
+	[[ "$output" == *$'\n  redis-cluster (report: missing)'* ]] || false
+	run "$R" progress cache-layer/redis-cluster
+	[[ "$output" == *$'\nsources: no sources.md\n'* ]] || false
+}
+
+@test "progress writes nothing" {
+	before=$(tree_sum "$RESEARCH_ROOT")
+	"$R" progress hook-runner-choice >/dev/null
+	"$R" progress cache-layer/redis-cluster >/dev/null
+	[ "$(tree_sum "$RESEARCH_ROOT")" = "$before" ]
+}
+
+@test "progress exits 1 for a research that does not exist, and 2 for a bad slug" {
+	run "$R" progress nope
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"No research nope."* ]] || false
+	run "$R" progress cache-layer/nope
+	[ "$status" -eq 1 ]
+	for slug in Bad_Slug a/b/c cache-layer/ /cache-layer; do
+		run "$R" progress "$slug"
+		[ "$status" -eq 2 ] || {
+			echo "$slug: exit $status"
+			return 1
+		}
+	done
+}
+
+@test "reopen moves the final brief and every review or final file to draft, and sets the date" {
+	set_status "$V/comparison.md" review
+	run "$R" reopen hook-runner-choice
+	[ "$status" -eq 0 ]
+	[ "${#lines[@]}" -eq 7 ]
+	[[ "$output" == *"$V/comparison.md: review > draft"* ]] || false
+	[[ "$output" == *"$V/brief.md: final > draft"* ]] || false
+	for file in "$V"/*.md; do
+		[ "$(yq --front-matter=extract '.status' "$file")" = draft ]
+		[ "$(yq --front-matter=extract '.updated' "$file")" = 2026-11-06 ]
+	done
+}
+
+@test "reopen keeps the source IDs and every register row" {
+	before=$(grep -vE '^(status|updated):' "$V/sources.md")
+	"$R" reopen hook-runner-choice >/dev/null
+	[ "$(grep -vE '^(status|updated):' "$V/sources.md")" = "$before" ]
+	run "$R" source add hook-runner-choice --kind primary --author A --title T \
+		--url https://example.com/new --evidence E
+	[ "$output" = S5 ]
+}
+
+@test "reopen keeps a superseded file, and the reopened research still passes the check" {
+	report="$RESEARCH_ROOT/hook-runner-first-look/report.md"
+	before=$(cksum <"$report")
+	run "$R" reopen hook-runner-first-look
+	[ "$status" -eq 0 ]
+	[ "$(cksum <"$report")" = "$before" ]
+	[ "${#lines[@]}" -eq 2 ]
+	problems hook-runner-first-look
+	[ "$status" -eq 0 ]
+	[ -z "$output" ]
+}
+
+@test "a final file still needs a final brief after reopen" {
+	"$R" reopen hook-runner-first-look >/dev/null
+	set_status "$RESEARCH_ROOT/hook-runner-first-look/sources.md" final
+	problems hook-runner-first-look
+	[ "$status" -eq 1 ]
+	[ "$output" = "hook-runner-first-look/sources.md: the status is final, but brief.md is draft. Get the approval of the user and run: research.sh status hook-runner-first-look brief.md final" ]
+}
+
+@test "reopen leaves the sub-slugs of a parent and the parent of a sub-slug unchanged" {
+	child=$(tree_sum "$V/ci-cache")
+	"$R" reopen hook-runner-choice >/dev/null
+	[ "$(tree_sum "$V/ci-cache")" = "$child" ]
+	parent=$(tree_sum "$V" ci-cache)
+	run "$R" reopen hook-runner-choice/ci-cache
+	[ "$status" -eq 0 ]
+	[ "${#lines[@]}" -eq 3 ]
+	[ "$(tree_sum "$V" ci-cache)" = "$parent" ]
+}
+
+@test "reopen refuses a research whose brief is not final, and changes nothing" {
+	before=$(tree_sum "$RESEARCH_ROOT")
+	run "$R" reopen cache-layer
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"The brief of cache-layer is draft, not final."* ]] || false
+	[[ "$output" == *"research.sh status cache-layer <file> draft"* ]] || false
+	new_research
+	fill_brief
+	"$R" status q brief.md review >/dev/null
+	before=$(tree_sum "$RESEARCH_ROOT")
+	run "$R" reopen q
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"is review, not final."* ]] || false
+	[ "$(tree_sum "$RESEARCH_ROOT")" = "$before" ]
+}
+
+@test "reopen exits 1 for a research without a brief, and 2 for a bad slug" {
+	run "$R" reopen nope
+	[ "$status" -eq 1 ]
+	run "$R" reopen a/b/c
+	[ "$status" -eq 2 ]
+}
+
+@test "after reopen, the user approves the brief again and the flow goes on" {
+	"$R" reopen hook-runner-choice >/dev/null
+	echo "- New requirement: Windows support." >>"$V/brief.md"
+	run "$R" status hook-runner-choice brief.md review
+	[ "$status" -eq 0 ]
+	run "$R" status hook-runner-choice brief.md final
+	[ "$status" -eq 0 ]
+	run "$R" status hook-runner-choice report.md review
+	[ "$status" -eq 0 ]
+}
+
+@test "status refuses final to draft, also for a sub-slug, and points to reopen" {
+	for slug in hook-runner-choice hook-runner-choice/ci-cache; do
+		run "$R" status "$slug" brief.md draft
+		[ "$status" -eq 1 ]
+		[[ "$output" == *"brief.md cannot move from final to draft. To continue an approved research, run: research.sh reopen $slug"* ]] || false
+	done
+	[ "$(yq --front-matter=extract '.status' "$V/brief.md")" = final ]
+}
+
+@test "status keeps a parent report in draft while it does not link a sub-slug" {
+	"$R" reopen hook-runner-choice >/dev/null
+	"$R" status hook-runner-choice brief.md review >/dev/null
+	"$R" status hook-runner-choice brief.md final >/dev/null
+	swap "$V/report.md" "(ci-cache/report.md)" "(ci-cache/)"
+	run "$R" status hook-runner-choice report.md review
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"report.md: the report does not link the sub-slug research 'ci-cache'."* ]] || false
+	[ "$(yq --front-matter=extract '.status' "$V/report.md")" = draft ]
+	swap "$V/report.md" "(ci-cache/)" "(./ci-cache/report.md#summary)"
+	run "$R" status hook-runner-choice report.md review
+	[ "$status" -eq 0 ]
+}
+
+@test "the problems of a sub-slug do not block a move in its parent, and the reverse" {
+	swap "$V/ci-cache/report.md" "authors:" "owner: x"$'\n'"authors:"
+	"$R" reopen hook-runner-choice >/dev/null
+	run "$R" status hook-runner-choice brief.md review
+	[ "$status" -eq 0 ]
+	swap "$V/ci-cache/report.md" "owner: x"$'\n' ""
+	swap "$V/recommendation.md" "authors:" "owner: x"$'\n'"authors:"
+	"$R" reopen hook-runner-choice/ci-cache >/dev/null
+	run "$R" status hook-runner-choice/ci-cache brief.md review
+	[ "$status" -eq 0 ]
+}
+
+@test "status supersedes a file by a sub-slug, and refuses a slug two levels deep" {
+	run "$R" status hook-runner-choice recommendation.md superseded --by cache-layer/a/b
+	[ "$status" -eq 2 ]
+	run "$R" status hook-runner-choice recommendation.md superseded --by cache-layer/redis-cluster
+	[ "$status" -eq 0 ]
+	[ "$(yq --front-matter=extract '.superseded_by' "$V/recommendation.md")" = cache-layer/redis-cluster ]
+	problems
+	[ "$status" -eq 0 ]
+}
+
+@test "init of a sub-slug creates the child research and leaves the parent unchanged" {
+	before=$(tree_sum "$RESEARCH_ROOT/cache-layer")
+	run --separate-stderr "$R" init cache-layer/eviction --title "Eviction" --author "Ann Lee"
+	[ "$status" -eq 0 ]
+	[ "$output" = "$(printf '%s\n' \
+		"$RESEARCH_ROOT/cache-layer/eviction/brief.md" \
+		"$RESEARCH_ROOT/cache-layer/eviction/report.md" \
+		"$RESEARCH_ROOT/cache-layer/eviction/sources.md")" ]
+	[ -z "$stderr" ]
+	[ "$(tree_sum "$RESEARCH_ROOT/cache-layer" eviction)" = "$before" ]
+	problems cache-layer/eviction
+	[ "$status" -eq 0 ]
+}
+
+@test "init of a sub-slug below a parent report in review or later says that the parent must link it" {
+	before=$(tree_sum "$V")
+	run --separate-stderr "$R" init hook-runner-choice/windows --title "Windows" --author "Ann Lee"
+	[ "$status" -eq 0 ]
+	[[ "$stderr" == *"The report of hook-runner-choice is final, so the check now wants a link to windows/report.md in it."* ]] || false
+	[[ "$stderr" == *"research.sh reopen hook-runner-choice"* ]] || false
+	[ "$(tree_sum "$V" windows)" = "$before" ]
+	problems hook-runner-choice
+	[ "$output" = "hook-runner-choice/report.md: the report does not link the sub-slug research 'windows'. Add a link to windows/report.md, such as [<title>](windows/report.md)." ]
+}
+
+@test "init of a sub-slug fails when the parent does not exist, and creates nothing" {
+	run "$R" init queue/sqs --title T --author A
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"No research queue. Run research.sh init queue first"* ]] || false
+	[ ! -e "$RESEARCH_ROOT/queue" ]
+}
+
+@test "init refuses a slug two levels deep and a sub-slug that is not kebab-case" {
+	for slug in cache-layer/a/b cache-layer/ /cache-layer cache-layer/Bad_Name cache-layer//a; do
+		run "$R" init "$slug" --title T --author A
+		[ "$status" -eq 2 ] || {
+			echo "$slug: exit $status"
+			return 1
+		}
+		[[ "$output" == *"must be kebab-case. Use <slug> or <slug>/<sub-slug>."* ]] || false
+	done
+	[ "$(find "$RESEARCH_ROOT/cache-layer" -mindepth 1 -type d | wc -l | tr -d ' ')" -eq 1 ]
+}
+
+@test "add, source add and cite sync work on a sub-slug and touch only its folder" {
+	C="$RESEARCH_ROOT/cache-layer/redis-cluster"
+	parent=$(tree_sum "$RESEARCH_ROOT/cache-layer" redis-cluster)
+	run "$R" add cache-layer/redis-cluster comparison --title "Cluster options" --author "Ann Lee"
+	[ "$status" -eq 0 ]
+	[ "$output" = "$C/comparison.md" ]
+	[ "$(yq --front-matter=extract '.artifacts[]' "$C/brief.md")" = comparison ]
+	run "$R" source add cache-layer/redis-cluster --kind primary --author "Redis Ltd." \
+		--title "Redis cluster specification" --url https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/ \
+		--evidence "Redis cluster splits the keys into hash slots."
+	[ "$output" = S1 ]
+	swap "$C/report.md" "## Key findings" "## Key findings"$'\n\n'"- Redis cluster uses hash slots.[^S1]"
+	run "$R" cite sync cache-layer/redis-cluster
+	[ "$status" -eq 0 ]
+	grep -qxF "[^S1]: [S1](sources.md#s1) Redis Ltd., Redis cluster specification." "$C/report.md"
+	[ "$(tree_sum "$RESEARCH_ROOT/cache-layer" redis-cluster)" = "$parent" ]
+}
+
+@test "check of a parent covers its sub-slugs, and check of a sub-slug covers only that sub-slug" {
+	swap "$V/ci-cache/report.md" "authors:" "owner: x"$'\n'"authors:"
+	swap "$V/recommendation.md" "authors:" "owner: x"$'\n'"authors:"
+	problems hook-runner-choice
+	[ "$status" -eq 1 ]
+	[ "$(grep -c "front matter key 'owner'" <<<"$output")" -eq 2 ]
+	problems hook-runner-choice/ci-cache
+	[ "$status" -eq 1 ]
+	[[ "$output" == "hook-runner-choice/ci-cache/report.md: front matter key 'owner'"* ]] || false
+	[ "$(wc -l <<<"$output" | tr -d ' ')" -eq 1 ]
+}
+
+@test "check takes the path of a sub-slug folder and gives fix hints with the full slug" {
+	rm "$V/ci-cache/sources.md"
+	run "$R" check "$V/ci-cache"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"Run: research.sh add hook-runner-choice/ci-cache sources --title <t> --author <a>"* ]] || false
+}
+
+@test "check reports a folder two levels below a parent, also when it is given as a slug" {
+	mkdir -p "$V/ci-cache/deep"
+	problems hook-runner-choice/ci-cache/deep
+	[ "$status" -eq 1 ]
+	[ "$output" = "hook-runner-choice/ci-cache/deep: the folder is nested deeper than <slug>/<sub-slug>. Sub-slugs go one level deep only. Move it up to a child research of its own, or delete it." ]
+}
+
+@test "a link to a sub-slug in a code block or a comment does not count" {
+	swap "$V/report.md" "[Cache of hook environments in CI](ci-cache/report.md)" '`[CI cache](ci-cache/report.md)`'
+	problems hook-runner-choice
+	[[ "$output" == *"does not link the sub-slug research 'ci-cache'"* ]] || false
+	swap "$V/report.md" '`[CI cache](ci-cache/report.md)`' '<!-- [CI cache](ci-cache/report.md) -->'
+	problems hook-runner-choice
+	[[ "$output" == *"does not link the sub-slug research 'ci-cache'"* ]] || false
+}
+
+@test "a parent report in draft needs no link to its sub-slugs" {
+	problems cache-layer
+	[ "$status" -eq 0 ]
+	[ -d "$RESEARCH_ROOT/cache-layer/redis-cluster" ]
 }

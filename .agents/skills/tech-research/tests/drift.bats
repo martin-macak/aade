@@ -81,3 +81,39 @@ yes_no() { [[ "$1" == true ]] && echo yes || echo no; }
 	[ "$(yq "$hook | .files" "$CONFIG")" = "^docs/research/" ]
 	[[ "$TEXT" == *'pre-commit hook `research-check`'* ]] || false
 }
+
+@test "every command of the script appears in the skill" {
+	for cmd in $(sed -nE 's/^([a-z]+)\) cmd_.*/\1/p' "$SCRIPT"); do
+		grep -qE "\\\$R $cmd( |\`|$)" "$SKILL" || {
+			echo "research.sh has the command $cmd, but SKILL.md never shows \$R $cmd."
+			return 1
+		}
+	done
+}
+
+@test "the usage block lists exactly the commands of the script" {
+	usage=$(sed -nE 's/^#   research\.sh ([a-z]+).*/\1/p' "$SCRIPT" | sort -u)
+	commands=$(sed -nE 's/^([a-z]+)\) cmd_.*/\1/p' "$SCRIPT" | sort -u)
+	diff <(echo "$usage") <(echo "$commands")
+}
+
+@test "sub-slugs go one level deep in the skill and in the script" {
+	re=$(sed -nE "s/^SLUG_PATH_RE='(.*)'$/\1/p" "$SCRIPT")
+	[ -n "$re" ]
+	[[ "a-b" =~ $re ]] || false
+	[[ "a-b/c-d" =~ $re ]] || false
+	[[ ! "a/b/c" =~ $re ]] || false
+	[[ ! "a/" =~ $re ]] || false
+	[[ "$TEXT" == *'`docs/research/<slug>/<sub-slug>/`'* ]] || false
+	[[ "$TEXT" == *'**One level.**'* ]] || false
+}
+
+@test "the status diagram matches the moves of status, and only reopen moves final to draft" {
+	diagram=$(awk '/^stateDiagram-v2/ { on = 1; next } on && /^```/ { exit } on' "$SKILL")
+	moves=$(grep -vE '\[\*\]|:' <<<"$diagram" | sed -nE 's/^ *([a-z]+) --> ([a-z]+) *$/\1>\2/p' | sort)
+	allowed=$(sed -nE 's/^\t"draft>review" \| (.*)\) ;;$/"draft>review" | \1/p' "$SCRIPT" | tr -d '" ' | tr '|' '\n' | sort)
+	[ -n "$allowed" ]
+	diff <(echo "$moves") <(echo "$allowed")
+	grep -qE '^ *final --> draft: reopen$' <<<"$diagram"
+	grep -qE '^reopen\) cmd_reopen' "$SCRIPT"
+}

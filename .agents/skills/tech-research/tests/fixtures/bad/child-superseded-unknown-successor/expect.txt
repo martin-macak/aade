@@ -1,0 +1,1 @@
+hook-runner-choice/ci-cache/report.md: superseded_by 'hook-runner-choice/ci-cache-v2' is not a research folder. Set it to the slug of the research that replaces this file: cache-layer, cache-layer/redis-cluster, hook-runner-choice, hook-runner-first-look.

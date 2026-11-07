@@ -13,6 +13,9 @@ authors:
 Keep pre-commit. Lefthook installs faster, but pre-commit already pins
 each hook, and the repository depends on that.
 
+The sub-slug research [Cache of hook environments in CI](ci-cache/report.md)
+shows how CI keeps the hooks between runs.
+
 ## Summary
 
 ```mermaid

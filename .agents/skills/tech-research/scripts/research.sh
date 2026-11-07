@@ -15,7 +15,11 @@
 #   research.sh cite sync <slug>
 #   research.sh status <slug> <file> <status> [--by <slug>]
 #   research.sh check [<slug>...]
+#   research.sh progress <slug>
+#   research.sh reopen <slug>
 #
+# A <slug> is the folder name of a research, or <slug>/<sub-slug> for a
+# child research in a subfolder of its parent. Only one level is allowed.
 # Run it from the repository root. RESEARCH_ROOT sets the research folder
 # (default docs/research). RESEARCH_TODAY sets the date in YYYY-MM-DD form
 # (default: the current date), so tests get fixed dates.
@@ -41,6 +45,7 @@ SUPERSEDED_KEYS="superseded_by"
 # A complete file claims an answer, so the completeness rules apply to it.
 COMPLETE="review final superseded"
 SLUG_RE='^[a-z0-9]+(-[a-z0-9]+)*$'
+SLUG_PATH_RE='^[a-z0-9]+(-[a-z0-9]+)*(/[a-z0-9]+(-[a-z0-9]+)*)?$'
 DATE_RE='^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
 URL_RE='^https?://[^[:space:]]+$'
 FENCE='```'
@@ -119,6 +124,7 @@ file_type() {
 # Print the front matter of the file $1 as JSON. Fail when it has none.
 front_matter() {
 	local first=""
+	[[ -f "$1" ]] || return 1
 	IFS= read -r first <"$1" || [[ -n "$first" ]] || return 1
 	[[ "$first" == "---" ]] || return 1
 	yq --front-matter=extract -o json '.' "$1" 2>/dev/null
@@ -403,12 +409,11 @@ first_heading() {
 	done <<<"$PROSE"
 }
 
-# Check one artifact file $1 of the research folder $2.
+# Check one artifact file $1 of the research folder $2 with the slug $3.
 check_file() {
-	local file=$1 dir=$2 name type json status value heading by scan line allowed created slug first=""
+	local file=$1 dir=$2 slug=$3 name type json status value heading by scan line allowed created first=""
 	local FM_OBJECT FM_TYPE FM_STATUS FM_KEYS FM_TITLE FM_CREATED FM_UPDATED FM_AUTHORS FM_BY FM_DEPTH FM_ARTIFACTS
 	name=${file##*/}
-	slug=${dir##*/}
 	if ! type=$(file_type "$name"); then
 		problem "$file" "the file name is not an artifact name. Rename it to <type>.md, or to <type>-<name>.md for a repeatable type ($(repeatable_types | paste -sd ' ' -)). Types: $(all_types | paste -sd ' ' -)."
 		return
@@ -471,9 +476,9 @@ check_file() {
 	if [[ "$status" == superseded ]]; then
 		by=$FM_BY
 		if [[ -z "$by" ]]; then
-			problem "$file" "the status is superseded, but superseded_by is missing. Add the line 'superseded_by: <slug>' to the front matter, with the folder name of the research that replaces this file: $(other_slugs "$dir")."
-		elif [[ ! -d "${dir%/*}/$by" ]]; then
-			problem "$file" "superseded_by '$by' is not a research folder. Set it to the folder name of the research that replaces this file: $(other_slugs "$dir")."
+			problem "$file" "the status is superseded, but superseded_by is missing. Add the line 'superseded_by: <slug>' to the front matter, with the slug of the research that replaces this file: $(other_slugs "$slug")."
+		elif [[ ! "$by" =~ $SLUG_PATH_RE || ! -d "$CHECK_ROOT/$by" ]]; then
+			problem "$file" "superseded_by '$by' is not a research folder. Set it to the slug of the research that replaces this file: $(other_slugs "$slug")."
 		fi
 	fi
 	if [[ "$type" == brief ]]; then
@@ -502,8 +507,10 @@ check_file() {
 		[[ -z "$line" ]] || problem "$file" "a '<!-- fill: -->' placeholder is left at line $line, but the status is $status. Replace it with content, or move the file back to draft."
 		[[ $(type_flag "$type" diagram) == true && "$scan" == *"count 0" ]] &&
 			problem "$file" "a $type in status $status needs at least one Mermaid diagram. Add a mermaid code block, and a paragraph after it."
+		# A superseded file was approved under an earlier final brief. reopen
+		# keeps it, so it needs no final brief now.
 		value=$BRIEF_STATUS
-		[[ "$type" == brief || "$value" == final ]] ||
+		[[ "$type" == brief || "$status" == superseded || "$value" == final ]] ||
 			problem "$file" "the status is $status, but brief.md is ${value:-missing}. Get the approval of the user and run: research.sh status $slug brief.md final"
 		[[ "$type" == report && -f "$dir/sources.md" ]] && check_findings "$file" "$dir/sources.md"
 	fi
@@ -519,19 +526,52 @@ check_file() {
 	fi
 }
 
-# Print the slugs of the research folders next to the folder $1, or "none".
+# Print the slugs of every research and sub-slug in CHECK_ROOT except the
+# slug $1, or "none".
 other_slugs() {
-	local dir slugs=""
-	for dir in "$(dirname "$1")"/*/; do
-		[[ -d "$dir" && "${dir%/}" != "${1%/}" ]] && slugs+=" $(basename "$dir")"
-	done
-	echo "${slugs# }" | sed 's/^$/none/; s/ /, /g'
+	local dir slug slugs
+	slugs=$(for dir in "$CHECK_ROOT"/*/ "$CHECK_ROOT"/*/*/; do
+		[[ -d "$dir" ]] || continue
+		slug=${dir#"$CHECK_ROOT"/}
+		slug=${slug%/}
+		[[ "$slug" == "$1" ]] || echo "$slug"
+	done | LC_ALL=C sort | paste -sd ' ' -)
+	echo "$slugs" | sed 's/^$/none/; s/ /, /g'
 }
 
+# Print the slug of the research folder $1: its path below RESEARCH_ROOT,
+# or its folder name when it lies outside.
+slug_of() {
+	local root dir
+	if root=$(cd "$ROOT_DIR" 2>/dev/null && pwd -P) && dir=$(cd "$1" && pwd -P) && [[ "$dir" == "$root"/* ]]; then
+		echo "${dir#"$root"/}"
+	else
+		basename "$1"
+	fi
+}
+
+# Succeed when the report $1 links the child research $2 by its report,
+# such as [Title](<sub-slug>/report.md), outside code and comments.
+links_child() {
+	prose "$1" | grep -qE "\]\((\./)?$2/report\.md(#[^)]*)?\)"
+}
+
+DEEP_HINT="the folder is nested deeper than <slug>/<sub-slug>. Sub-slugs go one level deep only. Move it up to a child research of its own, or delete it."
+
+# Check the research folder $1 with the slug $2. A slug without "/" is a
+# parent, and each of its subfolders is a child research. A child has no
+# subfolder, so sub-slugs stay one level deep. CHECK_ROOT is the research
+# root, where superseded_by finds the slug of another research.
 check_research() {
-	local dir=${1%/} slug type file
+	local dir=${1%/} slug=$2 name type file child sub
 	local BRIEF_STATUS BRIEF_ARTIFACTS REPORT_STATUS="" json
-	slug=${dir##*/}
+	name=${dir##*/}
+	if [[ "$slug" == */*/* ]]; then
+		problem "$dir" "$DEEP_HINT"
+		return
+	fi
+	CHECK_ROOT=$(dirname "$dir")
+	[[ "$slug" == */* ]] && CHECK_ROOT=$(dirname "$CHECK_ROOT")
 	BRIEF_STATUS="" BRIEF_ARTIFACTS=""
 	if [[ -f "$dir/brief.md" ]]; then
 		json=$(front_matter "$dir/brief.md")
@@ -540,12 +580,29 @@ check_research() {
 	fi
 	REG_FILE="" REG_ROWS=""
 	[[ ! -f "$dir/sources.md" ]] || load_register "$dir/sources.md"
-	[[ "$slug" =~ $SLUG_RE ]] || problem "$dir" "the slug '$slug' is not kebab-case. Rename the folder to lower-case letters, digits and hyphens, such as '$(tr '[:upper:]_ ' '[:lower:]--' <<<"$slug")'."
+	[[ "$name" =~ $SLUG_RE ]] || problem "$dir" "the slug '$name' is not kebab-case. Rename the folder to lower-case letters, digits and hyphens, such as '$(tr '[:upper:]_ ' '[:lower:]--' <<<"$name")'."
 	for type in $TYPE_REQUIRED; do
 		[[ -f "$dir/$type.md" ]] || problem "$dir" "the required file $type.md is missing. Run: research.sh add $slug $type --title <t> --author <a>"
 	done
 	for file in "$dir"/*.md; do
-		[[ -f "$file" ]] && check_file "$file" "$dir"
+		[[ -f "$file" ]] && check_file "$file" "$dir" "$slug"
+	done
+	# BRIEF_*, REPORT_STATUS and the register are set for each research.
+	# The first two are local, so a child does not change them here.
+	for child in "$dir"/*/; do
+		[[ -d "$child" ]] || continue
+		child=${child%/}
+		sub=$(basename "$child")
+		if [[ "$slug" == */* ]]; then
+			problem "$child" "$DEEP_HINT"
+			continue
+		fi
+		# From review on, the report claims an answer, so it must lead the
+		# reader to each child research.
+		one_of "$REPORT_STATUS" $COMPLETE && ! links_child "$dir/report.md" "$sub" &&
+			problem "$dir/report.md" "the report does not link the sub-slug research '$sub'. Add a link to $sub/report.md, such as [<title>]($sub/report.md)."
+		check_research "$child" "$slug/$sub"
+		CHECK_ROOT=$(dirname "$dir")
 	done
 	# A draft research may still lack some files. From review on, the
 	# report claims an answer, so every requested artifact must exist.
@@ -563,14 +620,14 @@ cmd_check() {
 	trap 'rm -f "$CHECK_TMP"' EXIT
 	if (($# == 0)); then
 		for dir in "$ROOT_DIR"/*/; do
-			[[ -d "$dir" ]] && check_research "$dir"
+			[[ -d "$dir" ]] && check_research "$dir" "$(basename "$dir")"
 		done
 	else
 		for arg in "$@"; do
 			dir=$arg
 			[[ -d "$dir" ]] || dir="$ROOT_DIR/$arg"
 			[[ -d "$dir" ]] || die "No research folder $arg." 2
-			check_research "$dir"
+			check_research "$dir" "$(slug_of "$dir")"
 		done
 	fi
 	return $PROBLEMS
@@ -585,7 +642,7 @@ need_line() {
 }
 
 research_dir() {
-	[[ "$1" =~ $SLUG_RE ]] || die "The slug '$1' must be kebab-case." 2
+	[[ "$1" =~ $SLUG_PATH_RE ]] || die "The slug '$1' must be kebab-case. Use <slug> or <slug>/<sub-slug>." 2
 	echo "$ROOT_DIR/$1"
 }
 
@@ -619,7 +676,7 @@ parse_common() {
 }
 
 cmd_init() {
-	local slug=${1-} dir depth=standard artifacts="[]" type
+	local slug=${1-} dir depth=standard artifacts="[]" type parent="" status
 	[[ -n "$slug" ]] || usage
 	shift
 	parse_common "$@"
@@ -638,12 +695,21 @@ cmd_init() {
 	one_of "$depth" $DEPTHS || die "--depth must be one of: $DEPTHS." 2
 	dir=$(research_dir "$slug") || exit 2
 	[[ ! -e "$dir" ]] || die "$dir exists already."
+	# A child research needs its parent. init never changes the parent.
+	if [[ "$slug" == */* ]]; then
+		parent=${slug%/*}
+		[[ -d "$ROOT_DIR/$parent" ]] || die "No research $parent. Run research.sh init $parent first, or pick another parent."
+	fi
 	mkdir -p "$dir"
 	for type in $(required_types); do
 		new_artifact "$dir/$type.md" "$type"
 	done
 	DEPTH=$depth ARTIFACTS=$artifacts set_fields "$dir/brief.md" \
 		'.depth = strenv(DEPTH) | .artifacts = env(ARTIFACTS) | .artifacts style="" | .artifacts[] style=""'
+	[[ -n "$parent" ]] || return 0
+	status=$(field "$ROOT_DIR/$parent/report.md" status)
+	one_of "$status" $COMPLETE || return 0
+	>&2 echo "The report of $parent is $status, so the check now wants a link to ${slug#*/}/report.md in it. Move the report back to draft first: research.sh reopen $parent for a final brief, or research.sh status $parent report.md draft from review."
 }
 
 cmd_add() {
@@ -773,10 +839,11 @@ cmd_status() {
 	old=$(field "$file" status)
 	case "$old>$new" in
 	"draft>review" | "review>draft" | "review>final" | "final>superseded") ;;
+	"final>draft") die "$name cannot move from final to draft. To continue an approved research, run: research.sh reopen $slug" ;;
 	*) die "$name cannot move from $old to $new. Allowed: draft>review, review>draft, review>final, final>superseded." ;;
 	esac
 	if [[ "$new" == superseded ]]; then
-		[[ -n "$by" && "$by" != "$slug" && -d "$ROOT_DIR/$by" ]] ||
+		[[ -n "$by" && "$by" != "$slug" && "$by" =~ $SLUG_PATH_RE && -d "$ROOT_DIR/$by" ]] ||
 			die "superseded needs --by with the slug of another research." 2
 	elif [[ -n "$by" ]]; then
 		die "--by applies only to superseded." 2
@@ -801,13 +868,82 @@ cmd_status() {
 	echo "$file: $old > $new"
 }
 
+# Move an approved research back to draft, so that it can take new
+# requirements: the final brief and every other file in review or final.
+# Superseded files and the source IDs stay as they are. The children of a
+# parent are research of their own, so they stay too.
+cmd_reopen() {
+	local slug=${1-} dir file old
+	[[ -n "$slug" && $# -eq 1 ]] || usage
+	dir=$(research_dir "$slug") || exit 2
+	[[ -f "$dir/brief.md" ]] || die "No $dir/brief.md."
+	old=$(field "$dir/brief.md" status)
+	[[ "$old" == final ]] ||
+		die "The brief of $slug is ${old:-without status}, not final. reopen applies only to an approved research. Move a file from review to draft with: research.sh status $slug <file> draft"
+	for file in "$dir"/*.md; do
+		[[ -f "$file" ]] || continue
+		old=$(field "$file" status)
+		one_of "$old" review final || continue
+		NEW=draft set_fields "$file" '.status = strenv(NEW)'
+		touch_updated "$file"
+		echo "$file: $old > draft"
+	done
+}
+
+# Print the progress of a research: the status of each file, the open
+# placeholders, the number of sources and the sub-slugs.
+cmd_progress() {
+	local slug=${1-} dir file status lines child line
+	[[ -n "$slug" && $# -eq 1 ]] || usage
+	dir=$(research_dir "$slug") || exit 2
+	[[ -d "$dir" ]] || die "No research $slug."
+	echo "research: $slug"
+	if [[ "$slug" == */* ]]; then
+		status=$(field "$ROOT_DIR/${slug%/*}/report.md" status)
+		echo "parent: ${slug%/*} (report: ${status:-missing})"
+	else
+		echo "parent: none"
+	fi
+	echo "files:"
+	lines=""
+	for file in "$dir"/*.md; do
+		[[ -f "$file" ]] || continue
+		status=$(field "$file" status)
+		echo "  $(basename "$file"): ${status:-no status}"
+		for line in $(grep -n '<!-- fill:' "$file" | cut -d : -f 1); do
+			lines+="  $(basename "$file"):$line"$'\n'
+		done
+	done
+	if [[ -n "$lines" ]]; then
+		printf 'placeholders:\n%s' "$lines"
+	else
+		echo "placeholders: none"
+	fi
+	if [[ -f "$dir/sources.md" ]]; then
+		echo "sources: $(register "$dir/sources.md" | awk -F '\t' '$2 == "#" { n++ } END { print n + 0 }')"
+	else
+		echo "sources: no sources.md"
+	fi
+	lines=""
+	for child in "$dir"/*/; do
+		[[ -d "$child" ]] || continue
+		status=$(field "$child/report.md" status)
+		lines+="  $(basename "$child") (report: ${status:-missing})"$'\n'
+	done
+	if [[ -n "$lines" ]]; then
+		printf 'sub-slugs:\n%s' "$lines"
+	else
+		echo "sub-slugs: none"
+	fi
+}
+
 command=${1-}
 (($#)) && shift
 # Stop on a bad RESEARCH_TODAY before an action that writes. A die inside
 # "$(today)" ends only its subshell, so the action would write empty dates.
-# check and the usage write no date, so they ignore it.
+# check, progress and the usage write no date, so they ignore it.
 case $command in
-init | add | source | cite | status) today >/dev/null ;;
+init | add | source | cite | status | reopen) today >/dev/null ;;
 esac
 case $command in
 init | add | source | cite | status | check) load_types ;;
@@ -819,5 +955,7 @@ source) cmd_source "$@" ;;
 cite) cmd_cite "$@" ;;
 status) cmd_status "$@" ;;
 check) cmd_check "$@" ;;
+progress) cmd_progress "$@" ;;
+reopen) cmd_reopen "$@" ;;
 *) usage ;;
 esac

@@ -37,14 +37,22 @@ bad_root() {
 	[ -z "$output" ]
 }
 
-@test "check passes each good research on its own" {
-	for dir in "$GOOD"/*/; do
-		RESEARCH_ROOT="$GOOD" run "$R" check "$(basename "$dir")"
+@test "check passes each good research and each sub-slug on its own" {
+	for dir in "$GOOD"/*/ "$GOOD"/*/*/; do
+		slug=${dir#"$GOOD"/}
+		RESEARCH_ROOT="$GOOD" run "$R" check "${slug%/}"
 		[ "$status" -eq 0 ] || {
-			echo "$(basename "$dir"): $output"
+			echo "$slug: $output"
 			return 1
 		}
 	done
+}
+
+@test "the good fixtures hold a final and a draft sub-slug research" {
+	[ "$(yq --front-matter=extract '.status' "$GOOD/hook-runner-choice/ci-cache/report.md")" = final ]
+	[ "$(yq --front-matter=extract '.status' "$GOOD/hook-runner-choice/report.md")" = final ]
+	[ "$(yq --front-matter=extract '.status' "$GOOD/cache-layer/redis-cluster/report.md")" = draft ]
+	[ "$(yq --front-matter=extract '.status' "$GOOD/cache-layer/report.md")" = draft ]
 }
 
 @test "there are bad fixtures, and each has a diff and an expectation" {
@@ -56,7 +64,7 @@ bad_root() {
 		}
 		count=$((count + 1))
 	done
-	[ "$count" -ge 30 ]
+	[ "$count" -ge 45 ]
 }
 
 @test "check prints exactly the expected problems for each bad fixture" {
