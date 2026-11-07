@@ -238,6 +238,18 @@ gh_got() {
 	grep -qxF '<label><delete><good first issue><--yes>' "$FAKE_DIR/gh.argv"
 }
 
+@test "deletes every label when the file lists none" {
+	# Bash 3.2 (macOS) fails on the empty array of kept labels under set -u.
+	echo '[]' | fixture .github/labels.yml
+	github_has <<-'EOF'
+		[{"name":"wontfix","color":"ffffff","description":""}]
+	EOF
+	run "$S"
+	[ "$status" -eq 0 ]
+	[ "$output" == "delete wontfix" ]
+	gh_got 'gh label delete wontfix --yes'
+}
+
 @test "creates, updates, renames and deletes in one run, in file order and then deletes last" {
 	fixture .github/labels.yml <<-'EOF'
 		- {name: "type:new", color: "111111", description: "New"}
