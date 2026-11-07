@@ -1,6 +1,6 @@
 [
-  {"context": "pr-shepherd/trace", "state": "success", "description": "req=@REQ@ issue=@ISSUE@",
+  {"context": "pr-shepherd/trace", "state": "success", "description": "req=@REQ@ issue=@ISSUE@ review=",
    "target_url": "https://github.com/acme/app/pull/42#issuecomment-9002"},
-  {"context": "pr-shepherd/trace", "state": "failure", "description": "req=00000000 issue=00000000",
+  {"context": "pr-shepherd/trace", "state": "failure", "description": "req=00000000 issue=00000000 review=",
    "target_url": "https://github.com/acme/app/pull/42#issuecomment-9002"}
 ]

@@ -12,7 +12,7 @@ Q: May the shepherd reject a review finding on its own?
 A: It may reject a bot finding alone, but before it rejects a human finding it must ask the user and pass `--confirmed-by-user` after the user agrees.
 
 Q: When does the check fail on the trace?
-A: The check fails in three cases: the head commit has no `pr-shepherd/trace` status, the status is not `success`, or a hash differs.
+A: The check fails when the head commit has no `pr-shepherd/trace` status, the status is not `success`, a hash differs, or the description has no `review=` list. It also fails for each `review` row without a justification in the Notes.
 
 Q: What must the rules of the base branch require before `shepherd.sh merge` turns on auto-merge?
 A: The rules of the base branch must require the `pr-shepherd` check.
@@ -20,8 +20,11 @@ A: The rules of the base branch must require the `pr-shepherd` check.
 Q: Which pull requests are exempt from the rules?
 A: Dependabot PRs are exempt from every rule. A PR with the label `pr:no-issue` needs no Requirements section and no trace, but its checkboxes still need ticks and evidence and its findings still need triage.
 
-Q: What does the shepherd do with a trace row marked review?
-A: The row passes, and the status stays `success`. The shepherd still sharpens the sub-tasks or the evidence and runs verify again. If verify marks the row `review` again, the shepherd decides itself and writes the reason in the `## Notes` section of the PR.
+Q: Does a mention of R8 in the middle of a line of the Notes justify the review row R8 of the trace?
+A: No. A mention of `R8` in the middle of a line does not count.
+
+Q: When does merge refuse auto-merge because of a review row in the trace?
+A: Merge refuses auto-merge while the trace has a `review` row and the call has no `--confirmed-by-user`.
 
 Q: How does the shepherd find out which other checks of the PR, such as CI jobs, failed?
 A: The `checks <pr> --watch` command waits for every other check of the PR and lists each one that failed.

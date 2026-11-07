@@ -48,14 +48,14 @@ EOF
 	[[ "$output" == *"Passed: R1 R2 R3"* ]] || false
 	# The base PR has no trace comment, so verify writes a new one.
 	grep -q '^api repos/{owner}/{repo}/issues/42/comments -f body=<!-- pr-shepherd-trace:v1 -->' "$GH_LOG"
-	grep -q '^api repos/{owner}/{repo}/statuses/0123456789abcdef0123456789abcdef01234567 -f state=success -f context=pr-shepherd/trace -f description=req=[0-9a-f]\{8\} issue=[0-9a-f]\{8\} -f target_url=https://' "$GH_LOG"
+	grep -q '^api repos/{owner}/{repo}/statuses/0123456789abcdef0123456789abcdef01234567 -f state=success -f context=pr-shepherd/trace -f description=req=[0-9a-f]\{8\} issue=[0-9a-f]\{8\} review= -f target_url=https://' "$GH_LOG"
 	grep -qx 'run rerun 7001' "$GH_LOG"
 }
 
 @test "the hashes that verify writes make check see a fresh trace" {
 	run "$S" verify 42
 	[ "$status" -eq 0 ]
-	desc=$(sed -n 's/.*-f description=\(req=[0-9a-f]* issue=[0-9a-f]*\) .*/\1/p' "$GH_LOG")
+	desc=$(sed -n 's/.*-f description=\(req=[0-9a-f]* issue=[0-9a-f]* review=[0-9,]*\) .*/\1/p' "$GH_LOG")
 	[ -n "$desc" ]
 	jq --arg d "$desc" '.[0].description = $d' "$BASE/statuses.json" >"$CASE/statuses.json"
 	run "$S" check 42
@@ -285,12 +285,40 @@ logged_body() {
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"Requirement check: passed, 3 of 3 need a review"* ]] || false
 	[[ "$output" == *"Needs review:"*"Plan matches issue: ⚠️ review, Proof of done: ⚠️ review"* ]] || false
-	[[ "$output" == *"Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. No justification from the author yet."* ]] || false
+	[[ "$output" == *'Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. No justification yet. Add the line `R1: <reason>` to the Notes of the PR.'* ]] || false
 	[[ "$output" != *"Failed:"* && "$output" != *"Passed:"* ]] || false
 	grep -q -- '-f state=success' "$GH_LOG"
 	body=$(logged_body)
-	grep -qF 'This check does not block the merge. A reviewer reads each row under "Needs review".' <<<"$body"
-	grep -qxF '| R1: the check fails on an unticked task | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. No justification from the author yet. |' <<<"$body"
+	grep -qxF 'Before the merge, each row under "Needs review" needs a line `R<n>: <reason>` in the Notes of the PR, and a person reads each row. The "Why" column shows the Notes at the time of this check.' <<<"$body"
+	grep -qxF '| R1: the check fails on an unticked task | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. No justification yet. Add the line `R1: <reason>` to the Notes of the PR. |' <<<"$body"
+}
+
+@test "verify lists the review rows in the trace status, so check can ask for their justification" {
+	DK_P=0.6 run "$S" verify 42
+	[ "$status" -eq 0 ]
+	grep -q -- '-f description=req=[0-9a-f]\{8\} issue=[0-9a-f]\{8\} review=1,2,3 -f target_url=' "$GH_LOG"
+	desc=$(sed -n 's/.*-f description=\(req=[0-9a-f]* issue=[0-9a-f]* review=[0-9,]*\) .*/\1/p' "$GH_LOG")
+	jq --arg d "$desc" '.[0].description = $d' "$BASE/statuses.json" >"$CASE/statuses.json"
+	run "$S" check 42
+	[ "$status" -eq 1 ]
+	[[ "$output" == *'R2: the trace marks the row "review", and "## Notes" has no line "R2: <reason>".'* ]] || false
+}
+
+@test "verify exits 2 and writes no trace when the review rows do not fit in a commit status" {
+	# 39 review rows make a description of 141 characters.
+	{
+		printf '### Done when\n\n'
+		for i in $(seq 39); do printf -- '- item %d\n' "$i"; done
+	} >"$CASE/issue.txt"
+	{
+		printf 'Closes #11\n\n## Requirements\n\n'
+		for i in $(seq 39); do printf -- '- [x] R%d: item %d\n  - evidence: tests/\n' "$i" "$i"; done
+		printf '\n## Verify\n\n- [x] V1 (R1): ok\n  - evidence: tests/\n'
+	} >"$CASE/body.txt"
+	DK_P=0.6 run "$S" verify 42
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"The trace has more review rows than the 140 characters of a commit status description can list."* ]] || false
+	run ! grep -q 'statuses\|comments -f body' "$GH_LOG" 2>/dev/null
 }
 
 @test "verify fails an R item without evidence and does not ask the evidence question for it" {
@@ -298,6 +326,7 @@ logged_body() {
 	run "$S" verify 42
 	[ "$status" -eq 1 ]
 	[[ "$output" == *"R2: the check fails on a missing evidence line"*"Plan matches issue: ✅ pass, Proof of done: ❌ fail"*"Proof of done: the item has no evidence line."* ]] || false
+	[[ "$output" != *"justification"* ]] || false
 	logged_body | grep -qx '| R2 | 95 % | — |'
 	[ "$(grep -c '^Claim:$' "$FAKE_DIR/decisionkit.text")" -eq 2 ]
 	grep -q -- '-f state=failure' "$GH_LOG"
@@ -356,19 +385,19 @@ EOF
 	grep -qx '## Requirement check: failed, 1 of 3 failed' <<<"$body"
 	grep -qx 'This check blocks the merge until each failed row passes.' <<<"$body"
 	grep -qx '### ❌ Failed' <<<"$body"
-	grep -qxF '| R1: the check fails on an unticked task | ❌ fail | ❌ fail | Plan matches issue: a part of the item has no sub-task. Proof of done: the evidence does not show that the item works. No justification from the author yet. |' <<<"$body"
+	grep -qxF '| R1: the check fails on an unticked task | ❌ fail | ❌ fail | Plan matches issue: a part of the item has no sub-task. Proof of done: the evidence does not show that the item works. |' <<<"$body"
 	[[ "$output" == *"Trace: failure on 01234567."* ]] || false
 }
 
-@test "verify links a review row to the Notes only when the Notes name its R item" {
-	# R1.2 names R1. R21 and R3x name neither R2 nor R3.
-	printf '%s\n' "$(cat "$BASE/body.txt")" '' '## Notes' '' '- R1.2 holds, see the test.' '- R21 and R3x are not items.' >"$CASE/body.txt"
+@test "verify links a review row to the Notes only when a Notes line starts with its R item" {
+	# "- R1:" justifies R1. A bare R2 and a sub-task line R3.1 justify nothing.
+	printf '%s\n' "$(cat "$BASE/body.txt")" '' '## Notes' '' '- R1: each sub-task has a test.' '- R2 holds, see the test.' '- R3.1: the run is green.' >"$CASE/body.txt"
 	DK_P=0.6 run "$S" verify 42
 	[ "$status" -eq 0 ]
 	body=$(logged_body)
 	grep -qF '| R1: the check fails on an unticked task | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. [The author explains it in the Notes of the PR](https://github.com/acme/app/pull/42). |' <<<"$body"
-	grep -q '^| R2: .*No justification from the author yet\. |$' <<<"$body"
-	grep -q '^| R3: .*No justification from the author yet\. |$' <<<"$body"
+	grep -qF '| R2: the check fails on a missing evidence line | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. No justification yet. Add the line `R2: <reason>` to the Notes of the PR. |' <<<"$body"
+	grep -q '^| R3: .*No justification yet\. Add the line `R3: <reason>` to the Notes of the PR\. |$' <<<"$body"
 	[[ "$output" == *"The author explains it in the Notes of the PR."* ]] || false
 }
 
@@ -631,6 +660,44 @@ JQ
 	GH_FAIL="pr merge" run "$S" merge 42
 	[ "$status" -eq 2 ]
 	[[ "$output" == *"Cannot turn on auto-merge for PR #42."* ]] || false
+}
+
+@test "merge refuses while the trace has a review row, and arms auto-merge once the user confirms" {
+	echo '.[0].description = "req=@REQ@ issue=@ISSUE@ review=2"' >"$CASE/statuses.json.jq"
+	printf '%s\n' "$(cat "$BASE/body.txt")" '' '## Notes' '' '- R2: the test folder holds the case.' >"$CASE/body.txt"
+	run "$S" merge 42
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"The trace rows R2 need a human review. Ask the user to read them in the trace comment, then run: shepherd.sh merge 42 --confirmed-by-user"* ]] || false
+	run ! grep -q 'pr merge' "$GH_LOG" 2>/dev/null
+	run "$S" merge 42 --confirmed-by-user
+	[ "$status" -eq 0 ]
+	grep -qx 'pr merge 42 --auto --squash' "$GH_LOG"
+	# The confirmation stays on the PR, before auto-merge turns on.
+	[ "$(logged_body)" = "$(printf '%s\n' 'review-rows: 2' 'confirmed-by-user: yes' 'The user read the review rows R2 of the trace on 01234567 and confirmed the merge.')" ]
+	[ "$(grep -n 'issues/42/comments' "$GH_LOG" | cut -d: -f1)" -lt "$(grep -n 'pr merge' "$GH_LOG" | cut -d: -f1)" ]
+}
+
+@test "merge writes no confirmation comment for a trace without review rows" {
+	run "$S" merge 42 --confirmed-by-user
+	[ "$status" -eq 0 ]
+	run ! grep -q 'comments' "$GH_LOG"
+}
+
+@test "merge exits 2 and does not turn on auto-merge when it cannot write the confirmation" {
+	echo '.[0].description = "req=@REQ@ issue=@ISSUE@ review=2"' >"$CASE/statuses.json.jq"
+	printf '%s\n' "$(cat "$BASE/body.txt")" '' '## Notes' '' '- R2: the test folder holds the case.' >"$CASE/body.txt"
+	GH_FAIL="issues/42/comments --silent" run "$S" merge 42 --confirmed-by-user
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"Cannot write the confirmation comment."* ]] || false
+	run ! grep -q 'pr merge' "$GH_LOG"
+}
+
+@test "merge refuses a review row without a justification, also when the user confirms" {
+	echo '.[0].description = "req=@REQ@ issue=@ISSUE@ review=2"' >"$CASE/statuses.json.jq"
+	run "$S" merge 42 --confirmed-by-user
+	[ "$status" -eq 1 ]
+	[[ "$output" == *'R2: the trace marks the row "review"'*"Fix the problems above before merge."* ]] || false
+	run ! grep -q 'pr merge' "$GH_LOG" 2>/dev/null
 }
 
 @test "merge says that GitHub merges the PR when every required check passes" {

@@ -9,13 +9,15 @@
 #        shepherd.sh findings <pr> [--no-advice]
 #        shepherd.sh reply <pr> <thread-id|review-id> accepted|rejected --reason <text> [--fix <text>] [--confirmed-by-user]
 #        shepherd.sh checks <pr> [--watch]
-#        shepherd.sh merge <pr>
+#        shepherd.sh merge <pr> [--confirmed-by-user]
 #        shepherd.sh disarm <issue>
 # requirements prints the R skeleton of an issue. check is deterministic,
 # and CI runs it. verify asks decisionkit through decide.sh and writes the
 # trace: a commit status and a PR comment. findings lists the untriaged
 # review findings. reply triages one finding. checks lists the other PR
-# checks that did not pass. merge turns on auto-merge.
+# checks that did not pass. merge turns on auto-merge. While the trace has
+# a review row, merge needs --confirmed-by-user: the user read the row.
+# merge then records the confirmation in a PR comment.
 # disarm turns off auto-merge on the open PRs that close an edited issue.
 # gh picks the repository from the git remote, or from GH_REPO. Run it from
 # the repository root. It needs gh, jq and yq, and runs on bash 3.2.
@@ -31,7 +33,10 @@ MARKER='<!-- pr-shepherd-trace:v1 -->'
 WORKFLOW=pr-shepherd.yml
 CHECK_NAME=pr-shepherd
 NO_ISSUE_LABEL=pr:no-issue
+# GitHub refuses a commit status description that is longer.
+DESC_MAX=140
 STATUS=0
+REVIEW_ROWS=""
 
 usage() {
 	>&2 sed -nE 's/^# (Usage: |       )shepherd\.sh/shepherd.sh/p' "${BASH_SOURCE[0]}"
@@ -353,8 +358,10 @@ all_rids() {
 }
 
 # Check the trace status of the head SHA $1 against the hashes $2 and $3.
+# Each review row of the trace needs a justification in the Notes of the
+# body $BODY. Fill REVIEW_ROWS with the R numbers of the review rows.
 check_trace() {
-	local sha=$1 req=$2 issue_hash=$3 issue=$4 pr=$5 json state desc url
+	local sha=$1 req=$2 issue_hash=$3 issue=$4 pr=$5 json state desc url n re=' review=([0-9,]*) '
 	json=$(gh_statuses "$sha") || die "Cannot read the statuses of $sha."
 	json=$(jq -c --arg c "$CONTEXT" '[.[] | select(.context == $c)][0] // empty' <<<"$json")
 	if [[ -z "$json" ]]; then
@@ -371,6 +378,30 @@ check_trace() {
 		problem "Trace: the Requirements section changed after verify. Run: shepherd.sh verify $pr"
 	[[ "$desc" == *"issue=$issue_hash"* ]] ||
 		problem "Trace: issue #$issue changed after verify. Run: shepherd.sh verify $pr"
+	if [[ ! " $desc " =~ $re ]]; then
+		problem "Trace: the $CONTEXT status has no \"review=\" list, because an older verify wrote it. Run: shepherd.sh verify $pr"
+		return
+	fi
+	REVIEW_ROWS=$(tr ',' ' ' <<<"${BASH_REMATCH[1]}")
+	for n in $REVIEW_ROWS; do
+		notes_justify "$BODY" "$n" ||
+			problem "R$n: the trace marks the row \"review\", and \"## Notes\" has no line \"R$n: <reason>\". Read the row, then add that line to \"## Notes\"."
+	done
+}
+
+# Print the R numbers $@ as a list for a message, such as "R2, R5 and R8".
+row_list() {
+	local out="" i
+	for ((i = 1; i <= $#; i++)); do
+		if ((i == 1)); then
+			out="R${!i}"
+		elif ((i == $#)); then
+			out+=" and R${!i}"
+		else
+			out+=", R${!i}"
+		fi
+	done
+	printf '%s' "$out"
 }
 
 # jq definitions shared by check, findings and reply.
@@ -453,6 +484,7 @@ load_issue() {
 # Run every deterministic rule on the PR $1. Print one problem per line.
 run_check() {
 	local pr=$1 issue req
+	REVIEW_ROWS=""
 	load_pr "$pr"
 	if is_dependabot <<<"$PR_JSON"; then
 		echo "PR #$pr is a Dependabot PR. It is exempt."
@@ -481,7 +513,12 @@ run_check() {
 cmd_check() {
 	(($# == 1)) && [[ "$1" =~ ^[0-9]+$ ]] || usage
 	if run_check "$1"; then
-		echo "PR #$1 passes every shepherd rule."
+		if [[ -n "$REVIEW_ROWS" ]]; then
+			# shellcheck disable=SC2086 # each row is one word.
+			echo "PR #$1 passes the shepherd rules, but the trace rows $(row_list $REVIEW_ROWS) need a human review. Ask the user to read them, then run: shepherd.sh merge $1 --confirmed-by-user"
+		else
+			echo "PR #$1 passes every shepherd rule."
+		fi
 		return 0
 	fi
 	return 1
@@ -578,17 +615,18 @@ threshold_of() {
 	NAME=$1 yq -r '.questions[] | select(.name == strenv(NAME)) | .threshold' "$QUESTIONS"
 }
 
-# Succeed when the Notes section of the clean body $1 names the R item $2,
-# also as one of its sub-tasks R<n>.<m>.
-notes_mention() {
+# Succeed when the Notes section of the clean body $1 justifies the R item
+# $2: a line, or a list item, starts with "R<n>:" and a reason. A mention of
+# R<n> elsewhere in a line, or a line of a sub-task R<n>.<m>, does not count.
+notes_justify() {
 	awk '/^## / { inside = ($0 ~ /^## Notes[ \t]*$/); next } inside' <<<"$1" |
-		grep -qE "(^|[^[:alnum:]])R$2([^[:alnum:]]|$)"
+		grep -qE "^[[:space:]]*([-*][[:space:]]+)?R$2:[[:space:]]+[^[:space:]]"
 }
 
 # The rows of the trace live in these arrays, indexed by the R number:
 # ROW_TEXT, ROW_C and ROW_E (pass, review, fail; ROW_E also none), ROW_CP
 # and ROW_EP (the probability of true, or -) and ROW_NOTE (1 when the
-# Notes mention the item). ROWS is their count.
+# Notes justify the item). ROWS is their count.
 
 # The group of the row $1: fail, review or pass.
 row_group() {
@@ -602,20 +640,24 @@ row_group() {
 }
 
 # The reason of the row $1, for a fail or review row: the hint of each
-# check that did not pass, then the author's note. $2 is md or text.
+# check that did not pass. A review row then gets the state of its
+# justification when verify ran, as the merge line says. A fail row gets none, because only a fix
+# unblocks it. $2 is md or text.
 row_reason() {
 	local i=$1 out="" status
 	[[ "${ROW_C[i]}" != pass ]] && out="Plan matches issue: $(hint carry "${ROW_C[i]}"). "
 	status=${ROW_E[i]}
 	[[ "$status" != pass ]] && out+="Proof of done: $(hint evid "$status"). "
-	if ((ROW_NOTE[i])) && [[ "$2" == md ]]; then
+	if [[ "$(row_group "$i")" != review ]]; then
+		:
+	elif ((ROW_NOTE[i])) && [[ "$2" == md ]]; then
 		out+="[The author explains it in the Notes of the PR]($PR_URL)."
 	elif ((ROW_NOTE[i])); then
 		out+="The author explains it in the Notes of the PR."
 	else
-		out+="No justification from the author yet."
+		out+="No justification yet. Add the line \`R$i: <reason>\` to the Notes of the PR."
 	fi
-	printf '%s' "$out"
+	printf '%s' "${out% }"
 }
 
 # The status cell of the check $2 (C or E) of the row $1.
@@ -658,7 +700,7 @@ merge_line() {
 	if ((N_FAIL)); then
 		printf 'This check blocks the merge until each failed row passes.'
 	elif ((N_REVIEW)); then
-		printf 'This check does not block the merge. A reviewer reads each row under "Needs review".'
+		printf 'Before the merge, each row under "Needs review" needs a line `R<n>: <reason>` in the Notes of the PR, and a person reads each row. The "Why" column shows the Notes at the time of this check.'
 	else
 		printf 'This check does not block the merge.'
 	fi
@@ -770,7 +812,7 @@ rerun_ci() {
 }
 
 cmd_verify() {
-	local pr issue req n i carry evid subs verdict url comments id body problems
+	local pr issue req n i carry evid subs verdict url comments id body problems review desc
 	(($# == 1)) && [[ "$1" =~ ^[0-9]+$ ]] || usage
 	pr=$1
 	load_pr "$pr"
@@ -801,6 +843,7 @@ cmd_verify() {
 	T_EVID=$(threshold_of evidence)
 	BAR=$(uncertain_min)
 	PASS=1
+	review=""
 	for ((i = 1; i <= n; i++)); do
 		subs=$(sed -nE '2,$ s/^R[0-9]+\.[0-9]+: /- /p' <<<"${R_BLOCKS[i]}")
 		carry=$(ask carryover "$(printf 'Issue item:\n%s\n\nSub-tasks of the PR item:\n%s\n' \
@@ -826,11 +869,19 @@ cmd_verify() {
 			ROW_EP[i]=${ROW_EP[i]% *}
 		fi
 		ROW_NOTE[i]=0
-		notes_mention "$BODY" "$i" && ROW_NOTE[i]=1
-		[[ "$(row_group "$i")" == fail ]] && PASS=0
+		notes_justify "$BODY" "$i" && ROW_NOTE[i]=1
+		case $(row_group "$i") in
+		fail) PASS=0 ;;
+		review) review+=${review:+,}$i ;;
+		esac
 	done
 	count_groups
 	req=$(requirements_section <<<"$BODY" | sha8)
+	# check reads the review rows from the description, so it can ask for
+	# a justification of each without decisionkit.
+	desc="req=$req issue=$ISSUE_HASH review=${review:-}"
+	((${#desc} <= DESC_MAX)) ||
+		die "The trace has more review rows than the $DESC_MAX characters of a commit status description can list. Sharpen the sub-tasks or the evidence of some review rows until they pass, then run verify again."
 	verdict=failure
 	((PASS)) && verdict=success
 	body=$(render_comment "$pr" "$req" "$issue" "$ISSUE_HASH")
@@ -844,7 +895,7 @@ cmd_verify() {
 			die "Cannot write the trace comment."
 	fi
 	gh api "repos/{owner}/{repo}/statuses/$SHA" -f state="$verdict" -f context="$CONTEXT" \
-		-f description="req=$req issue=$ISSUE_HASH" -f target_url="$url" --silent ||
+		-f description="$desc" -f target_url="$url" --silent ||
 		die "Cannot write the $CONTEXT status."
 	render_terminal
 	echo
@@ -979,11 +1030,20 @@ cmd_checks() {
 }
 
 cmd_merge() {
-	local pr rules
-	(($# == 1)) && [[ "$1" =~ ^[0-9]+$ ]] || usage
+	local pr rules confirmed=0
+	(($# == 1 || $# == 2)) && [[ "$1" =~ ^[0-9]+$ ]] || usage
 	pr=$1
+	if (($# == 2)); then
+		[[ "$2" == --confirmed-by-user ]] || usage
+		confirmed=1
+	fi
 	if ! run_check "$pr" || ! run_checks "$pr"; then
 		echo "Fix the problems above before merge."
+		return 1
+	fi
+	if [[ -n "$REVIEW_ROWS" ]] && ((!confirmed)); then
+		# shellcheck disable=SC2086 # each row is one word.
+		echo "The trace rows $(row_list $REVIEW_ROWS) need a human review. Ask the user to read them in the trace comment, then run: shepherd.sh merge $pr --confirmed-by-user"
 		return 1
 	fi
 	rules=$(gh_rules "$BASE_REF") || die "Cannot read the rules of $BASE_REF."
@@ -991,6 +1051,15 @@ cmd_merge() {
 		and any(.parameters.required_status_checks[]?; .context == $c))' <<<"$rules" >/dev/null; then
 		echo "The rules of $BASE_REF do not require the $CHECK_NAME check, so auto-merge could skip it. Ask an admin to add it to the ruleset."
 		return 1
+	fi
+	# The confirmation of the user stays on the PR, as the triage reply of
+	# a rejected human finding does.
+	if [[ -n "$REVIEW_ROWS" ]]; then
+		# shellcheck disable=SC2086 # each row is one word.
+		gh api "repos/{owner}/{repo}/issues/$pr/comments" --silent -f body="review-rows: $(tr ' ' ',' <<<"$REVIEW_ROWS")
+confirmed-by-user: yes
+The user read the review rows $(row_list $REVIEW_ROWS) of the trace on ${SHA:0:8} and confirmed the merge." ||
+			die "Cannot write the confirmation comment."
 	fi
 	# Squash, not rebase: the ruleset requires signed commits, and GitHub
 	# signs a squash commit but cannot sign the commits of a rebase merge.

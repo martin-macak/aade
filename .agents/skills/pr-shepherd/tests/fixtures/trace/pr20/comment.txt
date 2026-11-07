@@ -1,7 +1,7 @@
 <!-- pr-shepherd-trace:v1 -->
 ## Requirement check: passed, 8 of 14 need a review
 
-This check does not block the merge. A reviewer reads each row under "Needs review".
+Before the merge, each row under "Needs review" needs a line `R<n>: <reason>` in the Notes of the PR, and a person reads each row. The "Why" column shows the Notes at the time of this check.
 
 - **Plan matches issue:** the sub-tasks of the PR do the whole issue item.
 - **Proof of done:** the evidence lines show that the item works.
@@ -10,14 +10,14 @@ This check does not block the merge. A reviewer reads each row under "Needs revi
 
 | Requirement | Plan matches issue | Proof of done | Why |
 | --- | --- | --- | --- |
-| R1: `mise run check` runs only the structural tasks. It takes under 15 s on a… | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
-| R4: One CI workflow classifies the diff. A code-only PR runs no repo job. | ⚠️ review | ✅ pass | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
-| R5: A repo-layer PR runs `check` and only the affected suites. | ⚠️ review | ✅ pass | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
-| R9: One gate job is the required check and blocks a merge when a needed job fails. | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
-| R11: copilot-setup-steps runs only `mise run check`. | ⚠️ review | ✅ pass | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. No justification from the author yet. |
-| R12: Each CI job installs only the tools that it needs. | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
-| R13: The ruleset requires the gate job. The ruleset, the knowledge-curator drift… | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
-| R14: The README, AGENTS.md files, the skills and the workflow comments describe the… | ⚠️ review | ✅ pass | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. [The author explains it in the Notes of the PR](https://github.com/martin-macak/aade/pull/20). |
+| R1: `mise run check` runs only the structural tasks. It takes under 15 s on a… | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. No justification yet. Add the line `R1: <reason>` to the Notes of the PR. |
+| R4: One CI workflow classifies the diff. A code-only PR runs no repo job. | ⚠️ review | ✅ pass | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. No justification yet. Add the line `R4: <reason>` to the Notes of the PR. |
+| R5: A repo-layer PR runs `check` and only the affected suites. | ⚠️ review | ✅ pass | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. No justification yet. Add the line `R5: <reason>` to the Notes of the PR. |
+| R9: One gate job is the required check and blocks a merge when a needed job fails. | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. No justification yet. Add the line `R9: <reason>` to the Notes of the PR. |
+| R11: copilot-setup-steps runs only `mise run check`. | ⚠️ review | ✅ pass | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. No justification yet. Add the line `R11: <reason>` to the Notes of the PR. |
+| R12: Each CI job installs only the tools that it needs. | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. No justification yet. Add the line `R12: <reason>` to the Notes of the PR. |
+| R13: The ruleset requires the gate job. The ruleset, the knowledge-curator drift… | ⚠️ review | ⚠️ review | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. Proof of done: decisionkit cannot confirm that the evidence shows the item works. No justification yet. Add the line `R13: <reason>` to the Notes of the PR. |
+| R14: The README, AGENTS.md files, the skills and the workflow comments describe the… | ⚠️ review | ✅ pass | Plan matches issue: decisionkit cannot confirm that the sub-tasks do the whole item. No justification yet. Add the line `R14: <reason>` to the Notes of the PR. |
 
 <details>
 <summary>✅ Passed: 6 of 14</summary>

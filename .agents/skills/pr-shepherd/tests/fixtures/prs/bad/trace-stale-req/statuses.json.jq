@@ -1,1 +1,1 @@
-.[0].description = "req=deadbeef issue=@ISSUE@"
+.[0].description = "req=deadbeef issue=@ISSUE@ review="
