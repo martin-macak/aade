@@ -57,8 +57,8 @@ Run a new pass after each push and after each new review.
    CI runs, a dry run, a manual check.
 4. **Findings.** Run `$P findings <pr>`. Triage each finding (see
    [Review triage](#review-triage)) and answer it with `$P reply`.
-5. **Trace.** Run `$P verify <pr>`. Fix each `FAIL` row of the trace
-   table, then run it again.
+5. **Trace.** Run `$P verify <pr>`. Fix each `fail` row of the trace,
+   then run it again.
    Run it after the last push, because the trace belongs to the head
    commit.
 6. **Check.** Run `$P check <pr>`. Fix each problem. Each line says how to
@@ -138,8 +138,8 @@ it and leaves a trace that CI can read.
   the sub-tasks deliver the issue item?) and `evidence` (does the evidence
   cover the item?).
 - It upserts one PR comment with the marker `<!-- pr-shepherd-trace:v1 -->`.
-  The comment has a table with the verdict and the probability of each
-  answer.
+  The comment is for a human reviewer, so it doesn't use internal names.
+  The terminal output of verify shows the same groups, statuses and hints.
 - It sets the commit status `pr-shepherd/trace` on the head commit. The
   state is `failure` when an answer is false. The description holds
   `req=<hash> issue=<hash>`. Each hash is the first 8 hex digits of the
@@ -154,14 +154,38 @@ Requirements section or an edit of the issue makes the trace stale, so run
 verify again. Only users with write access can set a commit status, so a
 fork cannot forge a trace.
 
-Each cell of the table is `ok`, `uncertain` or `FAIL`, with the
-probability of true. A `FAIL` cell is a false answer at the threshold of
-the question. An `uncertain` cell is a true answer whose top probability
-is below 0.8. A row with an `uncertain` cell passes, and the status stays
-`success`. Still, sharpen the sub-tasks or the evidence of that row, and
-run verify again. When verify marks the row `uncertain` again, decide
-yourself and state the reason in the `## Notes` section of the PR. Do not
-present it as a decision of decisionkit.
+The comment calls `carryover` "Plan matches issue" and `evidence` "Proof
+of done". Each check of an R item gets one status:
+
+- `✅ pass`: a true answer with a top probability of 0.8 or more.
+- `⚠️ review`: a true answer below 0.8. It passes, and the status stays
+  `success`.
+- `❌ fail`: a false answer, which is a probability below the threshold
+  of the question in `questions.yml`, or an R item without an evidence
+  line. Only a fail sets the status to `failure`.
+
+The comment has these parts, in this order:
+
+1. A heading with the result and the counts, such as "Requirement check:
+   passed, 8 of 14 need a review", and one line that says whether the
+   check blocks the merge.
+2. A legend that explains both checks.
+3. A "Failed" table, then a "Needs review" table. A table without rows
+   is left out. Each row shows the R
+   item and its text, cut at about 80 characters. Its "Why" cell gives a
+   fixed hint for each check that did not pass. It links to the PR when
+   the `## Notes` section names the R item, such as `R9` or `R9.1`.
+   Otherwise it says "No justification from the author yet."
+4. A folded table of the passed rows.
+5. Folded technical details: each probability in %, the threshold and
+   the 0.8 bar, the head commit, both hashes and the verify command.
+
+A row with a `review` cell passes, and the status stays `success`. The
+shepherd still sharpens the sub-tasks or the evidence of that row and
+runs verify again. When verify marks the row `review` again, the shepherd
+decides itself and writes the reason in the `## Notes` section of the PR,
+with the R number. It does not present the reason as a decision of
+decisionkit.
 
 ## Review triage
 
@@ -272,6 +296,11 @@ files, without an LLM and without the network:
   `expect.txt` with every problem line. For a new rule, add a bad case and
   write its `expect.txt` by hand.
 - `tests/verify.bats` tests `verify`, `findings`, `reply`, `checks`,
-  `merge` and `disarm` with a fake `gh` and a fake `decisionkit`.
+  `merge` and `disarm` with a fake `gh` and a fake `decisionkit`. It
+  compares the trace comment of `verify` with the golden file
+  `tests/fixtures/trace/pr20/comment.txt`, built from the scores of PR
+  #20. After a change to the layout or the hints, update the golden
+  file, and check it with the "Status reports" rule of the
+  `cold-reader` skill.
 - `tests/drift.bats` compares this file with the script, the questions,
   the PR template, the workflow, `labels.yml` and `mise.toml`.

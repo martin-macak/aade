@@ -512,17 +512,237 @@ ask() {
 	jq -r '"\(.answer) \(.p) \(.uncertain)"' <<<"$line"
 }
 
-# Format one verdict cell from "<answer> <p> <uncertain>". A false answer
-# fails the trace. An uncertain true answer passes, but the agent must
-# sharpen the item or decide itself, as the skill says.
-cell() {
-	local answer=$1 p=$2 uncertain=$3
-	if [[ "$answer" == true && "$uncertain" == false ]]; then
-		printf 'ok %s' "$p"
-	elif [[ "$answer" == true ]]; then
-		printf 'uncertain %s' "$p"
+# Print the status of one check from "<answer> <p> <uncertain>": pass,
+# review or fail. Only a false answer fails, and only fail blocks the
+# merge. An uncertain true answer needs a human review.
+status_of() {
+	local answer=$1 uncertain=$3
+	if [[ "$answer" != true ]]; then
+		echo fail
+	elif [[ "$uncertain" == true ]]; then
+		echo review
 	else
-		printf 'FAIL %s' "$p"
+		echo pass
+	fi
+}
+
+# The label of a status in the trace.
+status_label() {
+	case $1 in
+	pass) printf '✅ pass' ;;
+	review) printf '⚠️ review' ;;
+	*) printf '❌ fail' ;;
+	esac
+}
+
+# The fixed hint for the check $1 (carry or evid) in the status $2. A row
+# without evidence lines has the status none for evid.
+hint() {
+	case $1-$2 in
+	carry-review) printf 'decisionkit cannot confirm that the sub-tasks do the whole item' ;;
+	carry-fail) printf 'a part of the item has no sub-task' ;;
+	evid-review) printf 'decisionkit cannot confirm that the evidence shows the item works' ;;
+	evid-fail) printf 'the evidence does not show that the item works' ;;
+	evid-none) printf 'the item has no evidence line' ;;
+	esac
+}
+
+# A probability on stdin as a whole percent, or "—" for "-".
+percent() {
+	awk '{ if ($0 == "-") print "—"; else printf "%.0f %%\n", $0 * 100 }'
+}
+
+# Shorten the text on stdin to about 80 bytes for a table cell. Cut at a
+# word, never inside a code span, and escape each "|". C bytes make the
+# cut the same on every awk.
+short_text() {
+	LC_ALL=C awk '{
+		t = $0; cut = 0
+		if (length(t) > 80) { t = substr(t, 1, 80); sub(/ [^ ]*$/, "", t); cut = 1 }
+		if (gsub(/`/, "`", t) % 2) { sub(/`[^`]*$/, "", t); sub(/ +$/, "", t); cut = 1 }
+		if (cut) t = t "…"
+		gsub(/\|/, "\\|", t)
+		print t
+	}'
+}
+
+# The bar of a confident answer: UNCERTAIN_MIN of the block "sh facade" of
+# the decisionkit skill. decide.sh reads the same line.
+uncertain_min() {
+	awk '$0 == "```sh facade" { inside = 1; next } inside && /^```$/ { exit }
+		inside && sub(/^UNCERTAIN_MIN=/, "") { print; exit }' "$SKILL_DIR/../decisionkit/SKILL.md"
+}
+
+# The fail threshold of the question $1.
+threshold_of() {
+	NAME=$1 yq -r '.questions[] | select(.name == strenv(NAME)) | .threshold' "$QUESTIONS"
+}
+
+# Succeed when the Notes section of the clean body $1 names the R item $2,
+# also as one of its sub-tasks R<n>.<m>.
+notes_mention() {
+	awk '/^## / { inside = ($0 ~ /^## Notes[ \t]*$/); next } inside' <<<"$1" |
+		grep -qE "(^|[^[:alnum:]])R$2([^[:alnum:]]|$)"
+}
+
+# The rows of the trace live in these arrays, indexed by the R number:
+# ROW_TEXT, ROW_C and ROW_E (pass, review, fail; ROW_E also none), ROW_CP
+# and ROW_EP (the probability of true, or -) and ROW_NOTE (1 when the
+# Notes mention the item). ROWS is their count.
+
+# The group of the row $1: fail, review or pass.
+row_group() {
+	if [[ "${ROW_C[$1]}" == fail || "${ROW_E[$1]}" == fail || "${ROW_E[$1]}" == none ]]; then
+		echo fail
+	elif [[ "${ROW_C[$1]}" == review || "${ROW_E[$1]}" == review ]]; then
+		echo review
+	else
+		echo pass
+	fi
+}
+
+# The reason of the row $1, for a fail or review row: the hint of each
+# check that did not pass, then the author's note. $2 is md or text.
+row_reason() {
+	local i=$1 out="" status
+	[[ "${ROW_C[i]}" != pass ]] && out="Plan matches issue: $(hint carry "${ROW_C[i]}"). "
+	status=${ROW_E[i]}
+	[[ "$status" != pass ]] && out+="Proof of done: $(hint evid "$status"). "
+	if ((ROW_NOTE[i])) && [[ "$2" == md ]]; then
+		out+="[The author explains it in the Notes of the PR]($PR_URL)."
+	elif ((ROW_NOTE[i])); then
+		out+="The author explains it in the Notes of the PR."
+	else
+		out+="No justification from the author yet."
+	fi
+	printf '%s' "$out"
+}
+
+# The status cell of the check $2 (C or E) of the row $1.
+row_status() {
+	local s
+	if [[ "$2" == C ]]; then s=${ROW_C[$1]}; else s=${ROW_E[$1]}; fi
+	[[ "$s" == none ]] && s=fail
+	status_label "$s"
+}
+
+# Count the rows of each group into N_FAIL, N_REVIEW and N_PASS.
+count_groups() {
+	local i
+	N_FAIL=0 N_REVIEW=0 N_PASS=0
+	for ((i = 1; i <= ROWS; i++)); do
+		case $(row_group "$i") in
+		fail) N_FAIL=$((N_FAIL + 1)) ;;
+		review) N_REVIEW=$((N_REVIEW + 1)) ;;
+		*) N_PASS=$((N_PASS + 1)) ;;
+		esac
+	done
+}
+
+# The summary line: the result and the counts.
+summary_line() {
+	local out
+	if ((N_FAIL)); then
+		out="Requirement check: failed, $N_FAIL of $ROWS failed"
+		((N_REVIEW)) && out+=", $N_REVIEW need a review"
+	elif ((N_REVIEW)); then
+		out="Requirement check: passed, $N_REVIEW of $ROWS need a review"
+	else
+		out="Requirement check: passed, all $ROWS pass"
+	fi
+	printf '%s' "$out"
+}
+
+# The merge line under the summary.
+merge_line() {
+	if ((N_FAIL)); then
+		printf 'This check blocks the merge until each failed row passes.'
+	elif ((N_REVIEW)); then
+		printf 'This check does not block the merge. A reviewer reads each row under "Needs review".'
+	else
+		printf 'This check does not block the merge.'
+	fi
+}
+
+# Print the Markdown table of the group $1. A fail or review table has a
+# "Why" column.
+md_group_table() {
+	local group=$1 i
+	if [[ "$group" == pass ]]; then
+		printf '| Requirement | Plan matches issue | Proof of done |\n| --- | --- | --- |\n'
+	else
+		printf '| Requirement | Plan matches issue | Proof of done | Why |\n| --- | --- | --- | --- |\n'
+	fi
+	for ((i = 1; i <= ROWS; i++)); do
+		[[ "$(row_group "$i")" == "$group" ]] || continue
+		printf '| R%d: %s | %s | %s |' "$i" "${ROW_TEXT[i]}" "$(row_status "$i" C)" "$(row_status "$i" E)"
+		[[ "$group" != pass ]] && printf ' %s |' "$(row_reason "$i" md)"
+		printf '\n'
+	done
+}
+
+# Print the trace comment. $1 is the PR, $2 the Requirements hash, $3 the
+# issue and $4 its hash.
+render_comment() {
+	local pr=$1 req=$2 issue=$3 issue_hash=$4 i tc te bar
+	tc=$(percent <<<"$T_CARRY")
+	te=$(percent <<<"$T_EVID")
+	bar=$(percent <<<"$BAR")
+	printf '%s\n## %s\n\n%s\n\n' "$MARKER" "$(summary_line)" "$(merge_line)"
+	printf -- '- **Plan matches issue:** the sub-tasks of the PR do the whole issue item.\n'
+	printf -- '- **Proof of done:** the evidence lines show that the item works.\n\n'
+	if ((N_FAIL)); then
+		printf '### ❌ Failed\n\n%s\n\n' "$(md_group_table fail)"
+	fi
+	if ((N_REVIEW)); then
+		printf '### ⚠️ Needs review\n\n%s\n\n' "$(md_group_table review)"
+	fi
+	if ((N_PASS)); then
+		printf '<details>\n<summary>✅ Passed: %d of %d</summary>\n\n%s\n\n</details>\n\n' "$N_PASS" "$ROWS" "$(md_group_table pass)"
+	fi
+	printf '<details>\n<summary>Technical details</summary>\n\n'
+	printf 'decisionkit scores each check with the probability that it is true. '
+	if [[ "$tc" == "$te" ]]; then
+		printf 'A check fails below %s. ' "$tc"
+	else
+		printf '"Plan matches issue" fails below %s, and "Proof of done" fails below %s. ' "$tc" "$te"
+	fi
+	printf 'From %s on, it passes without a review.\n\n' "$bar"
+	printf '| Requirement | Plan matches issue | Proof of done |\n| --- | --- | --- |\n'
+	for ((i = 1; i <= ROWS; i++)); do
+		printf '| R%d | %s | %s |\n' "$i" "$(percent <<<"${ROW_CP[i]}")" "$(percent <<<"${ROW_EP[i]}")"
+	done
+	printf '\nHead commit `%s`. Requirements hash `%s`. Issue #%s hash `%s`. ' "${SHA:0:8}" "$req" "$issue" "$issue_hash"
+	printf 'CI reads the hashes from the commit status `%s`.\n\n' "$CONTEXT"
+	printf 'Run the check again: `.agents/skills/pr-shepherd/scripts/shepherd.sh verify %s`\n\n</details>\n' "$pr"
+}
+
+# Print the trace for the terminal: the same groups, statuses and hints.
+render_terminal() {
+	local i group title
+	summary_line
+	printf '\n%s\n' "$(merge_line)"
+	for group in fail review; do
+		if [[ "$group" == fail ]]; then
+			title=Failed
+			((N_FAIL)) || continue
+		else
+			title="Needs review"
+			((N_REVIEW)) || continue
+		fi
+		printf '\n%s:\n' "$title"
+		for ((i = 1; i <= ROWS; i++)); do
+			[[ "$(row_group "$i")" == "$group" ]] || continue
+			printf '  R%d: %s\n    Plan matches issue: %s, Proof of done: %s\n    %s\n' "$i" "${ROW_TEXT[i]}" \
+				"$(row_status "$i" C)" "$(row_status "$i" E)" "$(row_reason "$i" text)"
+		done
+	done
+	if ((N_PASS)); then
+		printf '\nPassed:'
+		for ((i = 1; i <= ROWS; i++)); do
+			[[ "$(row_group "$i")" == pass ]] && printf ' R%d' "$i"
+		done
+		printf '\n'
 	fi
 }
 
@@ -550,7 +770,7 @@ rerun_ci() {
 }
 
 cmd_verify() {
-	local pr issue req n i carry evid subs table="" verdict url comments id body problems
+	local pr issue req n i carry evid subs verdict url comments id body problems
 	(($# == 1)) && [[ "$1" =~ ^[0-9]+$ ]] || usage
 	pr=$1
 	load_pr "$pr"
@@ -574,6 +794,12 @@ cmd_verify() {
 	# check_requirements ran in a subshell above. Run it again for R_BLOCKS.
 	check_requirements "$issue" >/dev/null
 	n=${#R_BLOCKS[@]}
+	ROWS=$n
+	ROW_TEXT=() ROW_C=() ROW_E=() ROW_CP=() ROW_EP=() ROW_NOTE=()
+	PR_URL=$(jq -r '.url' <<<"$PR_JSON")
+	T_CARRY=$(threshold_of carryover)
+	T_EVID=$(threshold_of evidence)
+	BAR=$(uncertain_min)
 	PASS=1
 	for ((i = 1; i <= n; i++)); do
 		subs=$(sed -nE '2,$ s/^R[0-9]+\.[0-9]+: /- /p' <<<"${R_BLOCKS[i]}")
@@ -583,25 +809,31 @@ cmd_verify() {
 			evid=$(ask evidence "$(printf 'Claim:\n%s\n\nEvidence:\n%s\n' "${R_BLOCKS[i]}" \
 				"$(tr '\037' '\n' <<<"${R_EVIDENCE[i]}")")") || die "decisionkit failed. Run: decisionkit status"
 		else
-			evid="none - false"
+			evid=none
 		fi
+		ROW_TEXT[i]=$(sed -nE '1 s/^R[0-9]+: //p' <<<"${R_BLOCKS[i]}" | short_text)
 		# shellcheck disable=SC2086 # each answer splits into its 3 words.
-		carry=$(cell $carry)
-		# shellcheck disable=SC2086
-		evid=$(cell $evid)
-		[[ "$carry" == FAIL* || "$evid" == FAIL* ]] && PASS=0
-		table+="| R$i | $carry | $evid |"$'\n'
+		ROW_C[i]=$(status_of $carry)
+		ROW_CP[i]=${carry#* }
+		ROW_CP[i]=${ROW_CP[i]% *}
+		if [[ "$evid" == none ]]; then
+			ROW_E[i]=none
+			ROW_EP[i]=-
+		else
+			# shellcheck disable=SC2086
+			ROW_E[i]=$(status_of $evid)
+			ROW_EP[i]=${evid#* }
+			ROW_EP[i]=${ROW_EP[i]% *}
+		fi
+		ROW_NOTE[i]=0
+		notes_mention "$BODY" "$i" && ROW_NOTE[i]=1
+		[[ "$(row_group "$i")" == fail ]] && PASS=0
 	done
+	count_groups
 	req=$(requirements_section <<<"$BODY" | sha8)
 	verdict=failure
 	((PASS)) && verdict=success
-	body=$(printf '%s\n## pr-shepherd trace\n\nHead `%s`, Requirements `%s`, issue #%s `%s`.\n\n| Item | Carry-over | Evidence |\n| --- | --- | --- |\n%s\nVerdict: **%s**. ' \
-		"$MARKER" "${SHA:0:8}" "$req" "$issue" "$ISSUE_HASH" "$table" "$verdict")
-	if [[ "$verdict" == success ]]; then
-		body+="Every R item carries its issue item, and its evidence supports it. Sharpen each uncertain row, or state in the PR why it holds."
-	else
-		body+="Fix each FAIL row: add the missing sub-tasks or better evidence. Then run \`shepherd.sh verify $pr\` again."
-	fi
+	body=$(render_comment "$pr" "$req" "$issue" "$ISSUE_HASH")
 	comments=$(gh_comments "$pr") || die "Cannot read the comments of PR #$pr."
 	id=$(jq -r --arg m "$MARKER" '[.[] | select((.body // "") | startswith($m))][0].id // empty' <<<"$comments")
 	if [[ -n "$id" ]]; then
@@ -614,7 +846,8 @@ cmd_verify() {
 	gh api "repos/{owner}/{repo}/statuses/$SHA" -f state="$verdict" -f context="$CONTEXT" \
 		-f description="req=$req issue=$ISSUE_HASH" -f target_url="$url" --silent ||
 		die "Cannot write the $CONTEXT status."
-	printf '%s' "$table"
+	render_terminal
+	echo
 	echo "Trace: $verdict on ${SHA:0:8}. $url"
 	rerun_ci
 	[[ "$verdict" == success ]]

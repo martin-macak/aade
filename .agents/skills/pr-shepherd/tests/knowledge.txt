@@ -20,8 +20,8 @@ A: The rules of the base branch must require the `pr-shepherd` check.
 Q: Which pull requests are exempt from the rules?
 A: Dependabot PRs are exempt from every rule. A PR with the label `pr:no-issue` needs no Requirements section and no trace, but its checkboxes still need ticks and evidence and its findings still need triage.
 
-Q: What does the shepherd do with a trace row marked uncertain?
-A: The row passes, and the status stays `success`. The shepherd still sharpens the sub-tasks or the evidence and runs verify again. If verify marks the row `uncertain` again, the shepherd decides itself and writes the reason in the `## Notes` section of the PR.
+Q: What does the shepherd do with a trace row marked review?
+A: The row passes, and the status stays `success`. The shepherd still sharpens the sub-tasks or the evidence and runs verify again. If verify marks the row `review` again, the shepherd decides itself and writes the reason in the `## Notes` section of the PR.
 
 Q: How does the shepherd find out which other checks of the PR, such as CI jobs, failed?
 A: The `checks <pr> --watch` command waits for every other check of the PR and lists each one that failed.

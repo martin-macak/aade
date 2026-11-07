@@ -1,0 +1,53 @@
+### Scope
+
+repository
+
+### What and why
+
+This repository is a container for code, tools, agents, rules and knowledge. Later it gets a TypeScript monorepo with pnpm. Two layers will then exist:
+
+- **Repo layer (mise).** It covers scripts, skills, agent config, knowledge, the GitHub config and the tool versions. mise pins the tools and runs the repo tasks.
+- **Code layer (pnpm).** It covers build, test and package of the code. pnpm owns these tasks.
+
+Today `mise run check` mixes two questions. "Is the container well-formed?" takes about 5 s. "Do the tools inside the container behave?" takes about 176 s. After [#15](https://github.com/martin-macak/aade/pull/15) merged, agents-check took 3m15s on main. `skills:drift` took 175.7 s of it. The tech-research suite took about 2 min, and one bad-fixture test took 77 s. copilot-setup-steps also runs `mise run check`, so each Copilot session waits the same 3 minutes.
+
+**Decisions:**
+1. `mise run check` holds only the structural tasks: `agents:check`, `knowledge:size`, `knowledge:lint`, `scripts:coverage`, `research:check`, `taxonomy:check` and `prose:lint`. It runs in about 5 s.
+2. A new `mise run test` runs the bats suites: `skills:drift` and `scripts:test`. By default it runs only the suites that the changed files affect. It uses the mapping of `script-tests.sh` and the `.watch` files. `--all` runs every suite.
+3. The two layers stay separate. mise tasks never call pnpm. mise only pins node and pnpm. Later, a CI code job runs pnpm.
+4. One CI workflow always runs. A classifier job sorts the diff into the repo layer and the code layer. The repo layer is `scripts/`, `tests/`, `.agents/`, `.claude/`, `.github/`, `.vale*`, `mise.toml`, `docs/`, `*.md` and `.pre-commit-config.yaml`. A PR that touches only code skips the repo jobs.
+5. On a PR with repo-layer changes, CI runs `check` and the affected suites.
+6. CI runs every suite when a shared input changes: `tests/scripts/helpers/`, `[tools]` in mise.toml or the CI workflow. Another mise.toml edit runs only `mise-tasks.bats`.
+7. The label `ci:full` runs every suite on a PR. Adding the label starts the run again.
+8. A weekly run and a `workflow_dispatch` run cover every suite on Linux and macOS. They catch a `.watch` file that misses a path.
+9. A push to main runs only `check`, as a smoke test. Strict up-to-date and linear history make main equal the tested PR tree.
+10. One gate job always runs and is the only required check of the CI workflow. It fails when a needed job fails. The repo jobs and the later code jobs report to it.
+11. copilot-setup-steps runs only `mise run check`.
+12. Each CI job installs only the tools that it needs, through `install_args`. The check job needs no node and no decisionkit.
+13. A new push to a PR cancels its older runs, through a concurrency group per PR.
+
+[#16](https://github.com/martin-macak/aade/issues/16) keeps the speed fixes: one stub for all fakes, a per-suite sandbox, parallel suites and the `research.sh check` hot spot. This chore owns the check contract, the layer rule and the CI structure.
+
+### Done when
+
+- [x] `mise run check` runs only the structural tasks. It takes under 15 s on a developer Mac.
+- [x] `mise run test` runs the affected bats suites, and `mise run test --all` runs every suite.
+- [x] No mise task calls pnpm. The layer rule is in the knowledge layer, at the place that the knowledge-curator skill picks.
+- [x] One CI workflow classifies the diff. A code-only PR runs no repo job.
+- [x] A repo-layer PR runs `check` and only the affected suites.
+- [x] A change in a shared input or the label `ci:full` runs every suite. `.github/labels.yml` defines `ci:full`.
+- [x] A weekly run and a manual run cover every suite on Linux and macOS.
+- [x] A push to main runs only `check`.
+- [x] One gate job is the required check and blocks a merge when a needed job fails.
+- [x] A new push to a PR cancels its older runs.
+- [x] copilot-setup-steps runs only `mise run check`.
+- [x] Each CI job installs only the tools that it needs.
+- [x] The ruleset requires the gate job. The ruleset, the knowledge-curator drift tests ("check runs every CI check") and the pre-commit hooks match the new tasks.
+- [x] The README, AGENTS.md files, the skills and the workflow comments describe the new behaviour.
+
+### Risk
+
+A wrong gate job can block every merge. Keep it out of the ruleset until it works, or revert the ruleset change. Affected-only runs can miss a suite when a `.watch` file is incomplete. The weekly full run catches this within a week, and `ci:full` lets a reviewer force a full run. A classifier that puts a repo path in the code layer skips checks without a warning. So the classifier treats an unknown path as repo layer.
+
+
+
