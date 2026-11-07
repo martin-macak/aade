@@ -47,6 +47,7 @@ setup() {
 
 @test "run: a changed suite runs itself, once even when its script also changed" {
 	run "$S" run tests/scripts/beta.bats scripts/beta.sh
+	[ "$status" -eq 0 ]
 	[ "$(calls)" = "bats tests/scripts/beta.bats" ]
 }
 
@@ -58,6 +59,7 @@ setup() {
 
 @test "run: a changed helper runs every suite" {
 	run "$S" run scripts/alpha.sh tests/scripts/helpers/common.bash
+	[ "$status" -eq 0 ]
 	[ "$(calls)" = "bats tests/scripts/alpha.bats tests/scripts/beta.bats tests/scripts/mise-tasks.bats tests/scripts/script-tests.bats" ]
 }
 

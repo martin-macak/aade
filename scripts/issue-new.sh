@@ -10,7 +10,7 @@
 # labels of the form plus scope:<scope>. --dry-run prints the title, labels
 # and body and opens nothing. The issue-authoring skill explains its use.
 # Run it from the repository root.
-# Exit codes: 0 done, 1 gh failed, 2 wrong usage or invalid fields.
+# Exit codes: 0 done, 1 gh or mktemp failed, 2 wrong usage or invalid fields.
 
 set -uo pipefail
 
@@ -25,7 +25,8 @@ fi
 DRY_RUN=false
 [[ ${2:-} == --dry-run ]] && DRY_RUN=true
 
-input=$(mktemp)
+# An explicit template, because macOS mktemp ignores TMPDIR without one.
+input=$(mktemp "${TMPDIR:-/tmp}/issue-new.XXXXXX") || exit 1
 trap 'rm -f "$input"' EXIT
 cat >"$input"
 yq -e 'tag == "!!map"' "$input" >/dev/null 2>&1 || {

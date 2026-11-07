@@ -164,7 +164,7 @@ body() {
 		issue "$(body "$value")" type:task scope:beta
 		run "$S" 7
 		[ "$status" -eq 1 ]
-		[[ "$output" == *"Issue #7: the Scope section is not a scope name."* ]] || false
+		[ "$output" = "Issue #7: the Scope section is not a scope name." ]
 		[[ "$(calls)" != *"issue edit"* ]] || false
 	done
 }

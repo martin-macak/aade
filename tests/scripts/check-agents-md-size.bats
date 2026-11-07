@@ -12,6 +12,7 @@ setup() {
 	S=scripts/check-agents-md-size.sh
 	ROOT_MAX=$(sed -n 's/^MAX_LINES=//p' "$S")
 	NESTED_MAX=$(sed -n 's/^MAX_NESTED_LINES=//p' "$S")
+	MOVE="Move task-specific content into a skill. See the knowledge-curator skill."
 }
 
 # Write the file $1 with $2 lines.
@@ -36,8 +37,8 @@ lines() {
 	lines AGENTS.md $((ROOT_MAX + 1))
 	run "$S" AGENTS.md
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"AGENTS.md has $((ROOT_MAX + 1)) lines. The limit is $ROOT_MAX."* ]] || false
-	[[ "$output" == *"Move task-specific content into a skill."* ]] || false
+	[ "$output" = "AGENTS.md has $((ROOT_MAX + 1)) lines. The limit is $ROOT_MAX.
+$MOVE" ]
 }
 
 @test "treats ./AGENTS.md as the root file" {
@@ -53,7 +54,8 @@ lines() {
 	lines docs/AGENTS.md $((NESTED_MAX + 1))
 	run "$S" docs/AGENTS.md
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"docs/AGENTS.md has $((NESTED_MAX + 1)) lines. The limit is $NESTED_MAX."* ]] || false
+	[ "$output" = "docs/AGENTS.md has $((NESTED_MAX + 1)) lines. The limit is $NESTED_MAX.
+$MOVE" ]
 }
 
 @test "skips a named file that does not exist" {
@@ -66,7 +68,19 @@ lines() {
 	lines a/AGENTS.md $((NESTED_MAX + 1))
 	run "$S" AGENTS.md a/AGENTS.md
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"AGENTS.md has"* && "$output" == *"a/AGENTS.md has"* ]] || false
+	[ "$output" = "AGENTS.md has $((ROOT_MAX + 1)) lines. The limit is $ROOT_MAX.
+$MOVE
+a/AGENTS.md has $((NESTED_MAX + 1)) lines. The limit is $NESTED_MAX.
+$MOVE" ]
+}
+
+@test "with files, checks only the named files" {
+	lines AGENTS.md 1
+	lines big/AGENTS.md $((NESTED_MAX + 1))
+	git add -A
+	run "$S" AGENTS.md
+	[ "$status" -eq 0 ]
+	[ -z "$output" ]
 }
 
 @test "without arguments checks tracked and untracked AGENTS.md files" {
@@ -75,7 +89,20 @@ lines() {
 	lines new/AGENTS.md $((NESTED_MAX + 1))
 	run "$S"
 	[ "$status" -eq 1 ]
-	[[ "$output" == *"new/AGENTS.md has"* ]] || false
+	[ "$output" = "new/AGENTS.md has $((NESTED_MAX + 1)) lines. The limit is $NESTED_MAX.
+$MOVE" ]
+}
+
+@test "without arguments fails a tracked AGENTS.md over its limit" {
+	lines AGENTS.md $((ROOT_MAX + 1))
+	lines docs/AGENTS.md $((NESTED_MAX + 1))
+	git add -A
+	run "$S"
+	[ "$status" -eq 1 ]
+	[ "$output" = "AGENTS.md has $((ROOT_MAX + 1)) lines. The limit is $ROOT_MAX.
+$MOVE
+docs/AGENTS.md has $((NESTED_MAX + 1)) lines. The limit is $NESTED_MAX.
+$MOVE" ]
 }
 
 @test "without arguments skips AGENTS.md files that git ignores" {
