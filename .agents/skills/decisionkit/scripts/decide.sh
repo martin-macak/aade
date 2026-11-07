@@ -142,6 +142,10 @@ ask() {
 calibrate() {
 	local file=$1 dir=$2 name kind fixture label line rc got p result count=0 status=0 low high
 	local unsure=0 wrong=0
+	if [[ ! -f "$file" ]]; then
+		>&2 echo "$file: no such questions file."
+		exit 2
+	fi
 	printf '%-14s %-8s %-8s %-6s %-9s %s\n' question want got p result fixture
 	while IFS= read -r name; do
 		kind=$(field "$file" "$name" kind)

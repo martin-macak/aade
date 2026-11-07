@@ -85,6 +85,15 @@ report() {
 	printf '%-6s %-7s %-5s %-6s %s\n' "$1" "$2" "$3" "$verdict" "${5#"$FIXTURES"/}"
 }
 
+# Each group needs a fixture, or the run cannot show both sides. Check all
+# groups before the first question, so a run fails fast.
+for group in slop/good/*.txt slop/bad/*.txt match/same-*.txt match/differ-*.txt; do
+	if ! compgen -G "$FIXTURES/$group" >/dev/null; then
+		>&2 echo "The fixture group $group is empty. Add a fixture to it."
+		exit 2
+	fi
+done
+
 printf '%-6s %-7s %-5s %-6s %s\n' kind expect value result fixture
 for kind in good bad; do
 	for file in "$FIXTURES/slop/$kind"/*.txt; do
