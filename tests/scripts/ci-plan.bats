@@ -119,6 +119,21 @@ value() {
 	[ "$(value test)" = false ]
 }
 
+@test "plan: a list that fails exits 2, and never plans test=false" {
+	printf '#!/usr/bin/env bash\nexit 2\n' >scripts/skill-drift.sh
+	run "$S" plan .agents/skills/alpha/SKILL.md
+	[ "$status" -eq 2 ]
+	has "$output" "ci-plan: cannot list the affected suites."
+	run ! grep -q '^test=' <<<"$output"
+}
+
+@test "plan: a skill change runs its suite without bats on PATH" {
+	unfake bats
+	run env PATH="$(path_without bats)" "$S" plan .agents/skills/alpha/SKILL.md
+	[ "$status" -eq 0 ]
+	[ "$(value test)" = true ]
+}
+
 @test "plan: an empty change plans no job" {
 	run "$S" plan --base base
 	[ "$output" = "$(printf '%s\n' repo=false code=false full=false test=false)" ]

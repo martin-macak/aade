@@ -212,3 +212,11 @@ setup() {
 	[ "$output" = "$(printf '%s\n' "$A/a.bats" "$A/b.bats" "$B/c.bats")" ]
 	[ -z "$(calls)" ]
 }
+
+@test "--list: works without bats on PATH, as in the classify job of CI" {
+	skill alpha a
+	unfake bats
+	run env PATH="$(path_without bats)" "$S" --list .agents/skills/alpha/SKILL.md
+	[ "$status" -eq 0 ]
+	[ "$output" = "$A/a.bats" ]
+}

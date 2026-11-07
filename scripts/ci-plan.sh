@@ -25,7 +25,7 @@
 # Both modes need git, and yq when mise.toml changed. Run it from the
 # repository root.
 # Exit codes: 0 pass or nothing affected, 1 a suite failed or git found no
-# merge-base, 2 wrong usage.
+# merge-base, 2 wrong usage or a suite list failed.
 
 # The code layer. Empty until the pnpm monorepo exists. Each entry is a
 # path prefix, such as packages/.
@@ -130,14 +130,15 @@ every_suite() {
 	((ALL || FULL || SHARED))
 }
 
-# Print the affected suites, one per line.
+# Print the affected suites, one per line. Fail when a list fails, so a
+# broken list never reads as "no suite affected".
 suites() {
 	if every_suite; then
-		scripts/script-tests.sh run --list
-		scripts/skill-drift.sh --list
+		scripts/script-tests.sh run --list || return
+		scripts/skill-drift.sh --list || return
 	elif ((${#REPO_FILES[@]} > 0)); then
-		scripts/script-tests.sh run --list "${REPO_FILES[@]}"
-		scripts/skill-drift.sh --list "${REPO_FILES[@]}"
+		scripts/script-tests.sh run --list "${REPO_FILES[@]}" || return
+		scripts/skill-drift.sh --list "${REPO_FILES[@]}" || return
 	fi
 }
 
@@ -148,7 +149,13 @@ if [[ $MODE == plan ]]; then
 	fi
 	full=false test=false
 	every_suite && full=true
-	[[ $REPO == true && -n "$(suites)" ]] && test=true
+	if [[ $REPO == true ]]; then
+		list=$(suites) || {
+			>&2 echo "ci-plan: cannot list the affected suites."
+			exit 2
+		}
+		[[ -n "$list" ]] && test=true
+	fi
 	printf '%s\n' "repo=$REPO" "code=$CODE" "full=$full" "test=$test"
 	exit 0
 fi
