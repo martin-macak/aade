@@ -124,7 +124,16 @@ value() {
 	run "$S" plan .agents/skills/alpha/SKILL.md
 	[ "$status" -eq 2 ]
 	has "$output" "ci-plan: cannot list the affected suites."
-	run ! grep -q '^test=' <<<"$output"
+	lacks "$output" "test="
+}
+
+@test "plan: a failing first list fails the plan, even when the second list works" {
+	# The skill list is not empty, so a lost failure would plan test=true.
+	printf '#!/usr/bin/env bash\nexit 2\n' >scripts/script-tests.sh
+	run "$S" plan .agents/skills/alpha/SKILL.md
+	[ "$status" -eq 2 ]
+	has "$output" "ci-plan: cannot list the affected suites."
+	lacks "$output" "test="
 }
 
 @test "plan: a skill change runs its suite without bats on PATH" {
