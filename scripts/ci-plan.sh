@@ -20,8 +20,9 @@
 # full is true for a shared input or --full (the ci:full label). test is
 # true when a suite is affected. --all sets every value to true, for the
 # weekly run.
-# test: runs the affected suites through script-tests.sh and
-# skill-drift.sh. --all runs every suite. It needs bats on PATH.
+# test: runs the affected suites of script-tests.sh and skill-drift.sh in
+# one parallel run of script-tests.sh bats. --all runs every suite. It
+# needs bats on PATH.
 # Both modes need git, and yq when mise.toml changed. Run it from the
 # repository root.
 # Exit codes: 0 pass or nothing affected, 1 a suite failed or git found no
@@ -162,16 +163,19 @@ fi
 
 if every_suite; then
 	echo "ci-plan: every suite runs."
-	status=0
-	scripts/script-tests.sh run || status=1
-	scripts/skill-drift.sh || status=1
-	exit $status
-fi
-if ((${#REPO_FILES[@]} == 0)); then
+elif ((${#REPO_FILES[@]} == 0)); then
 	echo "ci-plan: no repo-layer file changed, so no suite runs."
 	exit 0
 fi
-status=0
-scripts/script-tests.sh run "${REPO_FILES[@]}" || status=1
-scripts/skill-drift.sh "${REPO_FILES[@]}" || status=1
-exit $status
+# One parallel run for the script suites and the skill suites, so the
+# slowest suites of both start at once.
+list=$(suites) || {
+	>&2 echo "ci-plan: cannot list the affected suites."
+	exit 2
+}
+SUITES=()
+while IFS= read -r suite; do
+	[[ -n "$suite" ]] && SUITES+=("$suite")
+done <<<"$list"
+((${#SUITES[@]} > 0)) || exit 0
+scripts/script-tests.sh bats "${SUITES[@]}" || exit 1

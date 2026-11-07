@@ -3,13 +3,16 @@
 # scripts/script-tests.sh keeps the shell scripts tested. `run` picks the
 # suites that a change can affect, so the pre-commit hook stays fast.
 # `coverage` fails when a script has no suite, so a new script cannot slip
-# in untested. A fake bats records which suites would run.
+# in untested. `bats` runs suites in parallel and prints their output in
+# order. A fake bats records which suites would run. Most tests run one
+# suite at a time (TEST_JOBS=1), so the calls keep their order.
 
 load helpers/common
 
 setup() {
 	sandbox script-tests.sh
 	S=scripts/script-tests.sh
+	export TEST_JOBS=1
 	fake bats 'exit "${BATS_STATUS:-0}"'
 	mkdir -p tests/scripts/helpers
 	for name in alpha beta; do
@@ -33,10 +36,10 @@ setup() {
 	[[ "$output" == *"Run script-tests.sh from the repository root."* ]] || false
 }
 
-@test "run: without files runs every suite in tests/scripts" {
+@test "run: without files runs every suite in tests/scripts, one bats per suite" {
 	run "$S" run
 	[ "$status" -eq 0 ]
-	[ "$(calls)" = "bats tests/scripts/alpha.bats tests/scripts/beta.bats tests/scripts/mise-tasks.bats tests/scripts/script-tests.bats" ]
+	[ "$(calls)" = "$(printf 'bats %s\n' tests/scripts/alpha.bats tests/scripts/beta.bats tests/scripts/mise-tasks.bats tests/scripts/script-tests.bats)" ]
 }
 
 @test "run: a changed script runs only its own suite" {
@@ -60,7 +63,7 @@ setup() {
 @test "run: a changed helper runs every suite" {
 	run "$S" run scripts/alpha.sh tests/scripts/helpers/common.bash
 	[ "$status" -eq 0 ]
-	[ "$(calls)" = "bats tests/scripts/alpha.bats tests/scripts/beta.bats tests/scripts/mise-tasks.bats tests/scripts/script-tests.bats" ]
+	[ "$(calls)" = "$(printf 'bats %s\n' tests/scripts/alpha.bats tests/scripts/beta.bats tests/scripts/mise-tasks.bats tests/scripts/script-tests.bats)" ]
 }
 
 @test "run: files that affect no suite run nothing and pass" {
@@ -88,6 +91,62 @@ setup() {
 	export BATS_STATUS=1
 	run "$S" run scripts/alpha.sh
 	[ "$status" -eq 1 ]
+}
+
+@test "bats: without suites exits 2" {
+	run "$S" bats
+	[ "$status" -eq 2 ]
+	has "$output" "Usage: script-tests.sh run"
+}
+
+@test "bats: exits 2 and runs no suite when bats is missing" {
+	unfake bats
+	run env PATH="$(path_without bats)" "$S" bats tests/scripts/alpha.bats
+	[ "$status" -eq 2 ]
+	[ "$output" = "script-tests.sh needs bats on PATH. Run it through mise, such as: mise run scripts:test" ]
+}
+
+@test "bats: runs suites in parallel and prints each whole, in the given order" {
+	export TEST_JOBS=3
+	# The first suite waits until the last one has started, so it ends last.
+	# A run one suite at a time would fail it, and a run that printed in end
+	# order would print it last.
+	fake bats '
+case $1 in
+*alpha*)
+	n=0
+	while [ ! -f "$FAKE_DIR/mise-started" ] && [ "$n" -lt 100 ]; do
+		sleep 0.1
+		n=$((n + 1))
+	done
+	[ -f "$FAKE_DIR/mise-started" ] || exit 1
+	;;
+*mise*) touch "$FAKE_DIR/mise-started" ;;
+esac
+printf "1..1\nok 1 %s\n" "$1"'
+	run "$S" bats tests/scripts/alpha.bats tests/scripts/beta.bats tests/scripts/mise-tasks.bats
+	[ "$status" -eq 0 ]
+	[ "$output" = "$(printf '==> %s\n1..1\nok 1 %s\n' tests/scripts/alpha.bats tests/scripts/alpha.bats tests/scripts/beta.bats tests/scripts/beta.bats tests/scripts/mise-tasks.bats tests/scripts/mise-tasks.bats)
+script-tests: 3 suites passed." ]
+}
+
+@test "bats: starts the biggest suite first, and keeps the given order in the output" {
+	printf '%s\n' one two three >tests/scripts/beta.bats
+	fake bats 'echo "ran $1"'
+	run "$S" bats tests/scripts/alpha.bats tests/scripts/beta.bats tests/scripts/mise-tasks.bats
+	[ "$status" -eq 0 ]
+	[ "$(calls)" = "$(printf 'bats %s\n' tests/scripts/beta.bats tests/scripts/alpha.bats tests/scripts/mise-tasks.bats)" ]
+	[ "$output" = "$(printf '==> %s\nran %s\n' tests/scripts/alpha.bats tests/scripts/alpha.bats tests/scripts/beta.bats tests/scripts/beta.bats tests/scripts/mise-tasks.bats tests/scripts/mise-tasks.bats)
+script-tests: 3 suites passed." ]
+}
+
+@test "bats: runs every suite, fails, and names each failed suite at the end" {
+	export TEST_JOBS=2
+	fake bats 'echo "not ok 1 $1"; case $1 in *beta* | *mise*) exit 1 ;; esac'
+	run "$S" bats tests/scripts/alpha.bats tests/scripts/beta.bats tests/scripts/mise-tasks.bats
+	[ "$status" -eq 1 ]
+	[ "${lines[${#lines[@]} - 1]}" = "script-tests: 2 of 3 suites failed: tests/scripts/beta.bats tests/scripts/mise-tasks.bats" ]
+	[ "$(calls | wc -l | tr -d ' ')" -eq 3 ]
 }
 
 @test "coverage: passes when each script has a suite and each suite a script" {
@@ -246,6 +305,31 @@ silent() {
 		run "$S" coverage
 		[ "$status" -eq 0 ]
 	done
+}
+
+@test "coverage: a test that makes a file executable fails" {
+	for mode in "+x" "u+x" "a=rwx" "755" "0700" "-R 711"; do
+		printf '@test "t" {\n\tchmod %s file\n}\n' "$mode" >tests/scripts/alpha.bats
+		run "$S" coverage
+		[ "$status" -eq 1 ]
+		has "$output" "tests/scripts/alpha.bats:2: this test makes a file executable."
+	done
+	mkdir -p .agents/skills/demo/tests
+	printf '@test "t" {\n\tchmod +x file\n}\n' >.agents/skills/demo/tests/x.bats
+	printf '@test "t" {\n\ttrue\n}\n' >tests/scripts/alpha.bats
+	run "$S" coverage
+	[ "$status" -eq 1 ]
+	has "$output" ".agents/skills/demo/tests/x.bats:2: this test makes a file executable."
+}
+
+@test "coverage: chmod without an execute bit, a comment and the helpers pass" {
+	# The mode is a variable, so this file does not trip the rule itself.
+	x=+x
+	printf '@test "t" {\n\tchmod a-w file\n\tchmod 644 file\n\t# chmod %s is not allowed\n}\n' "$x" >tests/scripts/alpha.bats
+	echo "chmod $x \"\$1\"" >tests/scripts/helpers/common.bash
+	run "$S" coverage
+	[ "$status" -eq 0 ]
+	[ -z "$output" ]
 }
 
 @test "coverage: the silent-check rule also reads skill tests and helpers" {

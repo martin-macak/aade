@@ -4,6 +4,7 @@
 # script has a suite. tests/AGENTS.md explains the layout.
 # Usage:
 #   script-tests.sh run [--list] [<file>...]   run the suites in tests/scripts
+#   script-tests.sh bats <suite>...            run the given suites in parallel
 #   script-tests.sh coverage                   check that each script has a suite
 # run: without files it runs every tests/scripts/*.bats. With files, it runs
 # only the suites that the files can affect: scripts/<x>.sh runs
@@ -11,24 +12,31 @@
 # mise-tasks.bats, which tests its inline tasks. A file in
 # tests/scripts/helpers/ runs every suite. scripts/ci-plan.sh decides when
 # a tool version change runs every suite. --list prints the suites and runs
-# nothing. Without --list, it needs bats on PATH.
+# nothing. Without --list, it runs the suites as the bats mode does.
+# bats: runs each suite in its own bats process, TEST_JOBS at a time (the
+# number of CPUs by default), the biggest file first. Each suite writes its TAP output to its own
+# buffer. The buffers print in the given order, each under a "==> <suite>"
+# header, as soon as the suite ends. A summary line names each failed
+# suite. skill-drift.sh and ci-plan.sh use this mode too. It needs bats on
+# PATH, and runs no suite without it.
 # coverage: each scripts/<x>.sh needs tests/scripts/<x>.bats. Each
 # .agents/skills/<skill>/scripts/<x>.sh needs a tests/<x>.bats in its skill.
 # Each tests/scripts/<x>.bats needs scripts/<x>.sh, except mise-tasks.bats,
 # which tests the inline tasks of mise.toml, and helpers.bats, which tests
 # tests/scripts/helpers/. No test file may hold a check that cannot fail.
-# silent_checks below lists the rules.
+# silent_checks below lists the rules. No test file outside the helpers may
+# make a file executable with chmod (new_executables below).
 # Run it from the repository root. It does not ask git, because a commit
 # hook can export GIT_DIR, and git then reports the wrong root.
 # Exit codes: 0 pass or nothing affected, 1 a test or the check failed,
-# 2 wrong usage.
+# 2 wrong usage or no bats.
 
 SUITES=tests/scripts
 MISE_SUITE=mise-tasks.bats
 HELPERS_SUITE=helpers.bats
 
 usage() {
-	>&2 echo "Usage: script-tests.sh run [--list] [<file>...] | script-tests.sh coverage"
+	>&2 echo "Usage: script-tests.sh run [--list] [<file>...] | script-tests.sh bats <suite>... | script-tests.sh coverage"
 	exit 2
 }
 
@@ -76,7 +84,52 @@ run_suites() {
 		printf '%s\n' "${suites[@]}" | sort -u
 		return 0
 	fi
-	bats $(printf '%s\n' "${suites[@]}" | sort -u)
+	run_parallel $(printf '%s\n' "${suites[@]}" | sort -u)
+}
+
+# Run the bats suites $@ in parallel, as the usage at the top explains.
+run_parallel() {
+	local jobs out pid i=0 n=$# suite code size failed=() list=("$@")
+	if ! command -v bats >/dev/null; then
+		>&2 echo "script-tests.sh needs bats on PATH. Run it through mise, such as: mise run scripts:test"
+		return 2
+	fi
+	jobs=${TEST_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)}
+	[[ "$jobs" =~ ^[1-9][0-9]*$ ]] || jobs=2
+	out=$(mktemp -d) || return 2
+	# Each job writes <i>.out, then <i>.status last, so a status file means
+	# that the suite has ended. The biggest suites start first, so that a
+	# long suite does not start last and stretch the run. Suites of the same
+	# size keep the given order, and so does the output.
+	for suite in "$@"; do
+		size=$(wc -c <"$suite" 2>/dev/null) || size=0
+		echo "${size//[!0-9]/} $i"
+		i=$((i + 1))
+	done | sort -k1,1nr -k2,2n | while read -r size i; do
+		printf '%s\0%s\0' "$i" "${list[i]}"
+	done | xargs -0 -n 2 -P "$jobs" sh -c '
+		bats "$2" >"$0/$1.out" 2>&1
+		echo $? >"$0/$1.tmp"
+		mv "$0/$1.tmp" "$0/$1.status"' "$out" &
+	pid=$!
+	i=0
+	for suite in "$@"; do
+		while [[ ! -f "$out/$i.status" ]] && kill -0 "$pid" 2>/dev/null; do
+			sleep 0.1
+		done
+		echo "==> $suite"
+		cat "$out/$i.out" 2>/dev/null
+		code=$(cat "$out/$i.status" 2>/dev/null || echo "no exit code")
+		[[ "$code" == 0 ]] || failed+=("$suite")
+		i=$((i + 1))
+	done
+	wait "$pid"
+	rm -rf "${out:?}"
+	if ((${#failed[@]} > 0)); then
+		echo "script-tests: ${#failed[@]} of $n suites failed: ${failed[*]}"
+		return 1
+	fi
+	echo "script-tests: $n suites passed."
 }
 
 coverage() {
@@ -107,7 +160,27 @@ coverage() {
 		}
 	done
 	silent_checks || status=1
+	new_executables || status=1
 	return $status
+}
+
+# Print each line of a test file outside the helpers that makes a file
+# executable with chmod. macOS endpoint security can scan each new
+# executable on its first run, which costs about 0.2 s, so a fake links to
+# the stub of fakes.bash instead. A comment line does not count.
+new_executables() {
+	local files=() file
+	for file in "$SUITES"/*.bats .agents/skills/*/tests/*.bats; do
+		[[ -f "$file" ]] && files+=("$file")
+	done
+	((${#files[@]} > 0)) || return 0
+	awk '
+		/^[ \t]*#/ { next }
+		/(^|[^A-Za-z_])chmod[ \t]+(-[A-Za-z]+[ \t]+)*([ugoa]*[+=][rwst]*x|[0-7]*[1357][0-7]*([ \t]|$))/ {
+			printf "%s:%d: this test makes a file executable. Fake a command with fake or fake_at of fakes.bash, or run a script with bash.\n", FILENAME, FNR
+			found = 1
+		}
+		END { exit found }' "${files[@]}" >&2
 }
 
 # Print each line of a test file that holds a check that cannot fail. The
@@ -178,6 +251,11 @@ case ${1:-} in
 run)
 	shift
 	run_suites "$@"
+	;;
+bats)
+	shift
+	(($# > 0)) || usage
+	run_parallel "$@"
 	;;
 coverage)
 	(($# == 1)) || usage

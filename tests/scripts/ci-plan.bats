@@ -7,11 +7,15 @@
 # small repository with real copies of the two suite runners and a fake
 # bats that records which suites would run.
 
+bats_require_minimum_version 1.5.0
+
 load helpers/common
 
 setup() {
 	sandbox ci-plan.sh script-tests.sh skill-drift.sh
 	S=scripts/ci-plan.sh
+	# One suite at a time, so the calls of the fake bats keep their order.
+	export TEST_JOBS=1
 	fake bats 'exit "${BATS_STATUS:-0}"'
 	mkdir -p tests/scripts/helpers .agents/skills/alpha/tests
 	touch scripts/alpha.sh tests/scripts/alpha.bats tests/scripts/mise-tasks.bats tests/scripts/helpers/common.bash
@@ -139,6 +143,14 @@ value() {
 	lacks "$output" "test="
 }
 
+@test "test: a list that fails exits 2, and runs no suite" {
+	fake_at "$SANDBOX/scripts/skill-drift.sh" 'exit 2'
+	run "$S" test .agents/skills/alpha/SKILL.md
+	[ "$status" -eq 2 ]
+	has "$output" "ci-plan: cannot list the affected suites."
+	lacks "$(calls)" "bats "
+}
+
 @test "plan: a skill change runs its suite without bats on PATH" {
 	unfake bats
 	run env PATH="$(path_without bats)" "$S" plan .agents/skills/alpha/SKILL.md
@@ -170,11 +182,12 @@ value() {
 	[ -z "$(calls)" ]
 }
 
-@test "test --all: runs every suite" {
+@test "test --all: runs every suite in one parallel run" {
 	run "$S" test --all
 	[ "$status" -eq 0 ]
 	has "$output" "ci-plan: every suite runs."
-	[ "$(calls)" = "$(printf '%s\n' "bats tests/scripts/alpha.bats tests/scripts/mise-tasks.bats" "bats .agents/skills/alpha/tests/drift.bats")" ]
+	[ "$(calls)" = "$(printf 'bats %s\n' tests/scripts/alpha.bats tests/scripts/mise-tasks.bats .agents/skills/alpha/tests/drift.bats)" ]
+	[ "$(grep -c '^script-tests: ' <<<"$output")" -eq 1 ]
 }
 
 @test "test: a failing suite fails the run" {
