@@ -169,6 +169,16 @@ setup() {
 	jq -e '.decision == "block"' <<<"$output"
 }
 
+@test "check fails and mise exec fails: still exits 0 and blocks with a fixed reason" {
+	fake_mise "$HOME/.local/bin"
+	export MISE_RUN_STATUS=1 MISE_RUN_OUTPUT="lint: bad link" MISE_EXEC_STATUS=1
+	hook '{}'
+	[ "$status" -eq 0 ]
+	[ "$(printf '%s\n' "$output" | wc -l | tr -d ' ')" -eq 1 ]
+	jq -e '.decision == "block"' <<<"$output"
+	has "$(jq -r .reason <<<"$output")" "The quality gate failed"
+}
+
 @test "check fails: the reason tells the agent to fix and holds the whole output" {
 	fake_mise "$HOME/.local/bin"
 	export MISE_RUN_STATUS=1 MISE_RUN_OUTPUT=$'lint: bad link in a.md\nvale: 1 error' MISE_RUN_ERROR="mise: task failed"

@@ -56,4 +56,8 @@ echo $((blocks + 1)) >"$COUNTER"
 reason="The quality gate failed: \`mise run check\` exited non-zero. Fix every problem below. Do not disable or weaken a check.
 
 $(tail -n 80 <<<"$output")"
-mise exec -- jq -cn --arg reason "$reason" '{decision: "block", reason: $reason}'
+# When jq cannot run, block with a fixed reason. A failed hook would let
+# the agent stop.
+mise exec -- jq -cn --arg reason "$reason" '{decision: "block", reason: $reason}' 2>/dev/null ||
+	echo '{"decision":"block","reason":"The quality gate failed: `mise run check` exited non-zero. Run it, and fix every problem that it prints. Do not disable or weaken a check."}'
+exit 0

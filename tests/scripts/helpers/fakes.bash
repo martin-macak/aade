@@ -148,6 +148,8 @@ dk_responder() {
 #                     when it called fake_mise, without the fake folders,
 #                     so the real jq or yq answers. A command that the test
 #                     faked, such as vale, answers as its fake does.
+#                     MISE_EXEC_STATUS, when set, makes each exec print an
+#                     error and exit with that code instead.
 # Every other call only logs.
 fake_mise() {
 	fake_paths
@@ -167,6 +169,10 @@ if [[ "${1:-}" == run ]]; then
 fi
 if [[ "${1:-} ${2:-}" == "exec --" ]]; then
 	shift 2
+	if [[ -n "${MISE_EXEC_STATUS:-}" ]]; then
+		echo "mise: exec failed" >&2
+		exit "$MISE_EXEC_STATUS"
+	fi
 	[[ -x "'"$FAKE_BIN"'/$1" ]] && exec "'"$FAKE_BIN"'/$1" "${@:2}"
 	PATH='"$(printf %q "$real")"'
 	exec "$@"
