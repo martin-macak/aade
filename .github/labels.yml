@@ -9,6 +9,7 @@
 #            values, and the issue-scope workflow sets the label.
 #            `mise run taxonomy:check` fails when the forms and this list
 #            differ.
+# pr:<x>     Pull request flags. The pr-shepherd skill reads them.
 #
 # Each entry: name, color and description. The color is 6 hex digits
 # without #, in quotes, because YAML reads 5319e7 as a number. GitHub
@@ -43,3 +44,7 @@
 - name: scope:tooling
   color: "5319e7"
   description: mise tools and tasks, pre-commit hooks and scripts.
+
+- name: pr:no-issue
+  color: "ededed"
+  description: The PR closes no issue. The pr-shepherd check skips the issue items and the trace.

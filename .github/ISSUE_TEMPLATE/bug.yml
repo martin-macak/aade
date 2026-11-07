@@ -48,6 +48,15 @@ body:
       label: Actual behaviour
     validations:
       required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Checkable statements. The bug is fixed when all hold. The PR copies each one as an R item.
+      placeholder: |
+        - [ ] `mise run check` passes again.
+    validations:
+      required: true
   - type: dropdown
     id: severity
     attributes:

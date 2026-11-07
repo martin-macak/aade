@@ -3,7 +3,8 @@
 # Check that the issue forms and .github/labels.yml agree.
 # - Each label has a unique name, a quoted 6-digit hex color and a
 #   description of at most 100 characters.
-# - Each label is a type:* or a scope:* label.
+# - Each label is a type:*, a scope:* or a pr:* label. pr:* labels flag
+#   pull requests, so no form uses them.
 # - Each form sets exactly one type:* label, and each type:* label has
 #   exactly one form. Every label of a form exists in labels.yml.
 # - The Scope dropdown of each form lists the scope:* values of labels.yml,
@@ -26,7 +27,7 @@ dupes=$(sort <<<"$names" | uniq -d)
 [[ -z "$dupes" ]] || fail "$LABELS: duplicate labels: $dupes"
 while IFS= read -r bad; do
 	[[ -n "$bad" ]] && fail "$LABELS: $bad"
-done < <(yq '.[] | select((.name | test("^(type|scope):[a-z0-9-]+$") | not)) | .name + ": the name must be type:<x> or scope:<x> in lower case."' "$LABELS"
+done < <(yq '.[] | select((.name | test("^(type|scope|pr):[a-z0-9-]+$") | not)) | .name + ": the name must be type:<x>, scope:<x> or pr:<x> in lower case."' "$LABELS"
 	yq '.[] | select((.color | tag) != "!!str") | .name + ": the color must be 6 hex digits in quotes."' "$LABELS"
 	yq '.[] | select((.color | tag) == "!!str") | select(.color | test("^[0-9a-fA-F]{6}$") | not) | .name + ": the color must be 6 hex digits in quotes."' "$LABELS"
 	yq '.[] | select((.description // "" | length) == 0 or (.description | length) > 100) | .name + ": the description must have 1 to 100 characters."' "$LABELS")
