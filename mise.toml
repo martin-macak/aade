@@ -82,6 +82,14 @@ fi
 exec scripts/issue-new.sh "$usage_type"
 '''
 
+[tasks."pr:check"]
+description = "Check one pull request against the pr-shepherd rules (needs gh and the network)"
+run = ".agents/skills/pr-shepherd/scripts/shepherd.sh check"
+
+[tasks."pr:shepherd"]
+description = "Run a pr-shepherd command, such as verify <pr> or merge <pr>"
+run = ".agents/skills/pr-shepherd/scripts/shepherd.sh"
+
 [tasks."prose:lint"]
 description = "Lint the Markdown prose with Vale"
 run = "git ls-files -z '*.md' | xargs -0 vale"
