@@ -8,7 +8,7 @@
 # The hook always exits 0, because Copilot ignores the output of a failed hook.
 #
 # When mise is missing, the hook lets the agent stop and warns on stderr.
-# The agents-check CI workflow stays the backstop.
+# The ci workflow stays the backstop.
 set -uo pipefail
 
 # Blocks in a row before the hook gives up. Copilot itself ends the turn

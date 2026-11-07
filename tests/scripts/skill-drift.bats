@@ -202,3 +202,13 @@ setup() {
 	has "$output" "==> zeta"
 	[ "$(calls | wc -l | tr -d ' ')" -eq 3 ]
 }
+
+@test "--list: prints the affected test files and runs nothing" {
+	skill alpha a b
+	skill beta c
+	watch beta c mise.toml
+	run "$S" --list mise.toml .agents/skills/alpha/SKILL.md
+	[ "$status" -eq 0 ]
+	[ "$output" = "$(printf '%s\n' "$A/a.bats" "$A/b.bats" "$B/c.bats")" ]
+	[ -z "$(calls)" ]
+}

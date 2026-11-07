@@ -1,0 +1,50 @@
+# Reruns the ci workflow of a pull request when someone adds the ci:full
+# label. The classify job of ci reads the labels at run time, so the rerun
+# runs every suite.
+# ci itself does not trigger on label events. Such a run would skip its
+# ci-gate job, and GitHub counts a skipped required check as passed. A
+# failing PR could then turn green.
+# On a PR from a fork, the token is read-only and the rerun fails. Then
+# rerun ci by hand from the Actions tab.
+name: ci-full
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  rerun:
+    if: github.event.label.name == 'ci:full'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Job permissions replace the workflow ones, so checkout needs
+    # contents: read here too.
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      # mise-action reads the pinned gh version from mise.toml.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: gh
+      # The newest ci run of the head commit. A rerun needs a finished run,
+      # so cancel a running one and wait for it to stop first.
+      - env:
+          SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          run=$(gh run list --workflow ci.yml --commit "$SHA" --event pull_request --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [[ -z "$run" ]]; then
+            echo "No ci run for $SHA yet. The next push runs the full plan, because the label stays."
+            exit 0
+          fi
+          if [[ $(gh run view "$run" --json status --jq .status) != completed ]]; then
+            gh run cancel "$run" || true
+            gh run watch "$run" --exit-status >/dev/null 2>&1 || true
+          fi
+          gh run rerun "$run"

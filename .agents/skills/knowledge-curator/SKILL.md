@@ -187,7 +187,7 @@ The skill folder holds a `Makefile` with the line
 | `knowledge` | A cold reader cannot learn a key rule from `SKILL.md` alone. | `tests/knowledge.txt` | Claude headless, decisionkit |
 | `slop` | A `##` section of `SKILL.md` scores `SLOP_MAX` or more. | `SKILL.md` | decisionkit |
 
-- **drift** also runs in the pre-commit hook `skill-drift` and in CI. Use
+- **drift** also runs in the pre-commit hook `test` and in CI. Use
   only bash, git, grep, awk, yq and jq, because CI has no other tools. Find
   the repository root with `cd "$BATS_TEST_DIRNAME/../../../.." && pwd`,
   not with git. A commit hook can export `GIT_DIR`, and git then reports
@@ -196,11 +196,11 @@ The skill folder holds a `Makefile` with the line
   and skills, limits, versions and paths. A test file lists each path
   outside the skill that it reads in a `.watch` file with the same name,
   one per line, such as `tests/drift.watch` for `tests/drift.bats`. A path
-  that ends with `/` covers a folder. The hook runs a test file only when a
-  commit changes its skill folder or a watched path. A drift test checks
-  that each `.watch` file lists the outside paths of its test file, and
-  that the `files` filter of the hook lists every watched path. On a
-  mismatch, it prints the filter to paste.
+  that ends with `/` covers a folder. The hook and `mise run test` run a
+  test file only when a change touches its skill folder or a watched path.
+  A drift test checks that each `.watch` file lists the outside paths of
+  its test file. The weekly CI run runs every test file, so it catches a
+  path that a `.watch` file misses.
 - **triggers** has one task per line. A `+ <task>` line must load the
   skill. A `- <task>` line must not. Write each `-` task so that it clearly
   belongs to another skill. The run offers only the `Skill` tool, so the
@@ -264,7 +264,8 @@ rule to another home, or changes more than one rule of the root
 `AGENTS.md`. Report each finding with its evidence, and let the user
 decide each one, because an audit can remove rules that someone needs.
 
-1. Run `mise run check`. It runs the deterministic checks of CI.
+1. Run `mise run check` and `mise run test`. They run the deterministic
+   checks of CI.
 2. Run `mise run skills:test` for the skills that the change touched.
 3. Compare the root `AGENTS.md` with the ledger. Each rule has one active
    row with the triage of its exact wording.
@@ -276,7 +277,7 @@ decide each one, because an audit can remove rules that someone needs.
 ## Enforcement
 
 Five pre-commit hooks guard the layer. CI runs the same checks with
-`mise run check`. They check structure and stale facts only. Triage and
+`mise run check` and `mise run test`. They check structure and stale facts only. Triage and
 placement stay your job.
 
 - **`agents-check`** runs `mise run agents:check`. It fails when a
@@ -294,7 +295,31 @@ placement stay your job.
   - relative links in every Markdown file resolve;
   - a commit that adds or changes a line of the root `AGENTS.md` also
     stages the ledger.
-- **`skill-drift`** runs each skill test file that a commit affects. See
+- **`test`** runs `scripts/ci-plan.sh test` on the staged files. It runs
+  each bats suite and skill test file that they affect. See
   [Test a skill](#test-a-skill).
 - **`vale`** lints the prose of each Markdown file. The `cold-reader`
   skill explains its rules.
+
+## Check contract
+
+The repository has two layers. The repo layer contains the scripts,
+skills, agent config, docs, the GitHub config and `mise.toml`. mise pins
+every tool and runs the tasks of this layer. The code layer contains the
+later pnpm monorepo, and pnpm builds, tests and packages it. A mise
+task never calls pnpm, and mise only pins node and pnpm. Otherwise CI
+could not skip the repo jobs for a change that touches only code.
+
+- `mise run check` runs only the structural checks and takes a few
+  seconds. Add a check to it only when the check is fast and doesn't run a
+  bats suite.
+- `mise run test` runs the bats suites that the change affects, and
+  `mise run test --all` runs every suite. `scripts/ci-plan.sh` maps the
+  files to the suites, and it holds the paths of the code layer. An
+  unknown path counts as repo layer, so no check skips without notice.
+- The `ci` workflow runs `check` and the affected suites on a pull
+  request, and only `check` on a push to main. Its `ci-gate` job is the
+  required check. `.github/rulesets/main.json` is a snapshot of the
+  ruleset. GitHub does not read it, so apply a change with
+  `gh api -X PUT repos/{owner}/{repo}/rulesets/<id> --input .github/rulesets/main.json`.
+  `gh api repos/{owner}/{repo}/rulesets` lists the ids.

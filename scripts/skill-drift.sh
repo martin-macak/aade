@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Run the skill drift tests.
-# Usage: skill-drift.sh [<file>...]
+# Usage: skill-drift.sh [--list] [<file>...]
 # Without files, it runs every tests/*.bats of every skill. With files, as
 # pre-commit passes them, it runs only the test files that the files can
 # affect. A file affects tests/<test>.bats of a skill when it is in the
@@ -13,7 +13,7 @@
 # Run it from the repository root. It does not ask git, because a commit
 # hook can export GIT_DIR, and git then reports the wrong root. It needs
 # bats on PATH. Exit codes: 0 pass or nothing affected, 1 a test failed,
-# 2 an error.
+# 2 an error. --list prints the test files and runs nothing.
 
 if [[ ! -d .agents/skills ]]; then
 	>&2 echo "Run skill-drift.sh from the repository root."
@@ -45,6 +45,11 @@ affected() {
 	return 1
 }
 
+LIST=0
+if [[ ${1:-} == --list ]]; then
+	LIST=1
+	shift
+fi
 FILES=("$@")
 STATUS=0
 for dir in .agents/skills/*/; do
@@ -55,6 +60,10 @@ for dir in .agents/skills/*/; do
 		[[ -f "$test" ]] && affected "$name" "$test" && tests+=("$test")
 	done
 	((${#tests[@]} > 0)) || continue
+	if ((LIST)); then
+		printf '%s\n' "${tests[@]}"
+		continue
+	fi
 	echo "==> $name"
 	bats "${tests[@]}" || STATUS=1
 done

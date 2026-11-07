@@ -10,6 +10,9 @@
 #            `mise run taxonomy:check` fails when the forms and this list
 #            differ.
 # pr:<x>     Pull request flags. The pr-shepherd skill reads them.
+# ci:<x>     Pull request flags of the ci workflow. ci:full makes ci run
+#            every suite. Adding the label starts the ci-full workflow,
+#            which reruns ci.
 #
 # Each entry: name, color and description. The color is 6 hex digits
 # without #, in quotes, because YAML reads 5319e7 as a number. GitHub
@@ -48,3 +51,7 @@
 - name: pr:no-issue
   color: "ededed"
   description: The PR closes no issue. The pr-shepherd check skips the issue items and the trace.
+
+- name: ci:full
+  color: "0e8a16"
+  description: Run every bats suite of the ci workflow on this PR. Adding it reruns the workflow.
