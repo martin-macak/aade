@@ -64,6 +64,21 @@ problems() {
 
 # ------------------------------------------------------ usage and settings
 
+@test "a call without a command prints the usage of every command and exits 2" {
+	run "$R"
+	[ "$status" -eq 2 ]
+	for cmd in "init <slug>" "add <slug> <type>" "source add <slug>" "cite sync <slug>" \
+		"status <slug> <file> <status>" "check [<slug>...]"; do
+		[[ "$output" == *"research.sh $cmd"* ]] || {
+			echo "the usage lacks: $cmd"
+			return 1
+		}
+	done
+	# The usage is plain text: no comment marks, and not the next paragraph.
+	[[ "$output" != *"# "* ]] || false
+	[[ "$output" != *"Run it from"* ]] || false
+}
+
 @test "an unknown command exits 2 with the usage" {
 	usage_error bogus
 }
@@ -102,6 +117,36 @@ problems() {
 	usage_error status q report.md
 	usage_error status q report.md review --bogus
 	usage_error status q report.md review --by
+}
+
+@test "a bad RESEARCH_TODAY exits 2 before an action writes a file" {
+	RESEARCH_TODAY=06.11.2026 run "$R" init q --title T --author A
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"RESEARCH_TODAY must have the form YYYY-MM-DD."* ]] || false
+	[ ! -e "$RESEARCH_ROOT/q" ]
+}
+
+@test "a bad RESEARCH_TODAY stops each action that writes, and changes no file" {
+	new_research
+	before=$(find "$RESEARCH_ROOT" -type f -exec cksum {} + | sort)
+	for args in "add q report" "source add q" "cite sync q" "status q brief.md review"; do
+		RESEARCH_TODAY=bad run "$R" $args
+		[ "$status" -eq 2 ] || {
+			echo "$args: exit $status"
+			return 1
+		}
+		[[ "$output" == *"RESEARCH_TODAY must have the form YYYY-MM-DD."* ]] || false
+	done
+	[ "$(find "$RESEARCH_ROOT" -type f -exec cksum {} + | sort)" = "$before" ]
+}
+
+@test "check and the usage ignore RESEARCH_TODAY, because they write no date" {
+	RESEARCH_TODAY=bad run "$R" check
+	[ "$status" -eq 0 ]
+	RESEARCH_TODAY=bad run "$R"
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"research.sh init <slug>"* ]] || false
+	[[ "$output" != *"RESEARCH_TODAY"* ]] || false
 }
 
 @test "the date is the date of today when RESEARCH_TODAY is unset" {
