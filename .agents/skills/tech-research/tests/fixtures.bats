@@ -7,8 +7,13 @@
 # with defect.diff, and expect.txt lists every problem line that the check
 # must print, with paths relative to the root. No LLM, no network.
 
+ROOT=$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)
+load "$ROOT/tests/scripts/helpers/fakes"
+
 setup() {
-	SKILL_DIR=$(cd "$BATS_TEST_DIRNAME/.." && pwd)
+	# The script runs from a copy of the skill, so it cannot change the
+	# repository.
+	SKILL_DIR="$(skill_copy tech-research)/tech-research"
 	R="$SKILL_DIR/scripts/research.sh"
 	GOOD="$SKILL_DIR/tests/fixtures/good"
 	BAD="$SKILL_DIR/tests/fixtures/bad"

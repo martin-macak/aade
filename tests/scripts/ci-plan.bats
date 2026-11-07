@@ -61,10 +61,13 @@ value() {
 
 @test "plan: a code-only change runs no repo job" {
 	# The code layer is empty until the monorepo exists. Add a path here.
-	sed -i.bak 's|^CODE_PATHS=()$|CODE_PATHS=(packages/)|' "$S"
-	run "$S" plan packages/app/index.ts packages/app/README.md
+	# The edited copy is not executable, so bash runs it: no test writes
+	# an executable file.
+	rm "$S"
+	sed 's|^CODE_PATHS=()$|CODE_PATHS=(packages/)|' "$ROOT/scripts/ci-plan.sh" >"$S"
+	run bash "$S" plan packages/app/index.ts packages/app/README.md
 	[ "$output" = "$(printf '%s\n' repo=false code=true full=false test=false)" ]
-	run "$S" plan packages/app/index.ts README.md
+	run bash "$S" plan packages/app/index.ts README.md
 	[ "$(value repo)" = true ]
 	[ "$(value code)" = true ]
 }
@@ -120,7 +123,7 @@ value() {
 }
 
 @test "plan: a list that fails exits 2, and never plans test=false" {
-	printf '#!/usr/bin/env bash\nexit 2\n' >scripts/skill-drift.sh
+	fake_at "$SANDBOX/scripts/skill-drift.sh" 'exit 2'
 	run "$S" plan .agents/skills/alpha/SKILL.md
 	[ "$status" -eq 2 ]
 	has "$output" "ci-plan: cannot list the affected suites."
@@ -129,7 +132,7 @@ value() {
 
 @test "plan: a failing first list fails the plan, even when the second list works" {
 	# The skill list is not empty, so a lost failure would plan test=true.
-	printf '#!/usr/bin/env bash\nexit 2\n' >scripts/script-tests.sh
+	fake_at "$SANDBOX/scripts/script-tests.sh" 'exit 2'
 	run "$S" plan .agents/skills/alpha/SKILL.md
 	[ "$status" -eq 2 ]
 	has "$output" "ci-plan: cannot list the affected suites."

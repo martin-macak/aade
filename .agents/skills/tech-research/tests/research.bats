@@ -12,8 +12,13 @@ bats_require_minimum_version 1.5.0
 
 # Each test works on a copy of fixtures/good in a temporary research root,
 # with a fixed date. No LLM and no network.
+ROOT=$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)
+load "$ROOT/tests/scripts/helpers/fakes"
+
 setup() {
-	SKILL_DIR=$(cd "$BATS_TEST_DIRNAME/.." && pwd)
+	# The script runs from a copy of the skill, so it cannot change the
+	# repository.
+	SKILL_DIR="$(skill_copy tech-research)/tech-research"
 	R="$SKILL_DIR/scripts/research.sh"
 	export RESEARCH_ROOT="$BATS_TEST_TMPDIR/research"
 	export RESEARCH_TODAY=2026-11-06

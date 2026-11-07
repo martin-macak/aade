@@ -3,7 +3,7 @@
 # Tests for scripts/test-skill.sh. Fake claude and decisionkit commands
 # (tests/scripts/helpers/fakes.bash) replace the real ones, so no test calls
 # an LLM. Each test builds a small
-# repository with a copy of the script, the two question blocks that it
+# repository with a link to the script, the two question blocks that it
 # reads, and a skill named demo.
 
 ROOT=$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)
@@ -14,7 +14,7 @@ setup() {
 	CURATOR="$REPO/.agents/skills/knowledge-curator"
 	DEMO="$REPO/.agents/skills/demo"
 	mkdir -p "$CURATOR/scripts" "$REPO/.agents/skills/cold-reader" "$DEMO/tests"
-	cp "$BATS_TEST_DIRNAME/../scripts/test-skill.sh" "$CURATOR/scripts/"
+	ln -s "$(suite_copy "$ROOT/.agents/skills/knowledge-curator/scripts/test-skill.sh")" "$CURATOR/scripts/test-skill.sh"
 	cat >"$CURATOR/SKILL.md" <<'EOF'
 ```sh skill-tests
 Q_KNOW="Same facts?"

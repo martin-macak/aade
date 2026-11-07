@@ -8,7 +8,9 @@ ROOT=$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)
 load "$ROOT/tests/scripts/helpers/fakes"
 
 setup() {
-	SCRIPT="$BATS_TEST_DIRNAME/../scripts/decide.sh"
+	# The script runs from a copy of the skill, so it cannot change the
+	# repository.
+	SCRIPT="$(skill_copy decisionkit)/decisionkit/scripts/decide.sh"
 	# The text "p=<n>" gives a binary answer, and "choice=<option>" a choice
 	# answer. Any other text gives the JSON in the file $FAKE_DIR/reply and
 	# the exit code FAKE_EXIT.
@@ -128,11 +130,11 @@ CASES
 	[ "$status" -eq 2 ]
 }
 
-# Copy the script next to a SKILL.md of our own, so that a test sets the
-# limits. The text of SKILL.md comes from stdin. COPY is the new script.
+# Link the script next to a SKILL.md of our own, so that a test sets the
+# limits. The text of SKILL.md comes from stdin. COPY is the linked script.
 copy_with_skill() {
 	mkdir -p "$BATS_TEST_TMPDIR/copy/scripts"
-	cp "$SCRIPT" "$BATS_TEST_TMPDIR/copy/scripts/decide.sh"
+	ln -sf "$(suite_copy "$ROOT/.agents/skills/decisionkit/scripts/decide.sh")" "$BATS_TEST_TMPDIR/copy/scripts/decide.sh"
 	cat >"$BATS_TEST_TMPDIR/copy/SKILL.md"
 	COPY="$BATS_TEST_TMPDIR/copy/scripts/decide.sh"
 }

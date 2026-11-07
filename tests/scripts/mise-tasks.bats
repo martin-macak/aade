@@ -24,13 +24,10 @@ setup() {
 	export MISE_TRUSTED_CONFIG_PATHS=$SANDBOX MISE_YES=1
 	fake make '[[ " $* " == *" .agents/skills/${MAKE_FAILS:-none}/ "* ]] && exit 1; exit 0'
 	mkdir -p .agents/skills/alpha .agents/skills/beta
-	cat >scripts/issue-new.sh <<'FAKE'
-#!/usr/bin/env bash
-printf '%s\n' "issue-new.sh $*" >>"$FAKE_LOG"
+	fake_at "$SANDBOX/scripts/issue-new.sh" - <<'FAKE'
 printf 'stdin: %s\n' "$(cat)" >>"$FAKE_LOG"
 exit "${ISSUE_STATUS:-0}"
 FAKE
-	chmod +x scripts/issue-new.sh
 }
 
 # Run the task $1 with the arguments that follow.
