@@ -14,7 +14,8 @@
 # coverage: each scripts/<x>.sh needs tests/scripts/<x>.bats. Each
 # .agents/skills/<skill>/scripts/<x>.sh needs a tests/<x>.bats in its skill.
 # Each tests/scripts/<x>.bats needs scripts/<x>.sh, except mise-tasks.bats,
-# which tests the inline tasks of mise.toml. No test file may hold a check
+# which tests the inline tasks of mise.toml, and helpers.bats, which tests
+# tests/scripts/helpers/. No test file may hold a check
 # that cannot fail: a whole line of [[ ]] or (( )) is ignored by bash 3.2
 # unless it is the last command of a test, and a line that starts with !
 # never fails a test on any bash. Such a line needs `|| false`.
@@ -25,6 +26,7 @@
 
 SUITES=tests/scripts
 MISE_SUITE=mise-tasks.bats
+HELPERS_SUITE=helpers.bats
 
 usage() {
 	>&2 echo "Usage: script-tests.sh run [<file>...] | script-tests.sh coverage"
@@ -91,7 +93,7 @@ coverage() {
 	for suite in "$SUITES"/*.bats; do
 		[[ -f "$suite" ]] || continue
 		name=$(basename "$suite")
-		[[ "$name" == "$MISE_SUITE" ]] && continue
+		[[ "$name" == "$MISE_SUITE" || "$name" == "$HELPERS_SUITE" ]] && continue
 		[[ -f "scripts/${name%.bats}.sh" ]] || {
 			>&2 echo "$suite tests no script. scripts/${name%.bats}.sh is missing."
 			status=1

@@ -112,6 +112,13 @@ setup() {
 	[ "$status" -eq 0 ]
 }
 
+@test "coverage: helpers.bats needs no script, because it tests the helpers" {
+	touch tests/scripts/helpers.bats
+	run "$S" coverage
+	[ "$status" -eq 0 ]
+	[ -z "$output" ]
+}
+
 @test "coverage: reports every problem, not only the first" {
 	touch scripts/gamma.sh tests/scripts/stale.bats
 	run "$S" coverage

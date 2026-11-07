@@ -6,10 +6,10 @@ script. Skill scripts keep their suites in `tests/` of their skill.
 
 ## Rules
 
-- Each `scripts/<x>.sh` has the suite `tests/scripts/<x>.bats`. The suite
-  `tests/scripts/mise-tasks.bats` tests the inline bash of `mise.toml`.
-  `mise run scripts:coverage` fails on a script without a suite, and on a
-  suite without a script.
+- Each `scripts/<x>.sh` has the suite `tests/scripts/<x>.bats`.
+  `mise-tasks.bats` tests the inline bash of `mise.toml`, and `helpers.bats`
+  tests `helpers/`. `mise run scripts:coverage` fails on a script without a
+  suite, and on any other suite without a script.
 - Start a suite with a short comment on what the script is for and why.
 - Write one `@test` per use case and per exit path of the script. Phrase
   each test title as a rule, such as "check: reports drift, edits no file".

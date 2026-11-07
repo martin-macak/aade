@@ -24,10 +24,6 @@ setup() {
 	UNHEALTHY_MESSAGE="Some checks failed. The agent environment is not healthy."
 }
 
-# Pass when the text $1 contains (has) or does not contain (lacks) the text
-# $2. A bare [[ ]] cannot fail a test on bash 3.2 unless it is the last
-# command, so every text check goes through these two functions.
-
 # Write the pre-commit hook that `pre-commit install` creates.
 install_hook() {
 	fixture "${1:-.git/hooks}/pre-commit" <<'EOF'
@@ -54,7 +50,7 @@ make_healthy() {
 
 @test "a missing decisionkit fails and skips the status check" {
 	make_healthy
-	rm "$BATS_TEST_TMPDIR/bin/decisionkit"
+	unfake decisionkit
 	[ -z "$(command -v decisionkit)" ]
 	run "$S"
 	[ "$status" -eq 1 ]
@@ -132,6 +128,7 @@ make_healthy() {
 }
 
 @test "every problem is reported in one run, on stderr, with one summary on stdout" {
+	unfake decisionkit
 	run --separate-stderr "$S"
 	[ "$status" -eq 1 ]
 	[ "$output" = "$UNHEALTHY_MESSAGE" ]

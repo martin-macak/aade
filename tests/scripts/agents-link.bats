@@ -40,10 +40,6 @@ mcp_fixture() {
 EOF
 }
 
-# Pass when the text $1 contains (has) or does not contain (lacks) the text
-# $2. A bare [[ ]] cannot fail a test on bash 3.2 unless it is the last
-# command, so every text check goes through these two functions.
-
 # Print one line per path of the sandbox: its link target or its checksum.
 # Two equal prints mean that nothing changed.
 state() {
