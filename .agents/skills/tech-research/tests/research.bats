@@ -64,6 +64,21 @@ problems() {
 
 # ------------------------------------------------------ usage and settings
 
+@test "a call without a command prints the usage of every command and exits 2" {
+	run "$R"
+	[ "$status" -eq 2 ]
+	for cmd in "init <slug>" "add <slug> <type>" "source add <slug>" "cite sync <slug>" \
+		"status <slug> <file> <status>" "check [<slug>...]"; do
+		[[ "$output" == *"research.sh $cmd"* ]] || {
+			echo "the usage lacks: $cmd"
+			return 1
+		}
+	done
+	# The usage is plain text: no comment marks, and not the next paragraph.
+	[[ "$output" != *"# "* ]] || false
+	[[ "$output" != *"Run it from"* ]] || false
+}
+
 @test "an unknown command exits 2 with the usage" {
 	usage_error bogus
 }
@@ -102,6 +117,13 @@ problems() {
 	usage_error status q report.md
 	usage_error status q report.md review --bogus
 	usage_error status q report.md review --by
+}
+
+@test "a bad RESEARCH_TODAY exits 2 before an action writes a file" {
+	RESEARCH_TODAY=06.11.2026 run "$R" init q --title T --author A
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"RESEARCH_TODAY must have the form YYYY-MM-DD."* ]] || false
+	[ ! -e "$RESEARCH_ROOT/q" ]
 }
 
 @test "the date is the date of today when RESEARCH_TODAY is unset" {
