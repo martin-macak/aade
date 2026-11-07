@@ -143,6 +143,27 @@ need_decisionkit() {
 	done
 }
 
+@test "each slop folder holds a status-report fixture, and the skill names the prefix" {
+	[ "$(ls "$FIXTURES"/slop/good/status-report-*.txt | wc -l)" -ge 1 ]
+	[ "$(ls "$FIXTURES"/slop/bad/status-report-*.txt | wc -l)" -ge 1 ]
+	[[ "$TEXT" == *'`status-report-*`'* ]] || false
+}
+
+@test "the status report section splits the fixed text from the data" {
+	report=$(section 'Status reports' | tr '\n' ' ' | tr -s ' ')
+	[ -n "$report" ]
+	# Q_SLOP and Vale score only the fixed text, and each hint once.
+	[[ "$report" == *'Run Vale and `Q_SLOP` on the fixed text only.'* ]] || false
+	[[ "$report" == *'Write each hint once'* ]] || false
+	[[ "$report" == *'Do not score the data for slop.'* ]] || false
+	# Q_MATCH still covers the whole report.
+	[[ "$report" == *'score `Q_MATCH` on all of it.'* ]] || false
+	# The rule stays limited to text that a script writes from data.
+	[[ "$report" == *'The rule covers only text that a script writes from data.'* ]] || false
+	# The Batch section keeps a report whole, as the section says.
+	[[ "$(section Batch | tr '\n' ' ' | tr -s ' ')" == *'a status report whole'* ]] || false
+}
+
 @test "each match fixture is a Q_MATCH input with one A: line, one B: line and no unclear list" {
 	for file in "$FIXTURES"/match/*.txt; do
 		[ "$(grep -cx 'A:' "$file")" = 1 ] || {
@@ -257,7 +278,7 @@ need_decisionkit() {
 	[ "$bullets" -ge 3 ]
 	[ "$rows" = "$bullets" ]
 	# Every list names each kind, and the first column of the table too.
-	for piece in 'skill' 'AGENTS.md' 'README' 'docs' 'config'; do
+	for piece in 'skill' 'AGENTS.md' 'README' 'docs' 'config' 'status report'; do
 		for where in "$description" "$scope" "$(grep '^| ' <<<"$reader" | tail -n +3 | cut -d'|' -f2)"; do
 			grep -qiF -- "$piece" <<<"$where" || {
 				echo "Not every list names the piece: $piece."

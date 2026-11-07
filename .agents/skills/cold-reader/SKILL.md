@@ -4,7 +4,8 @@ description: >-
   Quality gate for documentation pieces. Vale lints the piece, a cold reader
   on a cheap model restates it, and decisionkit scores the restatement and
   the slop. A piece is an edit to a skill or to an AGENTS.md, a README or
-  docs/ page, or a comment in a config file. Use this skill whenever you
+  docs/ page, a comment in a config file, or a status report that a script
+  writes from data, such as a PR comment. Use this skill whenever you
   write, change or review any of these, even one sentence. Load it before
   you judge such a piece yourself. Use it before you commit or open a pull
   request that holds one.
@@ -30,7 +31,8 @@ The procedure covers each of these pieces:
 
 - edits to skills and to `AGENTS.md` files, root and nested;
 - `README.md` and pages in `docs/`;
-- comments in config files that explain a setting.
+- comments in config files that explain a setting;
+- status reports that a script writes from data, such as a PR comment.
 
 More kinds of piece join when the stack arrives. Doc comments in code and
 API descriptions are two examples. Add a bullet here and a row to the table
@@ -89,15 +91,40 @@ memory out of the reader. Give the reader this as the path:
 | Skill or `AGENTS.md` edit | The path of the file and the heading of the section |
 | README or docs page | The path of the page and the heading of the section |
 | Config comment | The path of the file and the key that the comment explains |
+| Status report | The path of the script that writes the report and the name of the report |
 
 ## Batch
 
 Put all pieces of one change into one cold-reader run. Number them. Cut a
 skill, an `AGENTS.md`, a README or a docs page into one unit for each
-section. Keep a config comment whole. A reader cannot restate a whole file,
-and `Q_MATCH` rates a long restatement low. The reader answers under each
+section. Keep a config comment and a status report whole. A reader cannot
+restate a whole file, and `Q_MATCH` rates a long restatement low. The reader answers under each
 number. Then score each unit on its own, because decisionkit takes one text
 at a time.
+
+## Status reports
+
+A status report is text that a script writes from data, such as the trace
+comment that a check posts on a pull request. It has two parts:
+
+- The fixed text is the strings in the script: headings, legends, verdict
+  lines, hints and footers.
+- The data is each value that the script fills in from its input: IDs,
+  text quoted from an issue, statuses, numbers and links.
+
+`Q_SLOP` rates a table of data rows at about 1.0, whatever its wording,
+and the script cannot reword its input. So gate the two parts apart:
+
+- Run Vale and `Q_SLOP` on the fixed text only. Write each hint once, as a
+  list item, and leave out the data.
+- Do not score the data for slop.
+- Send the whole report to the cold reader as one piece, and score
+  `Q_MATCH` on all of it.
+
+Gate a sample report, such as a golden file in the tests of the script,
+each time the fixed text changes. The rule covers only text that a script
+writes from data. An agent or a person who writes a report writes prose,
+and `Q_SLOP` scores all of it.
 
 ## Prompt
 
@@ -171,7 +198,7 @@ distribution. The piece must score below `SLOP_MAX`.
 
 `MATCH_MIN` is 0.8 by design. Only `SLOP_MAX` comes from calibration. It ran
 with decisionkit 0.4.0 and the Jev provider. The highest good piece scored
-0.4 and the lowest bad piece scored 0.9, so `SLOP_MAX` sits between them.
+0.43 and the lowest bad piece scored 0.9, so `SLOP_MAX` sits between them.
 Calibrate again after you change the provider or upgrade decisionkit.
 
 Run [`scripts/calibrate.sh`](scripts/calibrate.sh) from the repository root
@@ -187,7 +214,9 @@ and exits 0 only when each fixture is on its expected side:
 
 Many fixtures show piece kinds that this repository does not have yet, such
 as doc comments and API descriptions. They stay, because they calibrate the
-thresholds on prose, and those kinds join later.
+thresholds on prose, and those kinds join later. The `status-report-*`
+fixtures in `slop/good` and `slop/bad` contain only the fixed text of a
+report, because `Q_SLOP` scores only that text, as "Status reports" says.
 
 The script reads only fixtures whose names end in `.txt`, and it skips any
 other file without a message. It needs `jq` as well as decisionkit.

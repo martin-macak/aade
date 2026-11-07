@@ -5,6 +5,7 @@
 + I wrote a comment above the vale pin in mise.toml. Check that a cold reader understands why the version is pinned.
 + I added a rule to a nested AGENTS.md. Score its prose with a cold reader and decisionkit before I open the pull request.
 + Lint my wording of this docs section with Vale and fix every finding, then check that the meaning survives.
++ I changed the legend of the trace comment that shepherd.sh posts on a PR. Score its slop before I commit.
 - Where should the rule "run the linter before each commit" live: AGENTS.md, a skill or the README?
 - Which folders, files and tests must a new skill have so that the knowledge lint accepts it?
 - Triage these three pull request comments: which ones are blocking, which are nits, which are questions?
