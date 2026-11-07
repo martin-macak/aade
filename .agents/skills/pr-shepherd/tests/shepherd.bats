@@ -51,6 +51,30 @@ setup() {
 	}
 }
 
+@test "check never says that every rule passes while the trace has a review row" {
+	export CASE=$GOOD/review-justified
+	run "$S" check 42
+	[ "$status" -eq 0 ]
+	[ "$output" = "PR #42 passes the shepherd rules, but the trace rows R1, R2 and R3 need a human review. Ask the user to read them, then run: shepherd.sh merge 42 --confirmed-by-user" ]
+}
+
+@test "check wants a justification line that starts with the R item and gives a reason" {
+	new_case
+	echo '.[0].description = "req=@REQ@ issue=@ISSUE@ review=2"' >"$CASE/statuses.json.jq"
+	for note in 'R2:' 'R2 holds.' 'R22: other item.' 'The row R2: holds.'; do
+		printf '%s\n' "$(cat "$BASE/body.txt")" '' '## Notes' '' "$note" >"$CASE/body.txt"
+		run "$S" check 42
+		[ "$status" -eq 1 ] || {
+			echo "'$note' justified R2"
+			return 1
+		}
+	done
+	# A line of another section does not justify the row.
+	printf '%s\n' "$(cat "$BASE/body.txt")" '' '## Other' '' 'R2: holds.' '' '## Notes' '' 'None.' >"$CASE/body.txt"
+	run "$S" check 42
+	[ "$status" -eq 1 ]
+}
+
 @test "there are bad cases, and each has an expectation" {
 	count=0
 	for dir in "$BAD"/*/; do
@@ -253,6 +277,8 @@ r2_evidence() {
 	usage_error merge
 	usage_error merge abc
 	usage_error merge 42 43
+	usage_error merge 42 --confirmed
+	usage_error merge 42 --confirmed-by-user extra
 }
 
 @test "disarm: a missing, non-numeric or extra argument exits 2" {

@@ -1,0 +1,2 @@
+R1: the trace marks the row "review", and "## Notes" has no line "R1: <reason>". Read the row, then add that line to "## Notes".
+R3: the trace marks the row "review", and "## Notes" has no line "R3: <reason>". Read the row, then add that line to "## Notes".

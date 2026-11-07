@@ -58,7 +58,8 @@ Run a new pass after each push and after each new review.
 4. **Findings.** Run `$P findings <pr>`. Triage each finding (see
    [Review triage](#review-triage)) and answer it with `$P reply`.
 5. **Trace.** Run `$P verify <pr>`. Fix each `fail` row of the trace,
-   then run it again.
+   then run it again. Justify each `review` row in the `## Notes`
+   section (see [Review rows](#review-rows)).
    Run it after the last push, because the trace belongs to the head
    commit.
 6. **Check.** Run `$P check <pr>`. Fix each problem. Each line says how to
@@ -70,7 +71,8 @@ Run a new pass after each push and after each new review.
    A re-run is right only for a cancelled check, or for a check that
    failed for a cause outside the PR. State that cause in the `## Notes`
    section.
-8. **Merge.** Run `$P merge <pr>`.
+8. **Merge.** Run `$P merge <pr>`. While the trace has a `review` row,
+   ask the user to read it, then run `$P merge <pr> --confirmed-by-user`.
 
 ## PR body format
 
@@ -142,14 +144,19 @@ it and leaves a trace that CI can read.
   The terminal output of verify shows the same groups, statuses and hints.
 - It sets the commit status `pr-shepherd/trace` on the head commit. The
   state is `failure` when an answer is false. The description holds
-  `req=<hash> issue=<hash>`. Each hash is the first 8 hex digits of the
-  SHA-256 of the Requirements section or of the issue items, with white
-  space collapsed.
+  `req=<hash> issue=<hash> review=<list>`. Each hash is the first 8 hex
+  digits of the SHA-256 of the Requirements section or of the issue items,
+  with white space collapsed. The list contains the numbers of the
+  `review` rows, such as `review=2,8`, and is empty when there are none. GitHub
+  limits the description to 140 characters, so verify exits 2 when the
+  list does not fit.
 - It re-runs the newest `pr-shepherd` run of the head commit, because a
   new status fires no workflow.
 
 The check fails when the head commit has no trace status, when the status
-is not `success`, or when a hash differs. A new commit, an edit of the
+is not `success`, when a hash differs, or when the description has no
+`review=` list. It also fails for each `review` row without a
+justification in the Notes. A new commit, an edit of the
 Requirements section or an edit of the issue makes the trace stale, so run
 verify again. Only users with write access can set a commit status, so a
 fork cannot forge a trace.
@@ -158,8 +165,9 @@ The comment calls `carryover` "Plan matches issue" and `evidence` "Proof
 of done". Each check of an R item gets one status:
 
 - `✅ pass`: a true answer with a top probability of 0.8 or more.
-- `⚠️ review`: a true answer below 0.8. It passes, and the status stays
-  `success`.
+- `⚠️ review`: a true answer below 0.8. The status stays `success`, but
+  the row needs a justification and a human review (see
+  [Review rows](#review-rows)).
 - `❌ fail`: a false answer, which is a probability below the threshold
   of the question in `questions.yml`, or an R item without an evidence
   line. Only a fail sets the status to `failure`.
@@ -167,25 +175,46 @@ of done". Each check of an R item gets one status:
 The comment has these parts, in this order:
 
 1. A heading with the result and the counts, such as "Requirement check:
-   passed, 8 of 14 need a review", and one line that says whether the
-   check blocks the merge.
+   passed, 8 of 14 need a review", and one line that says what the merge
+   waits for.
 2. A legend that explains both checks.
 3. A "Failed" table, then a "Needs review" table. A table without rows
    is left out. Each row shows the R
    item and its text, cut at about 80 characters. Its "Why" cell gives a
-   fixed hint for each check that did not pass. It links to the PR when
-   the `## Notes` section names the R item, such as `R9` or `R9.1`.
-   Otherwise it says "No justification from the author yet."
+   fixed hint for each check that did not pass. For a review row, it
+   links to the PR when the `## Notes` section justifies the R item.
+   Otherwise it gives the line to add. The comment says that the cell
+   shows the Notes at the time of verify. `check` reads them again on
+   each run. A fail row
+   gets only the hints, because a justification does not unblock it.
 4. A folded table of the passed rows.
 5. Folded technical details: each probability in %, the threshold and
    the 0.8 bar, the head commit, both hashes and the verify command.
 
-A row with a `review` cell passes, and the status stays `success`. The
-shepherd still sharpens the sub-tasks or the evidence of that row and
-runs verify again. When verify marks the row `review` again, the shepherd
-decides itself and writes the reason in the `## Notes` section of the PR,
-with the R number. It does not present the reason as a decision of
-decisionkit.
+### Review rows
+
+A `review` row means that decisionkit is not sure, so a person must read
+it before the merge. First, the shepherd sharpens the sub-tasks or the
+evidence of that row and runs verify again. When verify marks the row
+`review` again, the shepherd decides itself and justifies the row in the
+`## Notes` section of the PR. It does not present the reason as a
+decision of decisionkit.
+
+- **Justification.** A line in `## Notes` starts with the R item, a colon
+  and a reason, such as `R8: each sub-task maps to one clause of the
+  item.` A list item `- R8: <reason>` or `* R8: <reason>` counts too, also
+  when it is indented. A line `R8:` without a reason, a mention of `R8`
+  elsewhere in a line, or a line `R8.1: <reason>` does not count.
+- **check** fails for each `review` row without a justification, and
+  gives the line to add. The Notes are not part of a hash. A new
+  justification doesn't need a new verify. When every row is justified,
+  check passes, but it lists the `review` rows and does not say that
+  every rule passes.
+- **merge** refuses auto-merge while the trace has a `review` row. Ask
+  the user to read the rows in the trace comment. After the user agrees,
+  run `$P merge <pr> --confirmed-by-user`. merge then writes a PR comment
+  with the lines `review-rows: <list>` and `confirmed-by-user: yes`, so
+  the confirmation stays on the PR, as for a rejected human finding.
 
 ## Review triage
 
@@ -231,7 +260,8 @@ dismiss it.
 ## Merge
 
 `$P merge <pr>` runs the check and the checks, and stops on a problem.
-Then it reads the
+It also stops while the trace has a `review` row and the call has no
+`--confirmed-by-user` (see [Review rows](#review-rows)). Then it reads the
 ruleset rules of the base branch from
 `repos/{owner}/{repo}/rules/branches/<base>`. It refuses auto-merge until the rules require the
 `pr-shepherd` check, because GitHub could merge without that check. Only
@@ -253,7 +283,7 @@ shepherd.sh verify <pr>
 shepherd.sh findings <pr> [--no-advice]
 shepherd.sh reply <pr> <thread-id|review-id> accepted|rejected --reason <text> [--fix <text>] [--confirmed-by-user]
 shepherd.sh checks <pr> [--watch]
-shepherd.sh merge <pr>
+shepherd.sh merge <pr> [--confirmed-by-user]
 shepherd.sh disarm <issue>
 ```
 
