@@ -311,10 +311,20 @@ CASES
 	[ "$status" -eq 2 ]
 }
 
-@test "exits 2 when a fixture group is empty" {
+@test "exits 2 when a fixture group is empty, and names the group" {
 	fixture slop/good/clear.txt 'v=0.1'
 	fixture slop/bad/filler.txt 'v=1.5'
 	fixture match/same-limit.txt 'v=0.95'
 	run "$SCRIPT"
 	[ "$status" -eq 2 ]
+	[[ "$output" == *"The fixture group match/differ-*.txt is empty. Add a fixture to it."* ]] || false
+	[[ "$output" != *"decisionkit failed"* ]] || false
+}
+
+@test "exits 2 when a slop group is empty, before it asks decisionkit" {
+	fixture slop/bad/filler.txt 'v=1.5'
+	run "$SCRIPT"
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"The fixture group slop/good/*.txt is empty. Add a fixture to it."* ]] || false
+	[ ! -e "$FAKE_DIR/decisionkit.text" ]
 }

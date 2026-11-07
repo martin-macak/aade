@@ -6,3 +6,4 @@
 mise.toml
 scripts/check-agents-md-size.sh
 scripts/lint-knowledge.sh
+tests/scripts/

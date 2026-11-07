@@ -9,8 +9,15 @@
 load helpers/common
 
 setup() {
-	MISE=$(command -v mise) || skip "mise is not installed"
-	YQ=$(command -v yq)
+	# Fail, not skip: a skipped suite looks like a passed one in CI.
+	MISE=$(command -v mise) || {
+		echo "mise-tasks.bats needs mise on PATH."
+		return 1
+	}
+	YQ=$(command -v yq) || {
+		echo "mise-tasks.bats needs yq on PATH."
+		return 1
+	}
 	sandbox
 	"$YQ" -p toml -o toml '{"tasks": {"skills:test": .tasks["skills:test"], "issue:new": .tasks["issue:new"]}}' \
 		"$ROOT/mise.toml" >mise.toml

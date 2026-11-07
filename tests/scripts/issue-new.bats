@@ -144,7 +144,9 @@ gh_creates() {
 
 @test "usage errors call no gh" {
 	run "$S" nosuch
+	[ "$status" -eq 2 ]
 	run "$S" task --force <<<"$VALID"
+	[ "$status" -eq 2 ]
 	[ -z "$(calls)" ]
 }
 
@@ -173,6 +175,12 @@ gh_creates() {
 	run "$S" task --dry-run <<<"$VALID"$'\nbogus: 1'
 	[ "$status" -eq 2 ]
 	[[ "$output" == *"bogus: the task form has no such field. Fields: summary details log scope severity checks"* ]] || false
+}
+
+@test "keys: a key must match a field id as a whole, not as a part" {
+	run "$S" task --dry-run <<<"$VALID"$'\nscop: alpha'
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"scop: the task form has no such field."* ]] || false
 }
 
 @test "keys: a markdown element has no field id, so no key can name it" {
@@ -246,6 +254,21 @@ gh_creates() {
 	run "$S" task --dry-run <<<"$VALID"$'\nchecks:\n  - Tests pass\n  - Nope'
 	[ "$status" -eq 2 ]
 	[[ "$output" == *"checks: 'Nope' is not an option."* ]] || false
+}
+
+@test "checkboxes: a name must match an option as a whole, not as a part" {
+	run "$S" task --dry-run <<<"$VALID"$'\nchecks:\n  - Tests'
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"checks: 'Tests' is not an option."* ]] || false
+}
+
+@test "stdin: the temporary copy of stdin is gone after a run, and after an error" {
+	run "$S" task --dry-run <<<"$VALID"
+	[ "$status" -eq 0 ]
+	[ -z "$(ls -A "$TMPDIR")" ]
+	run "$S" task --dry-run <<<'title: T'
+	[ "$status" -eq 2 ]
+	[ -z "$(ls -A "$TMPDIR")" ]
 }
 
 @test "render: a field with render wraps the value in a code fence of that language" {

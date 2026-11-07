@@ -8,20 +8,26 @@
 # reports the wrong root, so this does not ask git.
 ROOT=$(cd "$BATS_TEST_DIRNAME/../.." && pwd)
 
-# fake, calls and the fakes of gh, decisionkit and mise.
+# fake, unfake, calls, path_without and the fakes of gh, decisionkit and mise.
 source "${BASH_SOURCE[0]%/*}/fakes.bash"
 
 # Create the repository $SANDBOX, copy each named script of scripts/ into
 # $SANDBOX/scripts/, and cd into $SANDBOX. HOME and TMPDIR point into the
-# test folder, so a script never sees the files of the user.
+# test folder, so a script never sees the files of the user. The guard
+# fakes of gh, decisionkit and claude go first on PATH, so a test that
+# forgets a fake fails and never calls a real API.
 sandbox() {
 	unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_CONFIG_PARAMETERS
+	# Credentials and settings of the caller must not reach a real tool.
+	unset GH_TOKEN GITHUB_TOKEN GH_ENTERPRISE_TOKEN GITHUB_ENTERPRISE_TOKEN GH_HOST GH_REPO XDG_CONFIG_HOME
 	# A tool can pass git config through the environment, such as a
 	# core.hooksPath. Drop it, so the sandbox has only its own config.
+	# decisionkit and mise read settings from their own variables too.
 	local var
-	for var in $(env | sed -n 's/^\(GIT_CONFIG_[A-Z_0-9]*\)=.*/\1/p'); do
+	for var in $(env | sed -nE 's/^((GIT_CONFIG|DECISIONKIT|MISE)_[A-Za-z_0-9]*)=.*/\1/p'); do
 		unset "$var"
 	done
+	guard_fakes
 	SANDBOX="$BATS_TEST_TMPDIR/repo"
 	export HOME="$BATS_TEST_TMPDIR/home" TMPDIR="$BATS_TEST_TMPDIR/tmp"
 	export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1

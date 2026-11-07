@@ -176,7 +176,10 @@ skill_tests() {
 			[[ "$path" == *'$'* || "$path/" == ".agents/skills/$name/"* ]] && continue
 			covered=0
 			while IFS= read -r entry; do
-				[[ -n "$entry" && ("$path" == "$entry"* || "$path/" == "$entry"*) ]] && covered=1
+				# The rule of skill-drift.sh: the same path, or a path below a
+				# watched folder.
+				[[ -n "$entry" && ("$path" == "$entry" || "$path/" == "$entry" ||
+					("$entry" == */ && "$path" == "$entry"*)) ]] && covered=1
 			done <<<"$watch"
 			((covered)) || missing+="${test#"$ROOT"/} reads $path, but $(basename "${test%.bats}").watch does not list it."$'\n'
 		done
@@ -198,13 +201,21 @@ skill_tests() {
 
 # A commit hook can export GIT_DIR. A test that asks git for the root then
 # gets the wrong one, and a git init then rewrites the real repository.
-@test "no skill test asks git for the root or creates a repository with GIT_DIR set" {
+# The check reads the skill tests and the suites of tests/scripts with their
+# helpers, where sandbox runs git init.
+@test "no test asks git for the root or creates a repository with GIT_DIR set" {
 	cd "$ROOT"
-	tests=$(skill_tests)
-	# This file names the pattern, so it skips itself.
-	bad=$(grep -l 'show-toplevel' $tests | grep -v '^.agents/skills/knowledge-curator/tests/drift.bats$' || true)
-	for test in $(grep -l 'git init' $tests || true); do
-		[[ "$test" == .agents/skills/knowledge-curator/tests/drift.bats ]] && continue
+	tests="$(skill_tests) $(ls "$ROOT"/tests/scripts/*.bats "$ROOT"/tests/scripts/helpers/* | sed "s|^$ROOT/||")"
+	# This file names the patterns, so it skips itself.
+	tests=$(printf '%s\n' $tests | grep -vx '.agents/skills/knowledge-curator/tests/drift.bats')
+	inits=$(grep -l 'git init' $tests || true)
+	# The sandbox helper runs git init, so an empty list means a broken check.
+	[ -n "$inits" ] || {
+		echo "No test file runs git init. This check reads the wrong files."
+		return 1
+	}
+	bad=$(grep -l 'show-toplevel' $tests || true)
+	for test in $inits; do
 		grep -q 'unset GIT_DIR' "$test" || bad+=" $test"
 	done
 	[ -z "$bad" ] || {

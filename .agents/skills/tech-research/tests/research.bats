@@ -666,9 +666,14 @@ diagram_problems() {
 
 @test "cite sync ignores citations in code and comments" {
 	new_research
+	"$R" source add q --kind primary --author A --title One --url https://example.com/a --evidence E >/dev/null
+	# The template cites [^S1] in a comment. Add a fenced block and inline code.
+	swap "$RESEARCH_ROOT/q/report.md" "## Analysis" $'## Analysis\n\n```text\nOne.[^S1]\n```\n\nSee `[^S1]`.'
+	cp "$RESEARCH_ROOT/q/report.md" "$BATS_TEST_TMPDIR/report"
 	run "$R" cite sync q
 	[ "$status" -eq 0 ]
 	[ -z "$output" ]
+	cmp "$BATS_TEST_TMPDIR/report" "$RESEARCH_ROOT/q/report.md"
 }
 
 @test "cite sync updates every file that cites a source, lists them and leaves the register alone" {

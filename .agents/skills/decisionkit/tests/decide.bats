@@ -459,4 +459,5 @@ CASES
 	echo 'p=0.95' >"$fixtures/Q_BIN/true-plain.txt"
 	run "$SCRIPT" calibrate "$BATS_TEST_TMPDIR/none.yaml" "$fixtures"
 	[ "$status" -eq 2 ]
+	[ "$output" = "$BATS_TEST_TMPDIR/none.yaml: no such questions file." ]
 }

@@ -40,10 +40,6 @@ mcp_fixture() {
 EOF
 }
 
-# Pass when the text $1 contains (has) or does not contain (lacks) the text
-# $2. A bare [[ ]] cannot fail a test on bash 3.2 unless it is the last
-# command, so every text check goes through these two functions.
-
 # Print one line per path of the sandbox: its link target or its checksum.
 # Two equal prints mean that nothing changed.
 state() {
@@ -238,6 +234,21 @@ http_headers = { "Authorization" = "Bearer x" }
 url = "https://plain.example.com/mcp"
 EOF
 	has "$output" "rendered: .codex/config.toml"
+}
+
+@test "link: Gemini gets url for an SSE server, and httpUrl for other remote servers" {
+	fixture .agents/mcp.json <<'EOF'
+{"mcpServers": {
+  "events": {"type": "sse", "url": "https://events.example.com/sse", "headers": {"A": "b"}},
+  "stream": {"type": "http", "url": "https://stream.example.com/mcp"},
+  "plain": {"url": "https://plain.example.com/mcp"}
+}}
+EOF
+	run "$S"
+	[ "$status" -eq 0 ]
+	[ "$(jq -c .mcpServers.events .gemini/settings.json)" = '{"url":"https://events.example.com/sse","headers":{"A":"b"}}' ]
+	[ "$(jq -c .mcpServers.stream .gemini/settings.json)" = '{"httpUrl":"https://stream.example.com/mcp"}' ]
+	[ "$(jq -c .mcpServers.plain .gemini/settings.json)" = '{"httpUrl":"https://plain.example.com/mcp"}' ]
 }
 
 @test "link: VS Code keeps an explicit server type, Gemini drops the type of a stdio server" {

@@ -39,6 +39,55 @@ fake() {
 	[[ ":$PATH:" == *":$FAKE_BIN:"* ]] || PATH="$FAKE_BIN:$PATH"
 }
 
+# Remove the fake $1 from PATH, so the real command, if any, answers.
+unfake() {
+	fake_paths
+	rm -f "$FAKE_BIN/$1"
+	hash -r
+}
+
+# Put a guard fake of gh, decisionkit and claude first on PATH. A guard
+# logs the call, prints an error and exits 99. A test that needs one of
+# these tools replaces its guard with a fake, so a forgotten fake fails
+# the test instead of calling a real API with real credentials.
+guard_fakes() {
+	local cmd
+	for cmd in gh decisionkit claude; do
+		fake "$cmd" "echo \"$cmd: this test has no fake for it. Fake it with tests/scripts/helpers/fakes.bash.\" >&2; exit 99"
+	done
+}
+
+# Print a PATH that finds each command of the current PATH except the
+# named ones. A folder that holds a named command is replaced by a folder
+# of links to its other files. Use it to test a missing tool:
+#   run env PATH="$(path_without bats)" scripts/skill-drift.sh
+path_without() {
+	local out="" dir file name hide n=0 link
+	local IFS=:
+	for dir in $PATH; do
+		hide=0
+		for name in "$@"; do
+			[[ -e "$dir/$name" ]] && hide=1
+		done
+		if ((hide)); then
+			n=$((n + 1))
+			link="$BATS_TEST_TMPDIR/path-without/$n"
+			rm -rf "$link"
+			mkdir -p "$link"
+			for file in "$dir"/*; do
+				hide=0
+				for name in "$@"; do
+					[[ "${file##*/}" == "$name" ]] && hide=1
+				done
+				((hide)) || ln -s "$file" "$link/"
+			done
+			dir=$link
+		fi
+		out+="${out:+:}$dir"
+	done
+	printf '%s\n' "$out"
+}
+
 # Print the calls that the fakes logged.
 calls() {
 	cat "$BATS_TEST_TMPDIR/fake.log" 2>/dev/null || true
@@ -145,9 +194,10 @@ dk_responder() {
 #                     prints $MISE_RUN_OUTPUT, prints $MISE_RUN_ERROR on
 #                     stderr and exits $MISE_RUN_STATUS (0 by default).
 #   mise exec -- <command> runs the command with the PATH that the test had
-#                     when it called fake_mise, without the fake folders,
-#                     so the real jq or yq answers. A command that the test
-#                     faked, such as vale, answers as its fake does.
+#                     when it called fake_mise, without the folder $1. A
+#                     command that the test faked, such as vale, answers as
+#                     its fake does, also in a child of the command. Other
+#                     commands, such as jq or yq, are the real ones.
 #                     MISE_EXEC_STATUS, when set, makes each exec print an
 #                     error and exit with that code instead.
 # Every other call only logs.
@@ -155,6 +205,7 @@ fake_mise() {
 	fake_paths
 	local real=":$PATH:"
 	real=${real//":$FAKE_BIN:"/:}
+	real=":$FAKE_BIN$real"
 	[[ -z "${1:-}" ]] || real=${real//":$1:"/:}
 	real=${real#:}
 	real=${real%:}
@@ -173,7 +224,6 @@ if [[ "${1:-} ${2:-}" == "exec --" ]]; then
 		echo "mise: exec failed" >&2
 		exit "$MISE_EXEC_STATUS"
 	fi
-	[[ -x "'"$FAKE_BIN"'/$1" ]] && exec "'"$FAKE_BIN"'/$1" "${@:2}"
 	PATH='"$(printf %q "$real")"'
 	exec "$@"
 fi'
