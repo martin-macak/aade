@@ -220,6 +220,12 @@ gh_creates() {
 	[[ "$output" == *$'### Checks\n\n- [ ] Tests pass\n- [x] Docs updated'* ]] || false
 }
 
+@test "checkboxes: an empty list checks no option" {
+	run "$S" task --dry-run <<<"$VALID"$'\nchecks: []'
+	[ "$status" -eq 0 ]
+	[[ "$output" == *$'### Checks\n\n- [ ] Tests pass\n- [ ] Docs updated'* ]] || false
+}
+
 @test "checkboxes: a name that is not an option exits 2" {
 	run "$S" task --dry-run <<<"$VALID"$'\nchecks:\n  - Tests pass\n  - Nope'
 	[ "$status" -eq 2 ]

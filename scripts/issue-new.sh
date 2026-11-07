@@ -67,7 +67,8 @@ for ((i = 0; i < count; i++)); do
 		if [[ "$(yq "(.[\"$id\"] // false) | tag" "$input")" == "!!seq" ]]; then
 			checked=$(value "$id" '| .[]')
 			while IFS= read -r c; do
-				grep -qxF -- "$c" <<<"$options" || error "$id: '$c' is not an option."
+				# An empty list gives one empty line.
+				[[ -z "$c" ]] || grep -qxF -- "$c" <<<"$options" || error "$id: '$c' is not an option."
 			done <<<"$checked"
 		elif [[ "$(value "$id")" == true ]]; then
 			checked=$options
