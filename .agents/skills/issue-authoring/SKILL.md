@@ -5,9 +5,10 @@ description: >-
   they follow the issue forms, the pull request template and the label
   taxonomy in .github/ (type:<x> and scope:<x> labels). Use this skill
   whenever you open, write or edit a GitHub issue or a pull request, pick
-  its type, scope or labels, write a PR title or body, or change the issue
-  forms, the PR template or .github/labels.yml. Load it before you call
-  `gh issue create` or `gh pr create`.
+  its type, scope or labels, write a PR title or body, write an issue or
+  PR comment, or change the issue forms, the PR template or
+  .github/labels.yml. Load it before you call `gh issue create`,
+  `gh pr create` or `gh issue comment`.
 ---
 
 # Issue authoring
@@ -45,8 +46,7 @@ mise run issue:new chore --dry-run <<'YAML'
 title: Pin the Vale package version
 scope: tooling
 what: |
-  .vale.ini downloads ai-tells from a URL without a checksum. Pin it, so
-  a new release cannot change the lint results.
+  .vale.ini downloads ai-tells from a URL without a checksum. Pin it, so a new release cannot change the lint results.
 done: |
   - [ ] .vale.ini names an exact release.
 YAML
@@ -62,6 +62,24 @@ YAML
 
 To edit the body of an issue, keep every `### <label>` heading of its
 form. The scope workflow reads the `### Scope` section.
+
+## Body format
+
+GitHub renders each newline in an issue, PR or comment body as a line
+break. So in such a body, write each paragraph, list item and reference to
+an issue or PR on one line. Keep hard wraps in the Markdown files of the
+repository, where a newline inside a paragraph is only a space.
+
+```text
+Wrong: the body shows two short lines.
+  .vale.ini downloads ai-tells from a URL without a checksum. Pin it, so
+  a new release cannot change the lint results.
+Right: the body shows one paragraph.
+  .vale.ini downloads ai-tells from a URL without a checksum. Pin it, so a new release cannot change the lint results.
+```
+
+The rule covers the YAML for `mise run issue:new`, the file for
+`gh pr create --body-file`, and every comment or review reply.
 
 ## Open a pull request
 

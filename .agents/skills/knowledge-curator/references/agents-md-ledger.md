@@ -36,6 +36,15 @@ decisionkit 0.4.0 with the Jev provider.
 | C1 | Edit `AGENTS.md` only. Never create a real `CLAUDE.md` or `GEMINI.md`. | general 0.97 | 1.41 | 0.77 | P1, `knowledge-curator`, the `agents-check` hook | Rule 5: uncertain, and frequency is below 1.5. The short form folds into P1 at no line cost. The hook catches a real file. | 2026-11-06 |
 | M1 | Agent layout table, skill, subagent and MCP rules. | n/a | n/a | n/a | `.agents/AGENTS.md`, `docs/agentic-setup.md` | Needed only when an agent changes the agent configuration. The table repeated `docs/agentic-setup.md`. | 2026-11-06 |
 
+## Kept out of AGENTS.md
+
+Rules that triage pointed at the root `AGENTS.md`, but that went into a
+skill at no new line.
+
+| ID | Instruction | Class | Freq | Impact | Now in | Reason | Date |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| K1 | Write each paragraph, list item and issue or PR reference of a GitHub issue, PR or comment body on one line. Keep hard wraps in repository files. | general 0.61 | 1.73 | 0.36 | `issue-authoring`, pointer in `pr-shepherd` | Rule 5 points to `AGENTS.md`, but issue #17 names the skill. V4 already loads `issue-authoring` before an agent opens an issue or PR. The rule loads with it. Low impact: a ragged body is easy to edit. | 2026-11-07 |
+
 M1 left before the triage of this ledger. It was not scored, because it was a table, not one rule.
 
 ## Lessons

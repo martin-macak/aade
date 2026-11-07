@@ -105,3 +105,25 @@ example() {
 	# The scope script matches this exact heading.
 	grep -qF '"### Scope"' "$ROOT/scripts/issue-scope-label.sh"
 }
+
+@test "the skill keeps the body format rule, and pr-shepherd points to it" {
+	[[ "$TEXT" == *'write each paragraph, list item and reference to an issue or PR on one line'* ]] || false
+	[[ "$TEXT" == *'Keep hard wraps in the Markdown files of the repository'* ]] || false
+	SHEPHERD=$(tr '\n' ' ' <"$ROOT/.agents/skills/pr-shepherd/SKILL.md" | tr -s ' ')
+	[[ "$SHEPHERD" == *'the "Body format" section of the `issue-authoring` skill'* ]] || false
+	grep -qx '## Body format' "$SKILL"
+}
+
+@test "the YAML example writes each paragraph of a body field on one line" {
+	# Inside a "key: |" block, a line that follows another prose line
+	# continues a hard-wrapped paragraph. List items may follow each other.
+	wrapped=$(example | awk '
+		/^[a-z_]+: \|/ { block = 1; prev = ""; next }
+		/^[a-z_]+:/ { block = 0 }
+		block && /^  [^ -]/ && prev ~ /^  [^ ]/ { print }
+		block { prev = $0 }')
+	[ -z "$wrapped" ] || {
+		echo "The example hard-wraps a body paragraph at: $wrapped"
+		return 1
+	}
+}
