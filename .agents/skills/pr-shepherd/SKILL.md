@@ -64,11 +64,12 @@ Run a new pass after each push and after each new review.
 6. **Check.** Run `$P check <pr>`. Fix each problem. Each line says how to
    fix it.
 7. **Checks.** Run `$P checks <pr> --watch`. It waits for every other
-   check of the PR, such as CI jobs, and lists each one that failed. Read
-   the failed log, fix the cause, push, and start a new pass. Never
-   re-run a failed check to hide a real failure. Re-run only a cancelled
-   check, or a check that failed for a cause outside the PR, and state
-   that cause in the `## Notes` section.
+   check of the PR, such as CI jobs, and lists each check that failed.
+   When a check fails, read its failed log, fix the cause, push, and
+   start a new pass. Never re-run a failed check to hide a real failure.
+   A re-run is right only for a cancelled check, or for a check that
+   failed for a cause outside the PR. State that cause in the `## Notes`
+   section.
 8. **Merge.** Run `$P merge <pr>`.
 
 ## PR body format
@@ -124,8 +125,8 @@ evidence line contains one of these:
 
 The script checks the form of a line only. It does not run the command or
 open the URL. decisionkit judges the content in the trace. A commit SHA is
-never evidence. The push rules require squash and
-`--force-with-lease`. Each rebase changes the SHAs.
+not valid as evidence or as a fix, because the push rules require squash
+and `--force-with-lease`. Each rebase changes the SHAs.
 
 ## Trace
 
@@ -156,9 +157,10 @@ fork cannot forge a trace.
 Each cell of the table is `ok`, `uncertain` or `FAIL`, with the
 probability of true. A `FAIL` cell is a false answer at the threshold of
 the question. An `uncertain` cell is a true answer whose top probability
-is below 0.8. It passes, and the status stays `success`. Then sharpen the
-sub-tasks or the evidence and run verify again. If it stays uncertain,
-decide yourself and state the reason in the `## Notes` section of the PR. Do not
+is below 0.8. A row with an `uncertain` cell passes, and the status stays
+`success`. Still, sharpen the sub-tasks or the evidence of that row, and
+run verify again. When verify marks the row `uncertain` again, decide
+yourself and state the reason in the `## Notes` section of the PR. Do not
 present it as a decision of decisionkit.
 
 ## Review triage
