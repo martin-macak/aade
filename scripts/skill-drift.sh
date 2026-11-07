@@ -11,19 +11,15 @@
 # that ends with "/" covers a folder, and matches every file below it.
 # The knowledge-curator skill explains the layers.
 # Run it from the repository root. It does not ask git, because a commit
-# hook can export GIT_DIR, and git then reports the wrong root. It needs
-# bats on PATH. Exit codes: 0 pass or nothing affected, 1 a test failed,
-# 2 an error. --list prints the test files and runs nothing.
+# hook can export GIT_DIR, and git then reports the wrong root. A run
+# needs bats on PATH. --list prints the test files and runs nothing, so it
+# works without bats, as in the classify job of CI. Exit codes: 0 pass or
+# nothing affected, 1 a test failed, 2 an error.
 
 if [[ ! -d .agents/skills ]]; then
 	>&2 echo "Run skill-drift.sh from the repository root."
 	exit 2
 fi
-if ! command -v bats >/dev/null; then
-	>&2 echo "skill-drift.sh needs bats on PATH. Run it through mise: mise run skills:drift"
-	exit 2
-fi
-
 # Print the watched paths of a test file: $1 is the skill, $2 the file.
 watched() {
 	local watch=${2%.bats}.watch
@@ -51,6 +47,10 @@ if [[ ${1:-} == --list ]]; then
 	shift
 fi
 FILES=("$@")
+if ((!LIST)) && ! command -v bats >/dev/null; then
+	>&2 echo "skill-drift.sh needs bats on PATH. Run it through mise: mise run skills:drift"
+	exit 2
+fi
 STATUS=0
 for dir in .agents/skills/*/; do
 	[[ -d "$dir" ]] || continue
