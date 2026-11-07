@@ -117,4 +117,6 @@ if $DRY_RUN; then
 	printf '%s' "$body"
 	exit 0
 fi
-printf '%s' "$body" | gh issue create --title "$title" --body-file - "${label_args[@]}" || exit 1
+# The ${label_args[@]+...} form keeps an empty array legal under set -u in
+# bash 3.2, for a form without labels and an issue without a scope.
+printf '%s' "$body" | gh issue create --title "$title" --body-file - ${label_args[@]+"${label_args[@]}"} || exit 1

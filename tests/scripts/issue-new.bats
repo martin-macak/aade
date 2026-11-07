@@ -94,6 +94,22 @@ gh_creates() {
 	gh_reply "issue create" <<<https://github.com/o/r/issues/1
 }
 
+@test "run: a form without labels and an issue without a scope pass no --label" {
+	fixture .github/ISSUE_TEMPLATE/bare.yml <<-'EOF'
+		name: Bare
+		description: A form with no labels and no scope.
+		body:
+		  - type: textarea
+		    id: text
+		    attributes:
+		      label: Text
+	EOF
+	gh_creates
+	run "$S" bare <<<$'title: T\ntext: x'
+	[ "$status" -eq 0 ]
+	[ "$(calls)" = "gh issue create --title T --body-file -" ]
+}
+
 @test "usage: no type exits 2 and lists the types, without config" {
 	run "$S"
 	[ "$status" -eq 2 ]
