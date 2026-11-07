@@ -91,9 +91,15 @@ add_label() {
 	run "$S"
 	[ "$status" -eq 1 ]
 	[ "$output" == "$(printf '%s\n' \
-		".github/labels.yml: bug: the name must be type:<x>, scope:<x> or pr:<x> in lower case." \
-		".github/labels.yml: pr:Needs-Work: the name must be type:<x>, scope:<x> or pr:<x> in lower case." \
-		".github/labels.yml: pr:needs_work: the name must be type:<x>, scope:<x> or pr:<x> in lower case.")" ]
+		".github/labels.yml: bug: the name must be type:<x>, scope:<x>, pr:<x> or ci:<x> in lower case." \
+		".github/labels.yml: pr:Needs-Work: the name must be type:<x>, scope:<x>, pr:<x> or ci:<x> in lower case." \
+		".github/labels.yml: pr:needs_work: the name must be type:<x>, scope:<x>, pr:<x> or ci:<x> in lower case.")" ]
+}
+
+@test "labels: accepts a ci:<x> flag, which no form needs" {
+	add_label '{name: "ci:full", color: "0e8a16", description: "Run every suite"}'
+	run "$S"
+	[ "$status" -eq 0 ]
 }
 
 @test "labels: reports a color that is not quoted" {

@@ -7,9 +7,9 @@ script. Skill scripts keep their suites in `tests/` of their skill.
 ## Rules
 
 - Each `scripts/<x>.sh` has the suite `tests/scripts/<x>.bats`. The suite
-  `mise-tasks.bats` tests the inline bash of `mise.toml`, and `helpers.bats`
-  tests the files of `tests/scripts/helpers/`. `mise run scripts:coverage`
-  fails on a script without a suite, and on any other suite without a script.
+  `tests/scripts/mise-tasks.bats` tests the inline bash of `mise.toml`.
+  `mise run scripts:coverage` fails on a script without a suite, and on a
+  suite without a script.
 - Start a suite with a short comment on what the script is for and why.
 - Write one `@test` per use case and per exit path of the script. Phrase
   each test title as a rule, such as "check: reports drift, edits no file".
@@ -24,7 +24,6 @@ script. Skill scripts keep their suites in `tests/` of their skill.
   `scripts:coverage` fails on such a line.
 - Keep each suite valid for bash 3.2 and BSD tools (macOS) and for bash 5
   and GNU tools (Linux), because developers and CI use both.
-- `mise run scripts:test` runs every suite of `tests/scripts/`. The
-  `scripts-test` pre-commit hook runs only the suites that a commit affects.
-  The `scripts-test` workflow runs them and the skill tests on Linux and
-  macOS when a script, a suite, a skill or `mise.toml` changes.
+- `mise run test` and the `test` pre-commit hook run only the suites that
+  a change affects. `mise run test --all` runs every suite. The `ci`
+  workflow runs the affected suites on Linux and macOS.

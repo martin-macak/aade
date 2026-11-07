@@ -3,14 +3,15 @@
 # Run the bats suites of the repository scripts, and check that every
 # script has a suite. tests/AGENTS.md explains the layout.
 # Usage:
-#   script-tests.sh run [<file>...]   run the suites in tests/scripts
-#   script-tests.sh coverage          check that each script has a suite
-# run: without files it runs every tests/scripts/*.bats. With files, as
-# pre-commit passes them, it runs only the suites that the files can affect:
-# scripts/<x>.sh runs tests/scripts/<x>.bats, and a suite runs itself.
-# mise.toml runs every suite, because it pins the tools of all of them and
-# holds the inline tasks of mise-tasks.bats. A file in tests/scripts/helpers/
-# runs every suite too. It needs bats on PATH.
+#   script-tests.sh run [--list] [<file>...]   run the suites in tests/scripts
+#   script-tests.sh coverage                   check that each script has a suite
+# run: without files it runs every tests/scripts/*.bats. With files, it runs
+# only the suites that the files can affect: scripts/<x>.sh runs
+# tests/scripts/<x>.bats, and a suite runs itself. mise.toml runs
+# mise-tasks.bats, which tests its inline tasks. A file in
+# tests/scripts/helpers/ runs every suite. scripts/ci-plan.sh decides when
+# a tool version change runs every suite. --list prints the suites and runs
+# nothing. Without --list, it needs bats on PATH.
 # coverage: each scripts/<x>.sh needs tests/scripts/<x>.bats. Each
 # .agents/skills/<skill>/scripts/<x>.sh needs a tests/<x>.bats in its skill.
 # Each tests/scripts/<x>.bats needs scripts/<x>.sh, except mise-tasks.bats,
@@ -27,7 +28,7 @@ MISE_SUITE=mise-tasks.bats
 HELPERS_SUITE=helpers.bats
 
 usage() {
-	>&2 echo "Usage: script-tests.sh run [<file>...] | script-tests.sh coverage"
+	>&2 echo "Usage: script-tests.sh run [--list] [<file>...] | script-tests.sh coverage"
 	exit 2
 }
 
@@ -42,12 +43,16 @@ suite_of() {
 	"$SUITES"/helpers/*) echo all ;;
 	"$SUITES"/*.bats) echo "$1" ;;
 	scripts/*.sh) echo "$SUITES/$(basename "${1%.sh}").bats" ;;
-	mise.toml) echo all ;;
+	mise.toml) echo "$SUITES/$MISE_SUITE" ;;
 	esac
 }
 
 run_suites() {
-	local file suite suites=() all=0
+	local file suite suites=() all=0 list=0
+	if [[ ${1:-} == --list ]]; then
+		list=1
+		shift
+	fi
 	if (($# == 0)); then
 		all=1
 	fi
@@ -67,6 +72,10 @@ run_suites() {
 	fi
 	((${#suites[@]} > 0)) || return 0
 	# One suite can appear twice, when both the script and its suite change.
+	if ((list)); then
+		printf '%s\n' "${suites[@]}" | sort -u
+		return 0
+	fi
 	bats $(printf '%s\n' "${suites[@]}" | sort -u)
 }
 

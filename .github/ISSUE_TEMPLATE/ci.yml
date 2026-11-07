@@ -25,7 +25,7 @@ body:
     attributes:
       label: Workflow or job
       description: The workflow file and job, or "new".
-      placeholder: .github/workflows/agents-check.yml, job check
+      placeholder: .github/workflows/ci.yml, job check
     validations:
       required: true
   - type: textarea

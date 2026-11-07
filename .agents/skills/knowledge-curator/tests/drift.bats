@@ -12,6 +12,8 @@ setup() {
 	LINT="$ROOT/scripts/lint-knowledge.sh"
 	SIZE="$ROOT/scripts/check-agents-md-size.sh"
 	MISE="$ROOT/mise.toml"
+	WORKFLOW="$ROOT/.github/workflows/ci.yml"
+	RULESET="$ROOT/.github/rulesets/main.json"
 	# The prose on one line, so a rewrapped paragraph still matches.
 	TEXT=$(tr '\n' ' ' <"$SKILL" | tr -s ' ')
 }
@@ -78,7 +80,7 @@ skill_tests() {
 }
 
 @test "the mise tasks in the skill exist, and check runs every CI check" {
-	for task in agents:check agents:link skills:test skills:drift check; do
+	for task in agents:check agents:link skills:test skills:drift check test; do
 		yq -p toml -e ".tasks[\"$task\"]" "$MISE" >/dev/null || {
 			echo "mise.toml has no task $task."
 			return 1
@@ -86,13 +88,31 @@ skill_tests() {
 	done
 	[[ "$TEXT" == *'mise run skills:drift'* && "$TEXT" == *'mise run skills:test'* && "$TEXT" == *'mise run agents:link'* ]] || false
 	deps=$(yq -p toml '.tasks.check.depends[]' "$MISE")
-	for task in agents:check knowledge:size knowledge:lint skills:drift prose:lint; do
+	for task in agents:check knowledge:size knowledge:lint prose:lint; do
 		grep -qx "$task" <<<"$deps" || {
 			echo "mise run check does not run $task."
 			return 1
 		}
 	done
-	grep -qF 'mise run check' "$ROOT/.github/workflows/agents-check.yml"
+	# check holds only the structural checks. The suites run in test.
+	for task in skills:drift scripts:test; do
+		if grep -qx "$task" <<<"$deps"; then
+			echo "mise run check runs the suites of $task. Move them to mise run test."
+			return 1
+		fi
+	done
+	[ "$(yq -p toml -oy '.tasks.test.run' "$MISE")" = "scripts/ci-plan.sh test" ]
+	grep -qF 'mise run check' "$WORKFLOW"
+}
+
+# The ruleset requires the gate job of the CI workflow. A renamed job would
+# leave the required check pending, and every merge would block.
+@test "the ruleset snapshot requires ci-gate, and the CI workflow has that job" {
+	checks=$(jq -r '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context' "$RULESET")
+	grep -qx ci-gate <<<"$checks"
+	grep -qx pr-shepherd <<<"$checks"
+	[ "$(yq '.jobs["ci-gate"].name // "ci-gate"' "$WORKFLOW")" = ci-gate ]
+	[ "$(yq '.jobs["ci-gate"].if' "$WORKFLOW")" = 'always()' ]
 }
 
 @test "each hook in Enforcement exists, and the count matches its list" {
@@ -133,30 +153,15 @@ skill_tests() {
 	[[ "$TEXT" == *"at least $min \`+\` and $min \`-\` tasks, and at least $min questions in each skill"* ]] || false
 }
 
-@test "the skill-drift hook runs only the drift tests that a change affects" {
-	hook='.repos[].hooks[] | select(.id == "skill-drift")'
-	[ "$(yq "$hook | .entry" "$CONFIG")" = "mise exec -- scripts/skill-drift.sh" ]
-	[ "$(yq "$hook | .always_run" "$CONFIG")" = null ]
+# The test hook gets every staged file, and ci-plan.sh picks the suites
+# from the .watch files, so no filter in the config can drift.
+@test "the test hook passes the staged files to the suite mapping" {
+	hook='.repos[].hooks[] | select(.id == "test")'
+	[ "$(yq "$hook | .entry" "$CONFIG")" = "mise exec -- scripts/ci-plan.sh test" ]
+	[ "$(yq "$hook | .files" "$CONFIG")" = null ]
+	[ "$(yq "$hook | .pass_filenames" "$CONFIG")" != false ]
 	[ "$(yq "$hook | .require_serial" "$CONFIG")" = true ]
-}
-
-# The files filter of the hook must equal the watched paths of all skills,
-# so pre-commit skips the hook when no test file is affected.
-@test "the skill-drift filter lists every watched path" {
-	expected=$({
-		printf '%s\n' .agents/skills/
-		for dir in $(skill_dirs); do
-			cat "$dir"/tests/*.watch 2>/dev/null || true
-		done
-	} | grep -vE '^(#|[[:space:]]*$)' | LC_ALL=C sort -u |
-		awk '{ for (i = 0; i < n; i++) if (index($0, kept[i]) == 1) next; kept[n++] = $0; print }' |
-		sed 's/\./\\./g' | paste -sd'|' -)
-	expected="^($expected)"
-	actual=$(yq '.repos[].hooks[] | select(.id == "skill-drift") | .files' "$CONFIG")
-	[ "$actual" = "$expected" ] || {
-		echo "Set the files filter of the skill-drift hook to: $expected"
-		return 1
-	}
+	[ -z "$(yq '.repos[].hooks[] | select(.id == "skill-drift" or .id == "scripts-test") | .id' "$CONFIG")" ]
 }
 
 # A test file that reads a path outside its skill must watch that path in

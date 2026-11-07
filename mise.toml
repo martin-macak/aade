@@ -102,6 +102,12 @@ run = ".agents/skills/pr-shepherd/scripts/shepherd.sh"
 description = "Lint the Markdown prose with Vale"
 run = "git ls-files -z '*.md' | xargs -0 vale"
 
+# The repo layer only. mise tasks never call pnpm: pnpm owns the build,
+# the tests and the packages of the code layer.
 [tasks.check]
-description = "Run every deterministic check, as CI does"
-depends = ["agents:check", "knowledge:size", "knowledge:lint", "skills:drift", "scripts:coverage", "research:check", "taxonomy:check", "prose:lint"]
+description = "Run the structural checks of the repository, as CI does (fast, no bats suites)"
+depends = ["agents:check", "knowledge:size", "knowledge:lint", "scripts:coverage", "research:check", "taxonomy:check", "prose:lint"]
+
+[tasks.test]
+description = "Run the bats suites that the changed files affect (--all runs every suite)"
+run = "scripts/ci-plan.sh test"

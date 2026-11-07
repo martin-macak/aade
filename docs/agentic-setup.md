@@ -62,15 +62,13 @@ These skills in `.agents/skills/` manage the instructions themselves:
   decisionkit.
 - `library-docs` fetches current library docs through Context7.
 
-Pre-commit hooks and the `agents-check` CI workflow run the same checks:
-`mise run check`. The [knowledge-curator](../.agents/skills/knowledge-curator/SKILL.md)
-skill lists each hook and the size limits of the `AGENTS.md` files. The LLM
-test layers of the skills run only on demand with `mise run skills:test`.
-The bats suites of `scripts/` run in the `scripts-test` pre-commit hook and
-in the `scripts-test` CI workflow, not in `mise run check`, because they
-take minutes. The workflow also runs the skill tests, on Linux and on macOS
-with bash 3.2.
-[tests/AGENTS.md](../tests/AGENTS.md) gives their rules.
+Pre-commit hooks and the `ci` workflow run the same checks:
+`mise run check` for the structure and `mise run test` for the bats
+suites that a change affects. The [knowledge-curator](../.agents/skills/knowledge-curator/SKILL.md)
+skill lists each hook, the size limits of the `AGENTS.md` files and the
+check contract. The LLM test layers of the skills run only on demand with
+`mise run skills:test`. [tests/AGENTS.md](../tests/AGENTS.md) gives the
+rules of the suites.
 
 ## MCP server format
 
@@ -107,10 +105,8 @@ agents. These files prepare its runner:
 - `.github/hooks/agents-check.json` runs `mise run check` when the agent
   tries to stop. On a failure, the agent gets the output and another turn.
   Pre-commit does not run on the commits of the agent, so this hook is its
-  quality gate. The `agents-check` CI workflow stays as the backstop. The
-  hook skips the suites of `scripts/`, because they take minutes, so the
-  `scripts-test` CI workflow, a required check, is their only gate for a
-  commit of the agent.
+  quality gate. The hook skips the bats suites, so the `ci` workflow is
+  their only gate for a commit of the agent.
   Copilot CLI reads the same hook, so it runs the checks locally too.
 - `.github/dependabot.yml` keeps the commit SHAs of the pinned actions up to
   date.

@@ -1,0 +1,160 @@
+# The one CI workflow of the repository. The classify job sorts the
+# change into the repo layer (mise) and the code layer (pnpm) with
+# scripts/ci-plan.sh. A layer that did not change runs no job.
+# - Pull request: check, and the bats suites that the change affects, on
+#   Linux and macOS. A shared input or the ci:full label runs every suite.
+#   The ci-full workflow reruns this workflow when someone adds the label.
+# - Push to main: check only, as a smoke test. The ruleset requires an
+#   up-to-date branch and linear history, so main equals the tested tree.
+# - Weekly and manual run: every suite on Linux and macOS. It catches a
+#   .watch file that misses a path.
+# No LLM runs in CI. The ruleset requires only the ci-gate job of this
+# workflow. Later code jobs add themselves to its needs.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels its older runs. Runs on main finish.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # mise run would install every tool of mise.toml. Each job installs only
+  # the tools it needs, with install_args.
+  MISE_TASK_RUN_AUTO_INSTALL: "false"
+
+jobs:
+  classify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      repo: ${{ steps.plan.outputs.repo }}
+      code: ${{ steps.plan.outputs.code }}
+      full: ${{ steps.plan.outputs.full }}
+      test: ${{ steps.plan.outputs.test }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # ci-plan.sh diffs from the merge-base with the PR base.
+          fetch-depth: 0
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: gh yq
+      - id: plan
+        # bash adds pipefail, so a failing ci-plan.sh fails the step and
+        # tee cannot hide it.
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          case $EVENT in
+          pull_request)
+            args=(--base "$BASE")
+            # Read the labels live: a rerun keeps the old event payload.
+            if gh pr view "$PR" --json labels --jq '.labels[].name' | grep -qx 'ci:full'; then
+              args+=(--full)
+            fi
+            scripts/ci-plan.sh plan "${args[@]}" | tee -a "$GITHUB_OUTPUT"
+            ;;
+          push)
+            printf '%s\n' repo=true code=false full=false test=false | tee -a "$GITHUB_OUTPUT"
+            ;;
+          *)
+            scripts/ci-plan.sh plan --all | tee -a "$GITHUB_OUTPUT"
+            ;;
+          esac
+
+  check:
+    needs: classify
+    if: needs.classify.outputs.repo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The structural checks need no node and no decisionkit.
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: jq yq vale
+      - run: vale sync
+      - run: mise run check
+
+  test:
+    needs: classify
+    if: needs.classify.outputs.repo == 'true' && needs.classify.outputs.test == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        # Developers run the scripts on macOS too, with bash 3.2 and BSD tools.
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      # The suites fake gh and decisionkit. Two skill drift suites check the
+      # installed decisionkit, so the job installs it with node.
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: bats gh jq yq node npm:@adxtya21/decisionkit
+      # The runner image puts Homebrew bash 5 first on PATH. Put /bin first,
+      # so `#!/usr/bin/env bash` finds the bash 3.2 of macOS, as on a Mac
+      # without Homebrew bash.
+      - if: runner.os == 'macOS'
+        run: echo /bin >>"$GITHUB_PATH"
+      - run: bash --version | head -n 1
+      - env:
+          FULL: ${{ needs.classify.outputs.full }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [[ $FULL == true ]]; then
+            mise run test --all
+          else
+            mise run test --base "$BASE"
+          fi
+
+  # The only required check of this workflow. It always runs, and it fails
+  # when a needed job failed or was cancelled. A skipped job passes, so a
+  # change that a layer does not need never blocks the merge.
+  ci-gate:
+    needs: [classify, check, test]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+          REPO: ${{ needs.classify.outputs.repo }}
+        run: |
+          echo "Results: $RESULTS"
+          # A plan without outputs would skip every job and pass.
+          case $REPO in
+          true | false) ;;
+          *)
+            echo "classify set no plan."
+            exit 1
+            ;;
+          esac
+          for result in $RESULTS; do
+            case $result in
+            success | skipped) ;;
+            *) exit 1 ;;
+            esac
+          done

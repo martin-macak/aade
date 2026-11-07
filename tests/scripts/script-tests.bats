@@ -51,10 +51,10 @@ setup() {
 	[ "$(calls)" = "bats tests/scripts/beta.bats" ]
 }
 
-@test "run: a change to mise.toml runs every suite, because it pins the tools of all" {
+@test "run: a change to mise.toml runs mise-tasks.bats, which tests its inline tasks" {
 	run "$S" run mise.toml
 	[ "$status" -eq 0 ]
-	[ "$(calls)" = "bats tests/scripts/alpha.bats tests/scripts/beta.bats tests/scripts/mise-tasks.bats tests/scripts/script-tests.bats" ]
+	[ "$(calls)" = "bats tests/scripts/mise-tasks.bats" ]
 }
 
 @test "run: a changed helper runs every suite" {
@@ -67,6 +67,20 @@ setup() {
 	touch scripts/orphan.sh
 	run "$S" run README.md scripts/orphan.sh
 	[ "$status" -eq 0 ]
+	[ -z "$(calls)" ]
+}
+
+@test "run --list: prints the affected suites once each and runs nothing" {
+	run "$S" run --list scripts/beta.sh tests/scripts/beta.bats scripts/alpha.sh
+	[ "$status" -eq 0 ]
+	[ "$output" = "$(printf '%s\n' tests/scripts/alpha.bats tests/scripts/beta.bats)" ]
+	[ -z "$(calls)" ]
+}
+
+@test "run --list: without files prints every suite" {
+	run "$S" run --list
+	[ "$status" -eq 0 ]
+	[ "$(grep -c '' <<<"$output")" -eq 4 ]
 	[ -z "$(calls)" ]
 }
 
