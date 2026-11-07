@@ -64,7 +64,8 @@ while IFS= read -r label; do
 done < <(jq -c '.[]' <<<"$desired")
 
 while IFS= read -r name; do
-	for keep in "${kept[@]}"; do
+	# The ${kept[@]+...} form keeps an empty array legal under set -u in bash 3.2.
+	for keep in ${kept[@]+"${kept[@]}"}; do
 		[[ "$name" == "$keep" ]] && continue 2
 	done
 	run "delete $name" gh label delete "$name" --yes
