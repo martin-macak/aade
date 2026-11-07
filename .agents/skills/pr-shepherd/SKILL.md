@@ -210,8 +210,9 @@ ruleset rules of the base branch from
 `repos/{owner}/{repo}/rules/branches/<base>`. It refuses auto-merge until the rules require the
 `pr-shepherd` check, because GitHub could merge without that check. Only
 an admin can change the ruleset, so ask the user. Then it runs
-`gh pr merge --auto --rebase`, and GitHub merges when every required check
-passes.
+`gh pr merge --auto --squash`, and GitHub merges when every required check
+passes. It squashes, because the ruleset requires signed commits. GitHub
+signs a squash commit, but it cannot sign the commits of a rebase merge.
 
 When someone edits an issue, the `disarm` job of the `pr-shepherd`
 workflow turns off

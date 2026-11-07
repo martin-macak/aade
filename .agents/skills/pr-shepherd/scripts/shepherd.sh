@@ -759,7 +759,10 @@ cmd_merge() {
 		echo "The rules of $BASE_REF do not require the $CHECK_NAME check, so auto-merge could skip it. Ask an admin to add it to the ruleset."
 		return 1
 	fi
-	gh pr merge "$pr" --auto --rebase || die "Cannot turn on auto-merge for PR #$pr."
+	# Squash, not rebase: the ruleset requires signed commits, and GitHub
+	# signs a squash commit but cannot sign the commits of a rebase merge.
+	# A squash still keeps the history linear.
+	gh pr merge "$pr" --auto --squash || die "Cannot turn on auto-merge for PR #$pr."
 	echo "Auto-merge is on for PR #$pr. GitHub merges it when every required check passes."
 }
 
