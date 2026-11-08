@@ -1,0 +1,402 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "import"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "env": {
+    "es2024": true
+  },
+  "rules": {
+    "no-console": "off",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-explicit-any": "error",
+    "import/no-cycle": "error",
+    "import/no-self-import": "error",
+    "no-var": "error",
+    "prefer-const": "error",
+    "eqeqeq": [
+      "error",
+      "smart"
+    ],
+    "no-eval": "error",
+    "no-new-func": "error",
+    "no-implied-eval": "error",
+    "no-empty-function": "off"
+  },
+  "overrides": [
+    {
+      "files": [
+        "packages/{base,reactive,di,interceptors,contracts,lifecycle,events,workitems,commands,persistence,plugins,workbench,rpc,shell,plugin-api}/src/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react",
+                "message": "Only @tessera/react imports React (packages.md rule 4)."
+              },
+              {
+                "name": "react-dom",
+                "message": "Only @tessera/react imports React DOM."
+              },
+              {
+                "name": "dockview",
+                "message": "Only @tessera/layout-dockview imports dockview."
+              },
+              {
+                "name": "dockview-core",
+                "message": "Only @tessera/layout-dockview imports dockview-core."
+              },
+              {
+                "name": "electron",
+                "message": "Only @tessera/host-electron imports electron."
+              },
+              {
+                "name": "vitest",
+                "message": "Shipped source never imports the test runner."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "node:*"
+                ],
+                "message": "Core packages (L0 to L3) never import Node built-ins (packages.md rule 3)."
+              },
+              {
+                "group": [
+                  "@tessera/*/src/*",
+                  "@tessera/*/dist/*"
+                ],
+                "message": "No deep imports: use the package exports entry (packages.md rule 6)."
+              }
+            ]
+          }
+        ],
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "self",
+            "message": "Worker-only global. Use globalThis only in host code."
+          },
+          {
+            "name": "postMessage",
+            "message": "Worker-only global."
+          },
+          {
+            "name": "importScripts",
+            "message": "Worker-only global."
+          },
+          {
+            "name": "document",
+            "message": "Core is DOM-free."
+          },
+          {
+            "name": "window",
+            "message": "Core is DOM-free."
+          },
+          {
+            "name": "process",
+            "message": "Core is Node-free."
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/{dom,host-web}/src/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react",
+                "message": "Only @tessera/react imports React (packages.md rule 4)."
+              },
+              {
+                "name": "react-dom",
+                "message": "Only @tessera/react imports React DOM."
+              },
+              {
+                "name": "dockview",
+                "message": "Only @tessera/layout-dockview imports dockview."
+              },
+              {
+                "name": "dockview-core",
+                "message": "Only @tessera/layout-dockview imports dockview-core."
+              },
+              {
+                "name": "electron",
+                "message": "Only @tessera/host-electron imports electron."
+              },
+              {
+                "name": "vitest",
+                "message": "Shipped source never imports the test runner."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "@tessera/*/src/*",
+                  "@tessera/*/dist/*"
+                ],
+                "message": "No deep imports: use the package exports entry (packages.md rule 6)."
+              },
+              {
+                "group": [
+                  "node:*"
+                ],
+                "message": "Browser adapters never import Node built-ins."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/react/src/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "dockview",
+                "message": "Only @tessera/layout-dockview imports dockview."
+              },
+              {
+                "name": "dockview-core",
+                "message": "Only @tessera/layout-dockview imports dockview-core."
+              },
+              {
+                "name": "electron",
+                "message": "Only @tessera/host-electron imports electron."
+              },
+              {
+                "name": "vitest",
+                "message": "Shipped source never imports the test runner."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "@tessera/*/src/*",
+                  "@tessera/*/dist/*"
+                ],
+                "message": "No deep imports: use the package exports entry (packages.md rule 6)."
+              },
+              {
+                "group": [
+                  "node:*"
+                ],
+                "message": "Browser adapters never import Node built-ins."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/layout-dockview/src/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react",
+                "message": "Only @tessera/react imports React (packages.md rule 4)."
+              },
+              {
+                "name": "react-dom",
+                "message": "Only @tessera/react imports React DOM."
+              },
+              {
+                "name": "electron",
+                "message": "Only @tessera/host-electron imports electron."
+              },
+              {
+                "name": "vitest",
+                "message": "Shipped source never imports the test runner."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "@tessera/*/src/*",
+                  "@tessera/*/dist/*"
+                ],
+                "message": "No deep imports: use the package exports entry (packages.md rule 6)."
+              },
+              {
+                "group": [
+                  "node:*"
+                ],
+                "message": "Browser adapters never import Node built-ins."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "plugins/*/src/**/*.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react",
+                "message": "Only @tessera/react imports React (packages.md rule 4)."
+              },
+              {
+                "name": "react-dom",
+                "message": "Only @tessera/react imports React DOM."
+              },
+              {
+                "name": "dockview",
+                "message": "Only @tessera/layout-dockview imports dockview."
+              },
+              {
+                "name": "dockview-core",
+                "message": "Only @tessera/layout-dockview imports dockview-core."
+              },
+              {
+                "name": "electron",
+                "message": "Only @tessera/host-electron imports electron."
+              },
+              {
+                "name": "vitest",
+                "message": "Shipped source never imports the test runner."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "@tessera/*/src/*",
+                  "@tessera/*/dist/*"
+                ],
+                "message": "No deep imports: use the package exports entry (packages.md rule 6)."
+              },
+              {
+                "group": [
+                  "node:*"
+                ],
+                "message": "Browser adapters never import Node built-ins."
+              }
+            ]
+          }
+        ],
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "document",
+            "message": "Plugin code uses the placement's ownerDocument, never the global document."
+          },
+          {
+            "name": "window",
+            "message": "Plugin code never uses the global window."
+          },
+          {
+            "name": "process",
+            "message": "Plugins are Node-free."
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "plugins/*/src/ui-*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react-dom",
+                "message": "UI entries render through @tessera/react only."
+              },
+              {
+                "name": "@tessera/plugin-api",
+                "message": "UI entries import react and @tessera/react only (poc-plan C26)."
+              },
+              {
+                "name": "@tessera/contracts",
+                "message": "UI entries import react and @tessera/react only (poc-plan C26)."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "@tessera/*/src/*",
+                  "@tessera/*/dist/*"
+                ],
+                "message": "No deep imports: use the package exports entry (packages.md rule 6)."
+              },
+              {
+                "group": [
+                  "./*",
+                  "../*"
+                ],
+                "allowTypeImports": true,
+                "message": "A UI entry may import its plugin's files only with import type (poc-plan C26: no business logic in React)."
+              }
+            ]
+          }
+        ],
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "document",
+            "message": "Views use the placement's ownerDocument, never the global document (contracts.md 18.2 rule 5)."
+          },
+          {
+            "name": "window",
+            "message": "Views never use the global window (contracts.md 18.2 rule 5)."
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/testing/src/**/*.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": [
+        "packages/*/test/**/*.{ts,tsx}",
+        "plugins/*/test/**/*.{ts,tsx}",
+        "apps/*/test/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "typescript/no-non-null-assertion": "off",
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/node_modules/**",
+    "**/test-fixtures/**"
+  ]
+}

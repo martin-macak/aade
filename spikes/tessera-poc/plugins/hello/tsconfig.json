@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.l0-l3.json",
+  "include": [
+    "src",
+    "tessera-plugin.json"
+  ]
+}

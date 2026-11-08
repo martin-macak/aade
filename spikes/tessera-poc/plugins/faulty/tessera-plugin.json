@@ -1,0 +1,16 @@
+{
+  "id": "sample.faulty",
+  "name": "Faulty Plugin",
+  "version": "1.0.0",
+  "description": "Fails on purpose: shows failure isolation. By default activate() throws after it registered things; with the setting off, its command, subscriber and interceptor throw.",
+  "publisher": "tessera-poc",
+  "engines": { "tessera": "^1.0.0" },
+  "main": "./src/main.ts",
+  "contributes": {
+    "commands": [{ "id": "faulty.boom", "title": "Boom (this command fails)", "category": "Faulty" }],
+    "configuration": [
+      { "key": "sample.faulty.failOnActivate", "type": "boolean", "default": true, "description": "When true, activate() throws. Tests set it to false." }
+    ],
+    "interceptors": [{ "id": "faulty.observer", "kinds": ["command"], "match": "faulty.boom", "description": "An observer that throws. A literal match gives the activation event onCommand:faulty.boom, so the plugin stays asleep until that command runs." }]
+  }
+}

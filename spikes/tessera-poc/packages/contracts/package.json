@@ -1,0 +1,25 @@
+{
+  "name": "@tessera/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Service interfaces, tokens and descriptor factories (contracts.md sections 5 to 13 in stage A). No behavior beyond factories.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*",
+    "@tessera/reactive": "*",
+    "@tessera/di": "*",
+    "@tessera/interceptors": "*"
+  },
+  "devDependencies": {
+    "@tessera/testing": "*",
+    "vitest": "5.1.0"
+  }
+}

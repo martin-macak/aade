@@ -1,0 +1,28 @@
+{
+  "name": "@tessera/workitems",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "WorkItem tree: DI scope, event node and context-key scope per use case.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*",
+    "@tessera/reactive": "*",
+    "@tessera/di": "*",
+    "@tessera/contracts": "*"
+  },
+  "devDependencies": {
+    "@tessera/commands": "*",
+    "@tessera/events": "*",
+    "@tessera/persistence": "*",
+    "@tessera/testing": "*",
+    "vitest": "5.1.0"
+  }
+}

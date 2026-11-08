@@ -1,0 +1,23 @@
+{
+  "name": "@tessera/interceptors",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The one around-advice pipeline: compose, observers, registry.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*"
+  },
+  "devDependencies": {
+    "@tessera/contracts": "*",
+    "@tessera/testing": "*",
+    "vitest": "5.1.0"
+  }
+}

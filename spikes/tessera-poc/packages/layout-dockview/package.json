@@ -1,0 +1,27 @@
+{
+  "name": "@tessera/layout-dockview",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DockSurface on dockview-core: origin and revision filters, close routing, placeholder panels, wrapped arrangement blobs.",
+  "sideEffects": false,
+  "exports": {
+    ".": { "types": "./src/index.ts", "default": "./src/index.ts" },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*",
+    "@tessera/contracts": "*",
+    "@tessera/di": "*",
+    "@tessera/dom": "*",
+    "@tessera/reactive": "*",
+    "dockview-core": "8.8.3"
+  },
+  "devDependencies": {
+    "@tessera/testing": "*",
+    "@vitest/browser-playwright": "5.1.0",
+    "jsdom": "31.0.0",
+    "playwright": "1.65.0",
+    "vitest": "5.1.0"
+  }
+}

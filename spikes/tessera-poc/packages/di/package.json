@@ -1,0 +1,22 @@
+{
+  "name": "@tessera/di",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Decorator-free DI container: tokens, scopes, lifetimes, injection context, disposal, opt-in interception.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*"
+  },
+  "devDependencies": {
+    "@tessera/testing": "*",
+    "vitest": "5.1.0"
+  }
+}

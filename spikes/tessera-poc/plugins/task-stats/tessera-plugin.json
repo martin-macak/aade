@@ -1,0 +1,11 @@
+{
+  "id": "sample.taskStats",
+  "name": "Task Statistics",
+  "version": "1.0.0",
+  "description": "A status bar item with the number of open tasks. Uses the TaskStore of sample.tasks through its token, never through an import.",
+  "publisher": "tessera-poc",
+  "engines": { "tessera": "^1.0.0" },
+  "main": "./src/main.ts",
+  "activationEvents": ["onStartupFinished"],
+  "requires": ["sample.tasks/TaskStore"]
+}

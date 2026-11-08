@@ -1,0 +1,23 @@
+{
+  "name": "@tessera/dom",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Renderer-independent DOM helpers: keyboard to KeyPress, focus tracking, idle scheduler, placement host marking, mount targets.",
+  "sideEffects": false,
+  "exports": {
+    ".": { "types": "./src/index.ts", "default": "./src/index.ts" },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*",
+    "@tessera/contracts": "*",
+    "@tessera/di": "*",
+    "@tessera/reactive": "*"
+  },
+  "devDependencies": {
+    "@tessera/testing": "*",
+    "jsdom": "31.0.0",
+    "vitest": "5.1.0"
+  }
+}

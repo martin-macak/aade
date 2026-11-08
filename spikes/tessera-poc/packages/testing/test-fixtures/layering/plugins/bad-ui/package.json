@@ -1,0 +1,8 @@
+{
+  "name": "@fixture/bad-ui-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": { "@tessera/plugin-api": "*", "@tessera/react": "*" },
+  "peerDependencies": { "react": "19.3.1" }
+}

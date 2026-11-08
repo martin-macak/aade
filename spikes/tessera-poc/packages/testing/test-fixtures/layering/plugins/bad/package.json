@@ -1,0 +1,7 @@
+{
+  "name": "@fixture/bad-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": { "@tessera/plugin-api": "*", "@tessera/events": "*" }
+}

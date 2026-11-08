@@ -1,0 +1,111 @@
+{
+  "v": 1,
+  "data": {
+    "savedAt": "2026-11-05T09:30:00.000Z",
+    "appVersion": "0.0.0-seed",
+    "windows": [
+      {
+        "id": "w-main",
+        "kind": "main",
+        "parts": {
+          "primarySideBar": {
+            "visible": true,
+            "active": "tasks.sidebar"
+          }
+        }
+      }
+    ],
+    "workspaces": {
+      "tasks.sidebar": {
+        "active": "p:tasks.sidebar:tasks.list",
+        "collapsed": []
+      },
+      "workbench.editorArea": {
+        "active": "pd1",
+        "collapsed": [],
+        "members": [
+          "pd1",
+          "pd2"
+        ]
+      }
+    },
+    "placements": {
+      "p:tasks.sidebar:tasks.list": {
+        "viewType": "tasks.list",
+        "instanceId": "inst1",
+        "workspaceId": "tasks.sidebar",
+        "local": {
+          "v": 1,
+          "data": {
+            "scrollTop": 55,
+            "expandedGroups": [
+              "project-a",
+              "project-b",
+              "inbox"
+            ]
+          }
+        }
+      },
+      "pd1": {
+        "viewType": "tasks.list",
+        "instanceId": "inst1",
+        "workspaceId": "workbench.editorArea",
+        "local": {
+          "v": 1,
+          "data": {
+            "scrollTop": 12,
+            "expandedGroups": [
+              "project-a",
+              "project-b",
+              "inbox"
+            ]
+          }
+        },
+        "dock": {
+          "group": "1",
+          "where": "grid"
+        }
+      },
+      "pd2": {
+        "viewType": "tasks.list",
+        "instanceId": "inst1",
+        "workspaceId": "workbench.editorArea",
+        "local": {
+          "v": 1,
+          "data": {
+            "scrollTop": 3,
+            "expandedGroups": [
+              "project-a",
+              "project-b",
+              "inbox"
+            ]
+          }
+        },
+        "dock": {
+          "group": "1",
+          "where": "grid"
+        }
+      }
+    },
+    "instances": {
+      "inst1": {
+        "viewType": "tasks.list",
+        "key": "",
+        "workItemPath": "root/tasks",
+        "shared": {
+          "v": 1,
+          "data": {
+            "selectedId": "t2",
+            "filter": ""
+          }
+        }
+      }
+    },
+    "closedInstances": [],
+    "overrides": {
+      "views": {},
+      "workspaces": {}
+    },
+    "focus": "pd1"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.l0-l3.json",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "isolatedDeclarations": false
+  },
+  "include": [
+    "src",
+    "test"
+  ]
+}

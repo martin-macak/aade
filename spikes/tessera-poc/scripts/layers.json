@@ -1,0 +1,305 @@
+{
+  "$comment": "Closed allowed-dependency lists (packages.md section 2). The single source for check-deps.mjs and .dependency-cruiser.cjs. Stage B adds lifecycle, persistence, plugins, workbench, rpc, shell and plugin-api. Stage C adds the L4 packages dom, react, layout-dockview and host-web.",
+  "packages": {
+    "base": {
+      "layer": "L0",
+      "tessera": [],
+      "thirdParty": [],
+      "peerThirdParty": []
+    },
+    "reactive": {
+      "layer": "L0",
+      "tessera": [
+        "base"
+      ],
+      "thirdParty": [
+        "@preact/signals-core"
+      ],
+      "peerThirdParty": [
+        "alien-signals"
+      ]
+    },
+    "di": {
+      "layer": "L0",
+      "tessera": [
+        "base"
+      ],
+      "thirdParty": [],
+      "peerThirdParty": []
+    },
+    "interceptors": {
+      "layer": "L0",
+      "tessera": [
+        "base"
+      ],
+      "thirdParty": [],
+      "peerThirdParty": []
+    },
+    "contracts": {
+      "layer": "L1",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "interceptors"
+      ],
+      "thirdParty": [],
+      "peerThirdParty": []
+    },
+    "events": {
+      "layer": "L2",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "interceptors",
+        "contracts"
+      ],
+      "thirdParty": [],
+      "peerThirdParty": []
+    },
+    "workitems": {
+      "layer": "L2",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "contracts"
+      ],
+      "thirdParty": [],
+      "peerThirdParty": []
+    },
+    "commands": {
+      "layer": "L2",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "interceptors",
+        "contracts"
+      ],
+      "thirdParty": [
+        "zod"
+      ],
+      "peerThirdParty": []
+    },
+    "testing": {
+      "layer": "T",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "interceptors",
+        "contracts",
+        "shell",
+        "rpc",
+        "persistence",
+        "plugins"
+      ],
+      "thirdParty": [],
+      "peerThirdParty": [
+        "vitest"
+      ]
+    },
+    "lifecycle": {
+      "layer": "L2",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "contracts"
+      ],
+      "thirdParty": [],
+      "peerThirdParty": []
+    },
+    "persistence": {
+      "layer": "L2",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "interceptors",
+        "contracts"
+      ],
+      "thirdParty": [
+        "zod"
+      ],
+      "peerThirdParty": []
+    },
+    "plugins": {
+      "layer": "L2",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "interceptors",
+        "contracts"
+      ],
+      "thirdParty": [
+        "zod",
+        "semver"
+      ],
+      "peerThirdParty": []
+    },
+    "workbench": {
+      "layer": "L2",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "interceptors",
+        "contracts"
+      ],
+      "thirdParty": [
+        "zod"
+      ],
+      "peerThirdParty": []
+    },
+    "rpc": {
+      "layer": "L2",
+      "tessera": [
+        "base",
+        "reactive",
+        "interceptors",
+        "contracts"
+      ],
+      "thirdParty": [
+        "zod"
+      ],
+      "peerThirdParty": []
+    },
+    "shell": {
+      "layer": "L3",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "interceptors",
+        "contracts",
+        "lifecycle",
+        "events",
+        "workitems",
+        "commands",
+        "persistence",
+        "plugins",
+        "workbench"
+      ],
+      "thirdParty": [],
+      "peerThirdParty": []
+    },
+    "plugin-api": {
+      "layer": "L3",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "interceptors",
+        "contracts"
+      ],
+      "thirdParty": [],
+      "peerThirdParty": []
+    },
+    "dom": {
+      "layer": "L4",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "contracts"
+      ],
+      "thirdParty": [],
+      "peerThirdParty": []
+    },
+    "react": {
+      "layer": "L4",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "contracts",
+        "dom"
+      ],
+      "thirdParty": [],
+      "peerThirdParty": [
+        "react",
+        "react-dom"
+      ]
+    },
+    "layout-dockview": {
+      "layer": "L4",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "contracts",
+        "dom"
+      ],
+      "thirdParty": [
+        "dockview-core"
+      ],
+      "peerThirdParty": []
+    },
+    "host-web": {
+      "layer": "L4",
+      "tessera": [
+        "base",
+        "reactive",
+        "di",
+        "contracts",
+        "shell",
+        "dom"
+      ],
+      "thirdParty": [],
+      "peerThirdParty": []
+    }
+  },
+  "l2": [
+    "lifecycle",
+    "events",
+    "workitems",
+    "commands",
+    "persistence",
+    "plugins",
+    "workbench",
+    "rpc"
+  ],
+  "exportEntries": [
+    "index.ts",
+    "alien.ts"
+  ],
+  "forbiddenInCore": [
+    "react",
+    "react-dom",
+    "dockview",
+    "dockview-core",
+    "electron",
+    "vitest"
+  ],
+  "pluginAllowed": [
+    "plugin-api",
+    "react"
+  ],
+  "foreignOwners": {
+    "react": [
+      "react"
+    ],
+    "react-dom": [
+      "react"
+    ],
+    "dockview": [
+      "layout-dockview"
+    ],
+    "dockview-core": [
+      "layout-dockview"
+    ],
+    "electron": [
+      "host-electron"
+    ]
+  },
+  "coreLayers": [
+    "L0",
+    "L1",
+    "L2",
+    "L3"
+  ]
+}

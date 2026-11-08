@@ -1,0 +1,33 @@
+{
+  "name": "@tessera/shell",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Composition root of a renderer realm: scopes, interceptor registry, module installation, bootstrap and phases.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*",
+    "@tessera/reactive": "*",
+    "@tessera/di": "*",
+    "@tessera/interceptors": "*",
+    "@tessera/contracts": "*",
+    "@tessera/lifecycle": "*",
+    "@tessera/events": "*",
+    "@tessera/workitems": "*",
+    "@tessera/commands": "*",
+    "@tessera/persistence": "*",
+    "@tessera/plugins": "*",
+    "@tessera/workbench": "*"
+  },
+  "devDependencies": {
+    "@tessera/testing": "*",
+    "vitest": "5.1.0"
+  }
+}

@@ -1,0 +1,5 @@
+node_modules/
+out/
+dist/
+# Copied Tessera demo build (scripts/copy-demo.js writes it at build time).
+renderer/

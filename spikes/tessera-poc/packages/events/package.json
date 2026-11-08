@@ -1,0 +1,26 @@
+{
+  "name": "@tessera/events",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Hierarchical event bus: nodes, publish scopes, delivery modes, sticky topics, back-pressure, relay hook.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*",
+    "@tessera/reactive": "*",
+    "@tessera/di": "*",
+    "@tessera/interceptors": "*",
+    "@tessera/contracts": "*"
+  },
+  "devDependencies": {
+    "@tessera/testing": "*",
+    "vitest": "5.1.0"
+  }
+}

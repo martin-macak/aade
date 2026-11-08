@@ -1,0 +1,49 @@
+{
+  "name": "electron-host-spike",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Throwaway spike: does a sandboxed Electron 45 renderer host the Tessera React 19 + dockview demo, with a utility-process plugin host reached over a MessagePort, and does the packaged app start?",
+  "main": "main.js",
+  "scripts": {
+    "build:tessera-demo": "npm --prefix ../tessera-poc run build:demo",
+    "copy:demo": "node scripts/copy-demo.js",
+    "build": "npm run build:tessera-demo && npm run copy:demo",
+    "start": "electron .",
+    "smoke": "electron . --smoke",
+    "pack": "electron-builder --dir --publish never",
+    "smoke:packaged": "node scripts/run-packaged.js",
+    "bench": "node scripts/run-packaged.js --runs 5"
+  },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "dev.aade.electronhostspike",
+    "productName": "ElectronHostSpike",
+    "directories": {
+      "output": "out"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "plugin-host.js",
+      "renderer/**",
+      "package.json"
+    ],
+    "asar": true,
+    "mac": {
+      "identity": null,
+      "target": "dir"
+    },
+    "win": {
+      "target": "dir"
+    },
+    "linux": {
+      "target": "dir",
+      "category": "Development"
+    },
+    "npmRebuild": false
+  },
+  "author": "aade spike"
+}

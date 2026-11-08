@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.dom.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "vite/client"
+    ],
+    "isolatedDeclarations": false
+  },
+  "include": [
+    "src",
+    "test"
+  ]
+}

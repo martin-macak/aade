@@ -1,0 +1,43 @@
+{
+  "name": "@tessera-poc/plugin-audit",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "sample.audit: observer interceptors for commands and events, a guard on workbench.closePlacement, the audit.log view.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/main.ts",
+      "default": "./src/main.ts"
+    },
+    "./manifest": {
+      "types": "./src/manifest.ts",
+      "default": "./src/manifest.ts"
+    },
+    "./package.json": "./package.json",
+    "./ui-react": {
+      "types": "./src/ui-react.tsx",
+      "default": "./src/ui-react.tsx"
+    }
+  },
+  "devDependencies": {
+    "@tessera/base": "*",
+    "@tessera/contracts": "*",
+    "@tessera/testing": "*",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "jsdom": "31.0.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "vitest": "5.1.0",
+    "@tessera/plugin-api": "*",
+    "@tessera/react": "*"
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "@tessera/plugin-api": "^1.0.0",
+    "@tessera/react": "*"
+  }
+}

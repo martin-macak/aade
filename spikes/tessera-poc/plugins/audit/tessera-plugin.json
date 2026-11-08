@@ -1,0 +1,21 @@
+{
+  "id": "sample.audit",
+  "name": "Audit Log",
+  "version": "1.0.0",
+  "description": "Records every command and event, and vetoes closing a pinned placement. Shows plugin-contributed interceptors.",
+  "publisher": "tessera-poc",
+  "engines": { "tessera": "^1.0.0" },
+  "main": "./src/main.ts",
+  "ui": { "react": "./src/ui-react.tsx" },
+  "activationEvents": ["*"],
+  "capabilities": ["interceptors.guard"],
+  "provides": ["sample.audit/AuditLog"],
+  "contributes": {
+    "interceptors": [
+      { "id": "audit.commands", "kinds": ["command"], "match": "**", "phase": "outer", "mode": "observer", "description": "Records id, source, duration and outcome of every command." },
+      { "id": "audit.events", "kinds": ["event"], "match": "**", "description": "Records every event publication." },
+      { "id": "audit.closeGuard", "kinds": ["command"], "match": "workbench.closePlacement", "phase": "guard", "mode": "guard", "description": "A pinned placement cannot be closed." }
+    ],
+    "views": [{ "id": "audit.log", "title": "Audit Log", "workspace": "workbench.editorArea", "visibleByDefault": false }]
+  }
+}

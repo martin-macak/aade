@@ -1,0 +1,9 @@
+{
+  "name": "@acme/plugin-hello",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/main.ts", "./manifest": "./src/manifest.ts" },
+  "peerDependencies": { "@tessera/plugin-api": "^1.0.0" },
+  "devDependencies": { "@tessera/plugin-api": "*", "@tessera/contracts": "*", "@tessera/testing": "*", "vitest": "5.1.0" }
+}

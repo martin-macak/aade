@@ -1,0 +1,21 @@
+{
+  "name": "@tessera/base",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tessera L0 kernel: disposables, events, cancellation, errors, schemas, scheduling, transaction gate.",
+  "sideEffects": [
+    "./src/index.ts"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "devDependencies": {
+    "@tessera/testing": "*",
+    "vitest": "5.1.0"
+  }
+}
