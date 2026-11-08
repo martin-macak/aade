@@ -1,6 +1,6 @@
 # The cold reader sees only SKILL.md. Each question has one expected answer.
 Q: When may an agent start to collect sources for a research?
-A: Only after the user approves the brief, which the agent records with `$R status <slug> brief.md final`; the agent must not research before that approval.
+A: An agent starts to collect sources only after the user approves the brief and the brief is final.
 
 Q: How does an agent add a source to the register of a research?
 A: Only the command $R source add writes an entry in sources.md, and it prints the new source ID.

@@ -8,7 +8,9 @@
 #              tests/triggers.txt, and not for each "-" task. A user-only
 #              skill, which no model can load, is skipped.
 #   knowledge  A headless cold reader answers tests/knowledge.txt from
-#              SKILL.md alone. decisionkit grades each answer with Q_KNOW.
+#              SKILL.md alone, SKILL_TEST_RUNS times. decisionkit grades
+#              each answer with Q_KNOW, and the majority of the runs
+#              decides each question.
 #   slop       decisionkit scores each "## " section of SKILL.md with Q_SLOP.
 #   calibrate  decisionkit scores the Q_KNOW pairs in
 #              tests/fixtures/knowledge. Only knowledge-curator has them.
@@ -190,9 +192,22 @@ know_value() {
 	jq -er '.answers.q.probability_true' <<<"$json"
 }
 
+# One cold reader run. $1 is the file with the prompt, $2 the file that gets
+# the JSON result of claude. An empty directory and these flags keep out
+# project rules, tools, skills and memory, as the cold-reader skill requires.
+read_once() {
+	local reader_dir
+	reader_dir=$(mktemp -d) || return 1
+	(cd "$reader_dir" && CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 claude -p \
+		--model "$MODEL" --tools "" --setting-sources "" --disable-slash-commands \
+		--strict-mcp-config --no-session-persistence --output-format json \
+		--json-schema "$ANSWER_SCHEMA" <"$1" >"$2" 2>/dev/null)
+	rm -rf "$reader_dir"
+}
+
 layer_knowledge() {
-	local file=$SKILL_DIR/tests/knowledge.txt line question="" n=0 i prompt reader_dir json answer value
-	local questions=() expected=()
+	local file=$SKILL_DIR/tests/knowledge.txt line question="" n=0 i r tmp answer value passes low verdict
+	local questions=() expected=() wrong=()
 	[[ -f "$file" ]] || {
 		>&2 echo "Missing $file."
 		return 2
@@ -232,7 +247,8 @@ layer_knowledge() {
 		>&2 echo "$file holds no question."
 		return 2
 	fi
-	prompt=$({
+	tmp=$(mktemp -d) || return 2
+	{
 		printf 'You are a cold reader. Below is the only document you can see.\n'
 		printf 'Answer each numbered question from the document alone, in one to\n'
 		printf 'three sentences. Keep every value, path and command as the document\n'
@@ -243,34 +259,50 @@ layer_knowledge() {
 		for ((i = 0; i < n; i++)); do
 			printf '%d. %s\n' "$((i + 1))" "${questions[i]}"
 		done
-	})
-	# An empty directory and these flags keep out project rules, tools,
-	# skills and memory, as the cold-reader skill requires.
-	reader_dir=$(mktemp -d) || return 2
-	json=$(cd "$reader_dir" && CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 claude -p \
-		--model "$MODEL" --tools "" --setting-sources "" --disable-slash-commands \
-		--strict-mcp-config --no-session-persistence --output-format json \
-		--json-schema "$ANSWER_SCHEMA" <<<"$prompt" 2>/dev/null)
-	rm -rf "$reader_dir"
-	if ! jq -e '.subtype == "success" and (.structured_output.answers | type) == "array"' <<<"$json" >/dev/null 2>&1; then
-		>&2 echo "The cold reader gave no answers. Check that claude works: claude -p hello"
-		return 2
-	fi
-	printf '%-5s %-6s %s\n' p result question
-	for ((i = 0; i < n; i++)); do
-		answer=$(jq -r --argjson n "$((i + 1))" '[.structured_output.answers[] | select(.n == $n) | .answer][0] // "not stated"' <<<"$json")
-		if ! value=$(printf 'A:\n%s\nB:\n%s\n' "${expected[i]}" "$answer" | know_value); then
-			>&2 echo "decisionkit failed. Run: decisionkit status"
+	} >"$tmp/prompt"
+	# The xargs children read MODEL from SKILL_TEST_MODEL again.
+	for ((r = 0; r < RUNS; r++)); do
+		printf '%s\0%s\0' "$tmp/prompt" "$tmp/$r.json"
+	done | xargs -0 -n 2 -P "$JOBS" "$SELF" _read
+	for ((r = 0; r < RUNS; r++)); do
+		if ! jq -e '.subtype == "success" and (.structured_output.answers | type) == "array"' "$tmp/$r.json" >/dev/null 2>&1; then
+			>&2 echo "The cold reader gave no answers. Check that claude works: claude -p hello"
+			rm -rf "$tmp"
 			return 2
 		fi
-		if less_than "$value" "$KNOW_MIN"; then
-			STATUS=1
-			printf '%-5s %-6s %s\n' "$value" WRONG "$(clip "${questions[i]}")"
-			printf '      expected: %s\n      answer:   %s\n' "${expected[i]}" "$answer"
+	done
+	printf '%-5s %-5s %-6s %s\n' pass p result question
+	for ((i = 0; i < n; i++)); do
+		passes=0 low="" wrong=()
+		for ((r = 0; r < RUNS; r++)); do
+			answer=$(jq -r --argjson n "$((i + 1))" '[.structured_output.answers[] | select(.n == $n) | .answer][0] // "not stated"' "$tmp/$r.json")
+			if ! value=$(printf 'A:\n%s\nB:\n%s\n' "${expected[i]}" "$answer" | know_value); then
+				>&2 echo "decisionkit failed. Run: decisionkit status"
+				rm -rf "$tmp"
+				return 2
+			fi
+			if [[ -z "$low" ]] || less_than "$value" "$low"; then low=$value; fi
+			if less_than "$value" "$KNOW_MIN"; then
+				wrong+=("[$value] $answer")
+			else
+				passes=$((passes + 1))
+			fi
+		done
+		# The majority of the runs decides, as in the triggers layer.
+		if ((passes * 2 > RUNS)); then
+			verdict=ok
 		else
-			printf '%-5s %-6s %s\n' "$value" ok "$(clip "${questions[i]}")"
+			verdict=WRONG
+			STATUS=1
+		fi
+		printf '%-5s %-5s %-6s %s\n' "$passes/$RUNS" "$low" "$verdict" "$(clip "${questions[i]}")"
+		# A wrong question shows each failing answer once, to guide the fix.
+		if [[ "$verdict" == WRONG ]]; then
+			printf '      expected: %s\n' "${expected[i]}"
+			printf '%s\n' "${wrong[@]}" | awk '!seen[$0]++ { print "      answer:   " $0 }'
 		fi
 	done
+	rm -rf "$tmp"
 	return "$STATUS"
 }
 
@@ -346,6 +378,11 @@ layer_calibrate() {
 if [[ "${1:-}" == _fire ]]; then
 	(($# == 3)) || exit 2
 	fire_once "$2" "$3"
+	exit 0
+fi
+if [[ "${1:-}" == _read ]]; then
+	(($# == 3)) || exit 2
+	read_once "$2" "$3"
 	exit 0
 fi
 
