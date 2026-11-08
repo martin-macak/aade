@@ -40,6 +40,19 @@ Example: - [x] V1 (R1, R2): `mise run check` passes
 
 - [ ] V1 (R1):
 
+## Leftovers
+
+<!--
+Work that this PR leaves for later, such as a deferred review finding or
+an issue item that moved out. After the merge, the leftovers workflow
+files each open item as an issue. Take the type and the scope from
+.github/labels.yml. Each indented line below an item becomes a Done-when
+item of the issue. Tick an item to drop it. Example:
+
+- [ ] chore(tooling): Pin the Vale package version
+  - .vale.ini names an exact release.
+-->
+
 ## Notes
 
-<!-- Settings for an admin, follow-ups, risks. Delete this section when it is empty. -->
+<!-- Settings for an admin, risks, and the reason for each review row. Delete this section when it is empty. -->

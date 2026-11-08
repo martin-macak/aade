@@ -1,0 +1,2 @@
+Notes of the pull request:
+Follow-up: #14 lists the remaining script quirks, test gaps and cleanups from the suites and from two reviews of this PR, plus three decisions for a maintainer.

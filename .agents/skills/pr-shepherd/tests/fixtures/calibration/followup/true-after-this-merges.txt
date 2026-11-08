@@ -1,0 +1,2 @@
+Notes of the pull request:
+Follow-up for PR #25: its fixed text reached SLOP_MAX in one run. After this merges, score it with each hint listed once, and point its R6 Notes to this rule.

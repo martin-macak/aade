@@ -6,6 +6,7 @@
 + A reviewer asked for changes on my PR, but I think the finding is wrong. What do I do?
 + Carry the Done when items of issue #11 over into the body of my open pull request.
 + The agents-check CI job is red on my PR #12. Watch the checks and fix what fails.
++ The Codex finding on my PR #12 is valid, but it needs its own PR. Turn it into a follow-up.
 - Open a GitHub issue for the flaky drift test in the decisionkit skill.
 - Which labels should the new issue about the Vale config get?
 - Add a new scope called api to the issue labels and the forms.

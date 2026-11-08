@@ -1,0 +1,20 @@
+# The labels that a leftover item may name. The tests point
+# SHEPHERD_LABELS at this file.
+- name: type:bug
+  color: "d73a4a"
+  description: Bug.
+- name: type:chore
+  color: "c5def5"
+  description: Chore.
+- name: type:enhancement
+  color: "a2eeef"
+  description: Enhancement.
+- name: scope:agents
+  color: "5319e7"
+  description: Agents.
+- name: scope:tooling
+  color: "5319e7"
+  description: Tooling.
+- name: origin:leftover
+  color: "fef2c0"
+  description: Leftover.

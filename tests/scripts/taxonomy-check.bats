@@ -91,15 +91,29 @@ add_label() {
 	run "$S"
 	[ "$status" -eq 1 ]
 	[ "$output" == "$(printf '%s\n' \
-		".github/labels.yml: bug: the name must be type:<x>, scope:<x>, pr:<x> or ci:<x> in lower case." \
-		".github/labels.yml: pr:Needs-Work: the name must be type:<x>, scope:<x>, pr:<x> or ci:<x> in lower case." \
-		".github/labels.yml: pr:needs_work: the name must be type:<x>, scope:<x>, pr:<x> or ci:<x> in lower case.")" ]
+		".github/labels.yml: bug: the name must be type:<x>, scope:<x>, pr:<x>, ci:<x> or origin:<x> in lower case." \
+		".github/labels.yml: pr:Needs-Work: the name must be type:<x>, scope:<x>, pr:<x>, ci:<x> or origin:<x> in lower case." \
+		".github/labels.yml: pr:needs_work: the name must be type:<x>, scope:<x>, pr:<x>, ci:<x> or origin:<x> in lower case.")" ]
+}
+
+@test "labels: reports a name with an unknown prefix, and lists origin:<x> among the valid ones" {
+	add_label '{name: "source:leftover", color: "fef2c0", description: "Unknown prefix"}'
+	run "$S"
+	[ "$status" -eq 1 ]
+	[ "$output" == ".github/labels.yml: source:leftover: the name must be type:<x>, scope:<x>, pr:<x>, ci:<x> or origin:<x> in lower case." ]
 }
 
 @test "labels: accepts a ci:<x> flag, which no form needs" {
 	add_label '{name: "ci:full", color: "0e8a16", description: "Run every suite"}'
 	run "$S"
 	[ "$status" -eq 0 ]
+}
+
+@test "labels: accepts an origin:<x> label, which a workflow sets" {
+	add_label '{name: "origin:leftover", color: "fef2c0", description: "Opened by a workflow"}'
+	run "$S"
+	[ "$status" -eq 0 ]
+	[ -z "$output" ]
 }
 
 @test "labels: reports a color that is not quoted" {
@@ -170,6 +184,14 @@ add_label() {
 	run "$S"
 	[ "$status" -eq 1 ]
 	[ "$output" == ".github/ISSUE_TEMPLATE/bug.yml: label pr:needs-review flags pull requests, so no form may set it." ]
+}
+
+@test "forms: reports a form that sets an origin:* label, because a workflow sets it" {
+	add_label '{name: "origin:leftover", color: "fef2c0", description: "Opened by a workflow"}'
+	form bug "type:bug, origin:leftover" "ci, docs"
+	run "$S"
+	[ "$status" -eq 1 ]
+	[ "$output" == ".github/ISSUE_TEMPLATE/bug.yml: label origin:leftover is set by a workflow, so no form may set it." ]
 }
 
 @test "forms: reports a form with no type label, and the type that then has no form" {

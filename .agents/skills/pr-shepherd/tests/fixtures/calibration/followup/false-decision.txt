@@ -1,0 +1,2 @@
+Notes of the pull request:
+Issue #38 asked to decide on stale `command -> result` evidence. Decision with the user: carry on any push with matching hashes, also a Copilot push that changes code. SKILL.md tells the shepherd to re-run such a command and `verify` when a push changes what it proves.

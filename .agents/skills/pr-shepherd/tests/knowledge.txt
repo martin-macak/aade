@@ -31,3 +31,15 @@ A: The `checks <pr> --watch` command waits for every other check of the PR and l
 
 Q: What does the shepherd do when another check of the PR, such as a CI job, fails?
 A: It reads the failed log of the check, fixes the cause, pushes and starts a new pass. It never re-runs a failed check to hide a real failure.
+
+Q: What is the format of a leftover item in the `## Leftovers` section?
+A: An open top-level item `- [ ] <type>(<scope>): <title>`. The type and the scope come from `.github/labels.yml`, without the `type:` and `scope:` prefixes.
+
+Q: What happens to each open item of `## Leftovers` after the merge?
+A: The `leftovers` workflow files each open item as an issue.
+
+Q: May the shepherd defer a human review finding on its own?
+A: No. It asks the user first, and it defers the human finding with `--confirmed-by-user` after the user agrees.
+
+Q: Under which file path does the shepherd quote a follow-up that hid in a merged PR and that `$P discover` missed?
+A: The path is `tests/fixtures/calibration/followup/true-<name>.txt`.

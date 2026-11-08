@@ -14,6 +14,9 @@
 # ci:<x>     Pull request flags of the ci workflow. ci:full makes ci run
 #            every suite. Adding the label starts the ci-full workflow,
 #            which reruns ci.
+# origin:<x> It marks an issue that a workflow opened. The leftovers
+#            workflow sets origin:leftover. No issue form sets an origin
+#            label.
 #
 # Each entry: name, color and description. The color is 6 hex digits
 # without #, in quotes, because YAML reads 5319e7 as a number. GitHub
@@ -59,3 +62,7 @@
 - name: ci:full
   color: "0e8a16"
   description: Run every bats suite of the ci workflow on this PR. Adding it reruns the workflow.
+
+- name: origin:leftover
+  color: "fef2c0"
+  description: The leftovers workflow opened this issue from an open item of a merged pull request.

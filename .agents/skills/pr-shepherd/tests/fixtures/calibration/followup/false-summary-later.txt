@@ -1,0 +1,2 @@
+Summary of the pull request:
+The check covers sub-slugs, rejects deeper folders and wants a link from a parent report in review or later to each child report.

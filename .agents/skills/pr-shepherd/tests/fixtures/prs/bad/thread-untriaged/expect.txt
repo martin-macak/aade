@@ -1,1 +1,1 @@
-Thread PRRT_bot (codex[bot]): not triaged. Run: shepherd.sh reply 42 PRRT_bot accepted|rejected --reason <text>
+Thread PRRT_bot (codex[bot]): not triaged. Run: shepherd.sh reply 42 PRRT_bot accepted|rejected|deferred --reason <text>

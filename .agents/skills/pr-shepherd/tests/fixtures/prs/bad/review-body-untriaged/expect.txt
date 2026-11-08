@@ -1,1 +1,1 @@
-Review 501 (codex[bot]): the review body is not triaged. Run: shepherd.sh reply 42 501 accepted|rejected --reason <text>
+Review 501 (codex[bot]): the review body is not triaged. Run: shepherd.sh reply 42 501 accepted|rejected|deferred --reason <text>

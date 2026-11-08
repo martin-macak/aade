@@ -90,7 +90,7 @@ example() {
 	# pr-shepherd defines the Requirements format, so this skill only points there.
 	grep -qx '## Requirements' "$PR_TEMPLATE"
 	[ -f "$ROOT/.agents/skills/pr-shepherd/SKILL.md" ]
-	[[ "$TEXT" == *'The `pr-shepherd` skill defines the format of the Requirements and Verify sections'* ]] || false
+	[[ "$TEXT" == *'The `pr-shepherd` skill defines the format of the Requirements, Verify and Leftovers sections'* ]] || false
 	! grep -qE '^- \[.\] R[0-9]' "$SKILL" || false
 }
 
@@ -126,4 +126,29 @@ example() {
 		echo "The example hard-wraps a body paragraph at: $wrapped"
 		return 1
 	}
+}
+
+@test "the leftovers workflow sets the origin label that the skill names" {
+	SHEPHERD="$ROOT/.agents/skills/pr-shepherd/scripts/shepherd.sh"
+	grep -qxF 'LEFTOVER_LABEL=origin:leftover' "$SHEPHERD"
+	yq -e '.[] | select(.name == "origin:leftover")' "$LABELS" >/dev/null
+	[[ "$TEXT" == *'`origin:leftover`'* && "$TEXT" == *'`leftovers` workflow'* ]] || false
+	grep -qF 'pr:shepherd leftovers' "$ROOT/.github/workflows/leftovers.yml"
+	# No form sets an origin label. taxonomy-check fails when one does.
+	! grep -rqF 'origin:' "$FORMS" || false
+}
+
+@test "the leftover issue body has the headings that the skill names" {
+	SHEPHERD="$ROOT/.agents/skills/pr-shepherd/scripts/shepherd.sh"
+	for heading in Scope 'What and why' 'Done when'; do
+		grep -qF "### $heading" "$SHEPHERD"
+		[[ "$TEXT" == *"\`### $heading\`"* ]] || false
+	done
+	grep -qx '## Leftovers' "$PR_TEMPLATE"
+	[[ "$TEXT" == *'`## Leftovers`'* ]] || false
+}
+
+@test "the markers-check hook that the skill names exists" {
+	yq -e '.repos[].hooks[] | select(.id == "markers-check")' "$ROOT/.pre-commit-config.yaml" >/dev/null
+	[[ "$TEXT" == *'`markers-check` hook'* ]] || false
 }

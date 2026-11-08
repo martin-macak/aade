@@ -1,0 +1,2 @@
+Reason for a rejected review finding:
+Valid, but the retry logic belongs in its own PR. A later change should add a backoff to the sync script.

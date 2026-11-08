@@ -22,3 +22,6 @@ A: Each paragraph, list item and reference to an issue or PR goes on one line, b
 
 Q: Which skill must an agent load before it writes a `type:research` issue?
 A: The agent loads the `tech-research` skill.
+
+Q: What do you do with a leftover issue before you start work on it?
+A: Read the PR that left it, check its type and scope, add the other required fields of the form of its type and sharpen the Done-when items, and keep the `origin:leftover` label and the marker line.

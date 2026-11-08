@@ -1,0 +1,2 @@
+Notes of the pull request:
+Follow-ups: tests/AGENTS.md still names only the `|| false` form of the silent-check rule. research.sh and test-skill.sh call bare `mktemp`, which ignores TMPDIR on macOS, so their suites can write outside the sandbox.

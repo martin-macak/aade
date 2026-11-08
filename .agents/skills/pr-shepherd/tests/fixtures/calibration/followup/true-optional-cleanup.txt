@@ -1,0 +1,2 @@
+Settings for an admin of the pull request:
+[ ] Optional: delete the Actions copy of the decisionkit key. CI runs no LLM.

@@ -1,0 +1,2 @@
+Notes of the pull request:
+The weekly and manual runs (R7) and the push to main (R8) can run only after the merge. I will run the workflow by hand on main and link the run here.

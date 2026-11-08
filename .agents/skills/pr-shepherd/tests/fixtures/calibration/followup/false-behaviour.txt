@@ -1,0 +1,2 @@
+Notes of the pull request:
+Two quick pushes can cancel `carry` through `cancel-in-progress`. The next head then has no trace, and the check fails closed until `verify` runs.

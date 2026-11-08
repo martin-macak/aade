@@ -1,11 +1,13 @@
 # Paths outside this skill that drift.bats reads. skill-drift runs the
 # file when one of them changes. A path that ends with "/" covers a folder.
 .agents/skills/pr-shepherd/SKILL.md
+.agents/skills/pr-shepherd/scripts/shepherd.sh
 .claude/skills
 .github/ISSUE_TEMPLATE/
 .github/labels.yml
 .github/pull_request_template.md
 .github/workflows/
+.pre-commit-config.yaml
 mise.toml
 scripts/issue-new.sh
 scripts/issue-scope-label.sh
