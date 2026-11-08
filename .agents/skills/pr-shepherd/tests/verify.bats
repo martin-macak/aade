@@ -677,6 +677,27 @@ JQ
 	[ "$(grep -n 'issues/42/comments' "$GH_LOG" | cut -d: -f1)" -lt "$(grep -n 'pr merge' "$GH_LOG" | cut -d: -f1)" ]
 }
 
+# A confirmed merge on a PR with a justified review row, in the state $1.
+# It must stop with the state named and write nothing to GitHub.
+merge_refuses_state() {
+	echo ".state = \"$1\"" >"$CASE/pr.json.jq"
+	echo '.[0].description = "req=@REQ@ issue=@ISSUE@ review=2"' >"$CASE/statuses.json.jq"
+	printf '%s\n' "$(cat "$BASE/body.txt")" '' '## Notes' '' '- R2: the test folder holds the case.' >"$CASE/body.txt"
+	run "$S" merge 42 --confirmed-by-user
+	[ "$status" -eq 1 ]
+	[ "$output" = "PR #42 is $2. There is nothing to merge." ]
+	run ! grep -q 'issues/42/comments' "$GH_LOG" 2>/dev/null
+	run ! grep -q 'pr merge' "$GH_LOG" 2>/dev/null
+}
+
+@test "merge refuses a merged PR and writes no comment" {
+	merge_refuses_state MERGED merged
+}
+
+@test "merge refuses a closed PR and writes no comment" {
+	merge_refuses_state CLOSED closed
+}
+
 @test "merge writes no confirmation comment for a trace without review rows" {
 	run "$S" merge 42 --confirmed-by-user
 	[ "$status" -eq 0 ]
