@@ -278,7 +278,7 @@ other files cite it as a footnote.
 | url | https://inversify.io/docs/api/container/ |
 | published | unknown |
 | accessed | 2026-11-08 |
-| evidence | InversifyJS supports container hierarchies through a parent option and offers activation and deactivation handlers. |
+| evidence | InversifyJS supports container hierarchies through a parent option and offers activation and deactivation handlers. The page does not mention a dispose method. |
 
 ### S23
 
@@ -915,3 +915,159 @@ other files cite it as a footnote.
 | published | 2026-11-08 |
 | accessed | 2026-11-08 |
 | evidence | The packaged smoke test reported every check as passed on windows-latest, ubuntu-latest and macos-latest. GitHub keeps run logs for a limited time. |
+
+### S76
+
+| Field | Value |
+| --- | --- |
+| kind | primary |
+| author | Tauri project |
+| title | crates.io entry for tauri-runtime-cef |
+| url | https://crates.io/api/v1/crates/tauri-runtime-cef |
+| published | 2026-11-08 |
+| accessed | 2026-11-08 |
+| evidence | The newest version of tauri-runtime-cef is 3.0.0-alpha.7, and the crate has no stable version. |
+
+### S77
+
+| Field | Value |
+| --- | --- |
+| kind | primary |
+| author | dockview project |
+| title | GitHub contributor list of dockview/dockview |
+| url | https://api.github.com/repos/dockview/dockview/contributors |
+| published | 2026-11-08 |
+| accessed | 2026-11-08 |
+| evidence | One account has 3,508 contributions. The next accounts other than bots have 104 and 26. |
+
+### S78
+
+| Field | Value |
+| --- | --- |
+| kind | primary |
+| author | dockview project |
+| title | dockview-core README on GitHub |
+| url | https://github.com/dockview/dockview/blob/master/packages/dockview-core/README.md |
+| published | unknown |
+| accessed | 2026-11-08 |
+| evidence | The README calls dockview-core an internal package and not a supported install target. |
+
+### S79
+
+| Field | Value |
+| --- | --- |
+| kind | primary |
+| author | Electron project |
+| title | GitHub release v45.2.3 |
+| url | https://api.github.com/repos/electron/electron/releases/tags/v45.2.3 |
+| published | 2026-11-04 |
+| accessed | 2026-11-08 |
+| evidence | GitHub lists release v45.2.3 with the publish date 2026-11-04. |
+
+### S80
+
+| Field | Value |
+| --- | --- |
+| kind | secondary |
+| author | endoflife.date |
+| title | Electron release and support dates |
+| url | https://endoflife.date/api/electron.json |
+| published | 2026-11-08 |
+| accessed | 2026-11-08 |
+| evidence | The list shows the latest three Electron major versions as still supported. |
+
+### S81
+
+| Field | Value |
+| --- | --- |
+| kind | primary |
+| author | React team |
+| title | GitHub release v19.3.1 |
+| url | https://api.github.com/repos/facebook/react/releases/tags/v19.3.1 |
+| published | 2026-10-14 |
+| accessed | 2026-11-08 |
+| evidence | GitHub lists release v19.3.1 with the publish date 2026-10-14. |
+
+### S82
+
+| Field | Value |
+| --- | --- |
+| kind | primary |
+| author | React team |
+| title | GitHub licence of facebook/react |
+| url | https://api.github.com/repos/facebook/react/license |
+| published | 2026-11-08 |
+| accessed | 2026-11-08 |
+| evidence | GitHub reports the licence of the React repository as MIT. |
+
+### S83
+
+| Field | Value |
+| --- | --- |
+| kind | primary |
+| author | MUI |
+| title | GitHub release v1.9.0 of Base UI |
+| url | https://api.github.com/repos/mui/base-ui/releases/tags/v1.9.0 |
+| published | 2026-10-09 |
+| accessed | 2026-11-08 |
+| evidence | GitHub lists Base UI release v1.9.0 with the publish date 2026-10-09. |
+
+### S84
+
+| Field | Value |
+| --- | --- |
+| kind | primary |
+| author | MUI |
+| title | GitHub licence of mui/base-ui |
+| url | https://api.github.com/repos/mui/base-ui/license |
+| published | 2026-11-08 |
+| accessed | 2026-11-08 |
+| evidence | GitHub reports the licence of the Base UI repository as MIT. |
+
+### S85
+
+| Field | Value |
+| --- | --- |
+| kind | primary |
+| author | WorkOS |
+| title | GitHub licence of radix-ui/primitives |
+| url | https://api.github.com/repos/radix-ui/primitives/license |
+| published | 2026-11-08 |
+| accessed | 2026-11-08 |
+| evidence | GitHub reports the licence of the Radix Primitives repository as MIT. |
+
+### S86
+
+| Field | Value |
+| --- | --- |
+| kind | primary |
+| author | dockview project |
+| title | dockview floating groups documentation |
+| url | https://dockview.dev/docs/core/groups/floatingGroups |
+| published | unknown |
+| accessed | 2026-11-08 |
+| evidence | The dockview documentation has a section on floating groups. |
+
+### S87
+
+| Field | Value |
+| --- | --- |
+| kind | primary |
+| author | dockview project |
+| title | dockview popout windows documentation |
+| url | https://dockview.dev/docs/core/groups/popoutGroups |
+| published | unknown |
+| accessed | 2026-11-08 |
+| evidence | The dockview documentation has a section on popout windows. |
+
+### S88
+
+| Field | Value |
+| --- | --- |
+| kind | primary |
+| author | Project Jupyter |
+| title | Lumino DockLayout source |
+| url | https://raw.githubusercontent.com/jupyterlab/lumino/main/packages/widgets/src/docklayout.ts |
+| published | unknown |
+| accessed | 2026-11-08 |
+| evidence | The Lumino DockLayout source has no code for floating or pop-out panels. |

@@ -39,18 +39,16 @@ The diagram shows the recommended stack as three layers. Plugins and views sit o
 
 ## Key findings
 
-- Electron is the only stable runtime in the comparison with one rendering engine and a Node.js process model[^S1][^S2]. Tauri 2 renders with a different webview on each platform[^S4][^S32].
-- A Chromium runtime for Tauri exists only on the 3.0.0 alpha line[^S33], and the stable line uses system webviews[^S32].
+- Electron is the only stable runtime in the comparison with one rendering engine and a Node.js process model[^S1][^S2][^S75]. Tauri 2 renders with a different webview on each platform[^S4][^S32].
+- A Chromium runtime for Tauri exists only as an alpha, and its crate has no stable version[^S33][^S76].
 - Eclipse Theia fails the permissive licence rule, because its licence is EPL-2.0 or GPL-2.0 with the Classpath exception[^S10][^S44].
-- dockview offers floating groups and pop-out windows[^S21] and had a release in October 2026[^S36]. Lumino DockPanel has neither feature[^S17].
-- dockview depends mainly on one person, who made 261 of 300 sampled commits[^S47]. Its `dockview-core` package calls itself internal[^S71].
+- dockview offers floating groups and pop-out windows[^S21][^S86][^S87]. Lumino has neither feature[^S17][^S88].
+- One person made most of the commits to dockview, with 261 of 300 sampled commits and 3,508 contributions overall[^S47][^S77]. Its `dockview-core` package calls itself internal[^S71][^S78].
 - Lumino gives plugins and commands natively[^S15][^S16], but the [Lumino demo](experiment-lumino-demo.md) needed our own mechanism for 7 of 9 capabilities.
-- InversifyJS has no dispose method[^S23] and needs decorators[^S70]. tsyringe had its last release in April 2025[^S43]. A small own container fits the rules of the brief best, as the [DI comparison](comparison-di.md) shows.
-- React 19.3.1, Radix and Base UI are current and MIT licensed[^S35][^S39][^S40], and React backports security fixes[^S24].
-- Electron supports the latest three stable majors and releases a new major every 8 weeks[^S1]. Version 45.2.3 was published on 2026-11-04[^S34].
+- InversifyJS has no dispose method[^S23][^S22]. tsyringe had its last release in April 2025, and its commit sample has one commit[^S43][^S65]. A small own container fits the rules of the brief best, as the [DI comparison](comparison-di.md) shows.
+- React 19.3.1 and Base UI 1.9.0 are current and MIT licensed[^S35][^S81][^S82][^S40][^S83][^S84]. Radix 1.8.1 is MIT licensed[^S39][^S85].
+- Electron supports the latest three stable majors[^S1][^S80], and version 45.2.3 was published on 2026-11-04[^S34][^S79].
 - A packaged Electron build started on Windows, Linux and macOS with a sandboxed renderer[^S75][^S3], as the [Electron host experiment](experiment-electron-host.md) shows.
-- The utility process has Node.js[^S2], and the experiment measured the plugin host as not sandboxed by the operating system[^S75].
-- Electron uses the MIT licence[^S34], and its Chromium licence file lists LGPL components, including FFmpeg[^S73].
 
 ## Analysis
 
@@ -123,8 +121,8 @@ The next step is a design issue that reduces the scope of the kernel for the fir
 [^S16]: [S16](sources.md#s16) Project Jupyter, Lumino plugin registry source.
 [^S17]: [S17](sources.md#s17) Project Jupyter, Lumino DockPanel source.
 [^S21]: [S21](sources.md#s21) dockview project, dockview README.
+[^S22]: [S22](sources.md#s22) InversifyJS project, Container API.
 [^S23]: [S23](sources.md#s23) InversifyJS project, Container class source.
-[^S24]: [S24](sources.md#s24) React team, Versioning Policy.
 [^S32]: [S32](sources.md#s32) Tauri project, Tauri README.
 [^S33]: [S33](sources.md#s33) Tauri project, tauri-runtime-cef on Tauri 3 alpha, issue 16481.
 [^S34]: [S34](sources.md#s34) Electron project, npm registry entry for electron.
@@ -135,7 +133,20 @@ The next step is a design issue that reduces the scope of the kernel for the fir
 [^S43]: [S43](sources.md#s43) Microsoft, npm registry entry for tsyringe.
 [^S44]: [S44](sources.md#s44) Eclipse Theia project, npm registry entry for @theia/core.
 [^S47]: [S47](sources.md#s47) dockview project, GitHub commit list of dockview/dockview.
-[^S70]: [S70](sources.md#s70) InversifyJS project, Getting started.
+[^S65]: [S65](sources.md#s65) Microsoft, GitHub commit list of microsoft/tsyringe.
 [^S71]: [S71](sources.md#s71) dockview project, dockview-core package page.
 [^S73]: [S73](sources.md#s73) Electron project, LICENSES.chromium.html in the Electron 45.2.3 release.
 [^S75]: [S75](sources.md#s75) aade maintainers, GitHub Actions run of the Electron host smoke test.
+[^S76]: [S76](sources.md#s76) Tauri project, crates.io entry for tauri-runtime-cef.
+[^S77]: [S77](sources.md#s77) dockview project, GitHub contributor list of dockview/dockview.
+[^S78]: [S78](sources.md#s78) dockview project, dockview-core README on GitHub.
+[^S79]: [S79](sources.md#s79) Electron project, GitHub release v45.2.3.
+[^S80]: [S80](sources.md#s80) endoflife.date, Electron release and support dates.
+[^S81]: [S81](sources.md#s81) React team, GitHub release v19.3.1.
+[^S82]: [S82](sources.md#s82) React team, GitHub licence of facebook/react.
+[^S83]: [S83](sources.md#s83) MUI, GitHub release v1.9.0 of Base UI.
+[^S84]: [S84](sources.md#s84) MUI, GitHub licence of mui/base-ui.
+[^S85]: [S85](sources.md#s85) WorkOS, GitHub licence of radix-ui/primitives.
+[^S86]: [S86](sources.md#s86) dockview project, dockview floating groups documentation.
+[^S87]: [S87](sources.md#s87) dockview project, dockview popout windows documentation.
+[^S88]: [S88](sources.md#s88) Project Jupyter, Lumino DockLayout source.
