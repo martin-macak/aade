@@ -1,0 +1,14 @@
+html, body { margin: 0; height: 100%; font: 13px system-ui, sans-serif; }
+#toolbar { position: absolute; top: 0; left: 0; right: 0; height: 32px; display: flex; gap: 4px; padding: 4px; box-sizing: border-box; background: #eee; z-index: 10; }
+#app { position: absolute; top: 32px; left: 0; right: 0; bottom: 0; }
+#shell { position: absolute; inset: 0; }
+.lm-CommandPalette { background: #fafafa; }
+section.tasks { height: 100%; overflow: auto; padding: 8px; box-sizing: border-box; background: white; }
+section.tasks header { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.checkbox { width: 16px; height: 16px; border: 1px solid #555; background: white; padding: 0; line-height: 1; }
+.pinned { display: inline-flex; gap: 4px; align-items: center; }
+.popover { background: white; border: 1px solid #888; padding: 8px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.3); z-index: 1000; }
+li.selected { background: #cde; }
+li.done { text-decoration: line-through; }
+li { cursor: pointer; padding: 2px 4px; list-style: none; }
+ol.audit { margin: 0; padding: 8px; font: 12px ui-monospace, monospace; }
