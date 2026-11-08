@@ -41,7 +41,7 @@
         "{workspaceRoot}/apps/**/*",
         "{workspaceRoot}/modules/**/*",
         "{workspaceRoot}/libs/**/*",
-        "{workspaceRoot}/tools/arch/**/*",
+        "{workspaceRoot}/tools/**/*",
         "{workspaceRoot}/tsconfig*.json",
         "{workspaceRoot}/nx.json",
         "{workspaceRoot}/pnpm-workspace.yaml",
