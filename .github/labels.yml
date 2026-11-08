@@ -4,7 +4,8 @@
 # Run `mise run labels:sync --dry-run` to see the plan.
 #
 # type:<x>   One per issue. Each issue form sets it. It maps to the
-#            Conventional Commits type of the change (enhancement -> feat).
+#            Conventional Commits type of the change (enhancement -> feat,
+#            research -> docs).
 # scope:<x>  One per issue. The Scope dropdown of each form lists these
 #            values, and the issue-scope workflow sets the label.
 #            `mise run taxonomy:check` fails when the forms and this list
@@ -31,6 +32,9 @@
 - name: type:ci
   color: "fbca04"
   description: GitHub Actions workflows and CI checks. Commit type ci.
+- name: type:research
+  color: "d4c5f9"
+  description: A technical research in docs/research/, in the tech-research format. Commit type docs.
 
 - name: scope:agents
   color: "5319e7"

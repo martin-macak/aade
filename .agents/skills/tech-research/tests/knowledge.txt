@@ -40,3 +40,6 @@ A: It fails when the parent research <slug> does not exist, and it leaves the pa
 
 Q: What must the report of a parent research contain, and from when does the check enforce it?
 A: The parent report must link each child by its report, as <sub-slug>/report.md, and the check fails on a missing link from the time the parent report is in review.
+
+Q: How does an agent start the research of a `type:research` issue, and where do the depth and the artifacts of the brief come from?
+A: The agent runs `$R init <slug> --issue <n> --author <a>`. The depth comes from the Depth field of the issue and the artifacts from the checked types of its Artifacts field, so the command takes no `--depth` or `--artifact`.

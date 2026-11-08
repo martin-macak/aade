@@ -9,7 +9,7 @@ belongs to a user account.
 | File | Role |
 | --- | --- |
 | `.github/labels.yml` | The only list of labels: `type:<x>` and `scope:<x>` for issues, `pr:<x>` and `ci:<x>` flags for pull requests. |
-| `.github/ISSUE_TEMPLATE/<type>.yml` | One issue form per type. It sets the type label and asks for the fields of that type. |
+| `.github/ISSUE_TEMPLATE/<type>.yml` | One issue form per type. It sets the type label and asks for the fields of that type. The `research` form asks for the fields of a research brief, which the [tech-research](../.agents/skills/tech-research/SKILL.md) skill reads. |
 | `.github/ISSUE_TEMPLATE/config.yml` | Turns blank issues off. The web UI offers only the forms. |
 | `.github/pull_request_template.md` | The body of every pull request, with the Requirements and Verify sections that the `pr-shepherd` check reads. |
 | `.github/dependabot.yml` | Sets taxonomy labels on the Dependabot pull requests. |

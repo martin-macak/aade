@@ -45,7 +45,7 @@ example() {
 }
 
 @test "the type mapping in the skill matches labels.yml" {
-	for pair in enhancement:feat bug:fix; do
+	for pair in enhancement:feat bug:fix research:docs; do
 		desc=$(yq ".[] | select(.name == \"type:${pair%%:*}\") | .description" "$LABELS")
 		[[ "$desc" == *"Commit type ${pair#*:}."* ]] || false
 		[[ "$TEXT" == *"\`type:${pair%%:*}\` becomes \`${pair#*:}\`"* ]] || false

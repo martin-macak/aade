@@ -3,3 +3,4 @@
 .claude/skills
 .pre-commit-config.yaml
 mise.toml
+.github/ISSUE_TEMPLATE/research.yml

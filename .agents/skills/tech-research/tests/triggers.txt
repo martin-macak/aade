@@ -15,7 +15,7 @@
 + Split the cache-layer research into a sub-research on Redis cluster mode.
 + Reopen the approved hook-runner-choice research brief, because we now need Windows support.
 + Where did we leave the queue-choice research? Show its progress.
-- Open a GitHub issue to research a message queue for the order events later.
++ Start the research that issue #50 asks for, and write its brief from the issue.
 - Move the long examples of the decisionkit SKILL.md into a references file.
 - Show me the current Prisma docs for the migrate deploy command and apply it in our CI.
 - Find the current GitHub Actions documentation for the permissions key of a workflow.

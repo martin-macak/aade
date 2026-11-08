@@ -1192,3 +1192,187 @@ set_status() {
 	[ "$status" -eq 0 ]
 	[ -d "$RESEARCH_ROOT/cache-layer/redis-cluster" ]
 }
+
+# ------------------------------------------------------------- init --issue
+
+# Make the fake gh serve issue 50 of the Research form: the title, the
+# labels of $1 (default type:research) and the body on stdin, with the CRLF
+# line ends that the web form writes. Call it with < <(...), not in a
+# pipe, so the fake stays on PATH.
+issue_reply() {
+	fake_gh
+	jq -Rs --arg labels "${1:-type:research}" '{title: "Queue choice", url: "https://github.com/o/r/issues/50",
+		labels: ($labels | split(",") | map({name: .})), body: gsub("\n"; "\r\n")}' | gh_reply "issue view"
+}
+
+# The body of a Research issue. $1 is the depth, $2 the slug.
+issue_body() {
+	cat <<-EOF2
+	### Scope
+
+	agents
+
+	### Question
+
+	Which queue should carry the order events?
+
+	### Background
+
+	The order service polls a table today.
+
+	It loses events on a restart.
+
+	### In scope
+
+	- SQS
+	- Kafka
+
+	### Out of scope
+
+	_No response_
+
+	### Constraints
+
+	_No response_
+
+	### Done when
+
+	- [ ] Each queue has a cost estimate.
+
+	### Depth
+
+	${1:-deep}
+
+	### Artifacts
+
+	- [x] comparison
+	- [ ] recommendation
+	- [ ] tech-profile
+	- [x] experiment
+
+	### Source policy
+
+	_No response_
+
+	### Slug
+
+	${2:-_No response_}
+	EOF2
+}
+
+@test "init --issue writes the title, depth, artifacts and brief sections from the issue" {
+	issue_reply < <(issue_body deep q)
+	run "$R" init q --issue 50 --author "Ann Lee"
+	[ "$status" -eq 0 ]
+	[[ "$(calls)" == "gh issue view 50 --json title,body,labels,url" ]] || false
+	b="$RESEARCH_ROOT/q/brief.md"
+	[ "$(yq --front-matter=extract '.title' "$b")" = "Queue choice" ]
+	[ "$(yq --front-matter=extract '.depth' "$b")" = deep ]
+	[ "$(yq --front-matter=extract '.artifacts | join(",")' "$b")" = comparison,experiment ]
+	grep -qx '# Queue choice' "$RESEARCH_ROOT/q/report.md"
+	expected=$(cat <<-EOF2
+	## Question
+
+	Which queue should carry the order events?
+
+	## Background
+
+	The order service polls a table today.
+
+	It loses events on a restart.
+
+	Requested in issue [#50](https://github.com/o/r/issues/50).
+
+	## Scope
+
+	### In scope
+
+	- SQS
+	- Kafka
+	EOF2
+	)
+	[[ "$(cat "$b")" == *"$expected"* ]] || false
+	grep -qx -- '- \[ \] Each queue has a cost estimate.' "$b"
+	[[ "$(cat "$b")" != *$'\r'* ]] || false
+	run "$R" check q
+	[ "$status" -eq 0 ]
+}
+
+@test "init --issue keeps the fill comment of a field without a response" {
+	issue_reply < <(issue_body)
+	"$R" init q --issue 50 --author A >/dev/null
+	b="$RESEARCH_ROOT/q/brief.md"
+	for heading in "### Out of scope" "## Constraints" "## Source policy"; do
+		[ "$(grep -A2 -x -- "$heading" "$b" | tail -1 | cut -c1-10)" = '<!-- fill:' ]
+	done
+	[ "$(grep -c '_No response_' "$b")" -eq 0 ]
+}
+
+@test "init --issue keeps a ### heading that the user writes inside a field" {
+	issue_reply < <(issue_body | awk '/^### Constraints$/ { print; getline; print; print "Stay within the budget."; print ""; print "### Data residency"; print ""; print "EU regions only."; getline; next } 1')
+	"$R" init q --issue 50 --author A >/dev/null
+	expected=$(printf '%s\n' "## Constraints" "" "Stay within the budget." "" "### Data residency" "" "EU regions only.")
+	[[ "$(cat "$RESEARCH_ROOT/q/brief.md")" == *"$expected"* ]] || false
+	grep -qx -- '- \[ \] Each queue has a cost estimate.' "$RESEARCH_ROOT/q/brief.md"
+}
+
+@test "init --issue takes a --title in place of the issue title" {
+	issue_reply < <(issue_body)
+	"$R" init q --issue 50 --title "Order queue" --author A >/dev/null
+	[ "$(yq --front-matter=extract '.title' "$RESEARCH_ROOT/q/brief.md")" = "Order queue" ]
+}
+
+@test "init --issue refuses an issue without the type:research label, and creates nothing" {
+	issue_reply "type:chore,scope:agents" < <(issue_body)
+	run "$R" init q --issue 50 --author A
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"Issue #50 has no type:research label."* ]] || false
+	[ ! -e "$RESEARCH_ROOT/q" ]
+}
+
+@test "init --issue refuses a bad depth, an unknown artifact and another slug" {
+	issue_reply < <(issue_body shallow)
+	run "$R" init q --issue 50 --author A
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"Issue #50: the Depth section must be one of: quick standard deep."* ]] || false
+	issue_reply < <(issue_body | sed 's/\[x\] experiment/[x] essay/')
+	run "$R" init q --issue 50 --author A
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"Issue #50: the artifact essay is not one of:"* ]] || false
+	issue_reply < <(issue_body deep other-slug)
+	run "$R" init q --issue 50 --author A
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"Issue #50 names the slug other-slug, not q."* ]] || false
+	[ ! -e "$RESEARCH_ROOT/q" ]
+}
+
+@test "init --issue exits 1 when gh cannot read the issue" {
+	fake_gh
+	gh_reply "issue view" 1 </dev/null
+	run "$R" init q --issue 50 --author A
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"gh could not read issue #50."* ]] || false
+	[ ! -e "$RESEARCH_ROOT/q" ]
+}
+
+@test "init --issue refuses --depth, --artifact and an issue that is not a number, before it calls gh" {
+	guard_fakes
+	run "$R" init q --issue 50 --author A --depth quick
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"--depth comes from the issue"* ]] || false
+	run "$R" init q --artifact comparison --issue 50 --author A
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"--artifact comes from the issue"* ]] || false
+	run "$R" init q --issue 5x --author A
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"--issue must be an issue number."* ]] || false
+	usage_error init q --author A --issue
+	[ -z "$(calls)" ]
+}
+
+@test "init on an existing research points to its progress" {
+	new_research
+	run "$R" init q --title T --author A
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"To continue that research, run research.sh progress q first."* ]] || false
+}

@@ -51,7 +51,8 @@ The diagram shows the one loop of the flow: the brief returns to draft until
 the user approves it. Sources and artifacts come only after that approval.
 
 1. **Init.** Pick a kebab-case slug without a date, such as
-   `vector-db-choice`. Run `$R init <slug> --title <t> --author <a>`. It
+   `vector-db-choice`. Run `$R init <slug> --title <t> --author <a>`, or
+   start from an issue (see [Start from an issue](#start-from-an-issue)). It
    creates `brief.md`, `report.md` and `sources.md`. Add
    `--depth quick|standard|deep` (default `standard`), and one
    `--artifact <type>` for each optional type that the question needs.
@@ -74,6 +75,39 @@ the user approves it. Sources and artifacts come only after that approval.
 7. **Finish.** Run `$R status <slug> <file> review` for each file. After
    the user accepts the file, run `$R status <slug> <file> final`. Run the
    `cold-reader` gate on your prose before you commit.
+
+## Start from an issue
+
+A user can request a research with a `type:research` issue or in chat.
+The Research form in `.github/ISSUE_TEMPLATE/research.yml` contains the
+fields of the brief, so the request and the brief stay the same.
+
+Run `$R init <slug> --issue <n> --author <a>` in place of step 1. It reads
+the issue with `gh` and refuses an issue without the `type:research`
+label. It takes the title of the issue, unless you give `--title`. The
+Depth field sets `depth`, and each checked type in the Artifacts field
+goes into `artifacts`, so `init --issue` takes no `--depth` or
+`--artifact`. The other fields fill these sections of the brief:
+
+| Issue field | Brief section |
+| --- | --- |
+| Question | Question |
+| Background | Background, with a link to the issue |
+| In scope, Out of scope | Scope |
+| Constraints | Constraints |
+| Done when | Success criteria |
+| Source policy | Source policy |
+
+A field without a response keeps its `<!-- fill: -->` comment. Fill it
+in step 2, like the first sentence under the title. Then get the
+approval of the user as in step 3, also when the issue came from the user.
+
+When the Slug field has a value, use it as `<slug>`, because `init`
+refuses any other slug. When it is empty, pick a slug as in step 1. When
+the slug is a research that exists, `init` refuses it: follow
+[Continue a research](#continue-a-research). Open a
+research issue with the `issue-authoring` skill. The PR of the research
+closes the issue, and its commit type is `docs`.
 
 ## Continue a research
 
