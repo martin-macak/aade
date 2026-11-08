@@ -1,0 +1,45 @@
+# The code layer of the repository. mise pins node and pnpm. This file sets
+# the packages and the dependency policy.
+packages:
+  - apps/*
+  - modules/*
+  - libs/*
+  - tools/*
+
+# One version of each dependency for the whole repository. catalogMode
+# strict makes pnpm refuse any version from outside this list.
+catalog:
+  "@biomejs/biome": 2.6.4
+  "@nx/js": 24.0.3
+  "@nx/vitest": 24.0.3
+  "@types/node": 26.6.6
+  # TypeScript 7 has no programmatic API yet. `tsc` comes from this alias,
+  # and the API comes from `typescript` below, as the Nx docs describe.
+  "@typescript/native": npm:typescript@7.0.2
+  archunit: 2.5.4
+  nx: 24.0.3
+  typescript: npm:@typescript/typescript6@6.0.2
+  vite: 8.3.5
+  vitest: 5.0.5
+
+catalogMode: strict
+# Exact versions, so an agent cannot widen a range without a visible diff.
+savePrefix: ""
+# Seven days. The delay gives the registry time to pull a malicious release
+# before pnpm can install it.
+minimumReleaseAge: 10080
+trustPolicy: no-downgrade
+# 30 days. Without this setting, the trust policy and the release delay can
+# together reject every version. A new release with provenance is still
+# inside the delay, and its older releases then fail the trust policy.
+trustPolicyIgnoreAfter: 43200
+strictPeerDependencies: true
+# A fresh worktree has no node_modules. pnpm installs before it runs a
+# script. The pre-commit hook then works there too.
+verifyDepsBeforeRun: install
+
+# Each dependency with an install script needs a decision here. true runs
+# the script, and false skips it. An install fails without a decision.
+allowBuilds:
+  # Its postinstall only updates the Nx Cloud client, and we do not use it.
+  nx: false

@@ -18,6 +18,13 @@ mise.local.toml
 .vale/styles/*
 !.vale/styles/House/
 
+# Code layer: dependencies, build output and the Nx workspace data
+node_modules/
+dist/
+out-tsc/
+coverage/
+.nx/
+
 # OS and editor noise
 .DS_Store
 .idea/

@@ -1,0 +1,10 @@
+{
+  "name": "@aade/arch",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "archTest": "vitest run --config vitest.arch.config.ts",
+    "lint": "biome check ."
+  }
+}

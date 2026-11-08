@@ -14,6 +14,8 @@ vale = "3.25.1"
 # decisionkit runs on node. The skill thresholds are calibrated on 0.4.0.
 node = "26.12.1"
 "npm:@adxtya21/decisionkit" = { version = "0.4.0", allow_low_downloads = true }
+# Keep it equal to packageManager in package.json.
+pnpm = "12.18.0"
 
 [tasks.setup]
 description = "Install the tools, the Vale styles and the pre-commit hooks"

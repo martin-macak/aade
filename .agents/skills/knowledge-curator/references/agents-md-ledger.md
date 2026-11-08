@@ -24,6 +24,7 @@ decisionkit 0.4.0 with the Jev provider.
 | C5 | Pin every tool in `mise.toml`. Run tools and checks through mise. | general 0.93 | 2.20 | 1.09 | 3 | Keep. | 2026-11-06 |
 | C6 | Pre-commit is the gate. Never `--no-verify`. | general 0.88 | 1.87 | 0.65 | 3 | Keep. | 2026-11-06 |
 | C7 | Secrets, credentials, personal data out of commits, MCP config and external services. | general 0.98 | 2.54 | 1.78 | 2 | Keep. Guardrail. | 2026-11-06 |
+| C8 | Build, test and lint code with `pnpm build`, `pnpm test`, `pnpm lint` and `pnpm archTest`, because `mise run test` runs only the bats suites. | general 0.53 | 1.53 | 0.59 | 5 | Keep. Uncertain class, but frequent. Every code task needs these commands, and `test` means two things in this repository. Issue #48. | 2026-11-08 |
 | V1 | Conventional Commits. | general 0.55 | 2.01 | 0.21 | 5 | Keep. Uncertain class, but frequent. | 2026-11-06 |
 | V2 | Linear history. Rebase, do not merge. | general 0.65 | 2.15 | 1.17 | 5 | Keep. Uncertain class, but frequent. | 2026-11-06 |
 | V3 | Write prose in short, active sentences. | general 0.71 | 1.68 | 0.15 | 5 | Keep. Uncertain class, but frequent. Vale checks only parts of it. | 2026-11-06 |

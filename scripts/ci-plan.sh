@@ -13,9 +13,13 @@
 # staged, unstaged and untracked files.
 # Layers: a path that starts with an entry of CODE_PATHS is code layer.
 # Every other path is repo layer, so a new path never skips the checks.
+# Agent instructions in a code folder stay repo layer, because only the
+# repo jobs check them.
 # Shared inputs run every suite: a file in tests/scripts/helpers/, the CI
 # workflow and a change to the [tools] table of mise.toml. The table is
-# compared with the merge-base, or with HEAD when files are given.
+# compared with the merge-base, or with HEAD when files are given. The CI
+# workflow and the [tools] table also run the code job, because they define
+# that job and pin its node and pnpm.
 # plan: prints the lines repo=, code=, full= and test= for GITHUB_OUTPUT.
 # full is true for a shared input or --full (the ci:full label). test is
 # true when a suite is affected. --all sets every value to true, for the
@@ -28,9 +32,13 @@
 # Exit codes: 0 pass or nothing affected, 1 a suite failed or git found no
 # merge-base, 2 wrong usage or a suite list failed.
 
-# The code layer. Empty until the pnpm monorepo exists. Each entry is a
-# path prefix, such as packages/.
-CODE_PATHS=()
+# The code layer. Each entry is a path prefix. The `code` hook in
+# .pre-commit-config.yaml must match every entry, and ci-plan.bats checks it.
+CODE_PATHS=(
+	apps/ modules/ libs/ tools/
+	package.json pnpm-lock.yaml pnpm-workspace.yaml
+	nx.json biome.json tsconfig.base.json tsconfig.json
+)
 
 usage() {
 	>&2 echo "Usage: ci-plan.sh plan [--base <ref>] [--full] [--all] [<file>...] | ci-plan.sh test [--base <ref>] [--all] [<file>...]"
@@ -98,6 +106,9 @@ fi
 # Succeed when the path $1 is in the code layer.
 in_code() {
 	local path
+	case $1 in
+	*/AGENTS.md | */CLAUDE.md | */GEMINI.md) return 1 ;;
+	esac
 	for path in "${CODE_PATHS[@]}"; do
 		[[ "$1" == "$path"* ]] && return 0
 	done
@@ -121,8 +132,17 @@ for file in "${FILES[@]}"; do
 	REPO=true
 	REPO_FILES+=("$file")
 	case $file in
-	tests/scripts/helpers/* | .github/workflows/ci.yml) SHARED=1 ;;
-	mise.toml) tools_changed && SHARED=1 ;;
+	tests/scripts/helpers/*) SHARED=1 ;;
+	.github/workflows/ci.yml)
+		SHARED=1
+		CODE=true
+		;;
+	mise.toml)
+		if tools_changed; then
+			SHARED=1
+			CODE=true
+		fi
+		;;
 	esac
 done
 

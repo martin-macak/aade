@@ -278,7 +278,7 @@ need_decisionkit() {
 	[ "$bullets" -ge 3 ]
 	[ "$rows" = "$bullets" ]
 	# Every list names each kind, and the first column of the table too.
-	for piece in 'skill' 'AGENTS.md' 'README' 'docs' 'config' 'status report'; do
+	for piece in 'skill' 'AGENTS.md' 'README' 'docs' 'config' 'doc comment' 'status report'; do
 		for where in "$description" "$scope" "$(grep '^| ' <<<"$reader" | tail -n +3 | cut -d'|' -f2)"; do
 			grep -qiF -- "$piece" <<<"$where" || {
 				echo "Not every list names the piece: $piece."

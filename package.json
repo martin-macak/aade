@@ -1,0 +1,26 @@
+{
+  "name": "@aade/root",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@12.18.0",
+  "scripts": {
+    "build": "nx run-many -t build",
+    "test": "nx run-many -t test",
+    "lint": "nx run-many -t lint",
+    "typecheck": "nx run-many -t typecheck",
+    "archTest": "nx run-many -t archTest",
+    "check:staged": "nx affected -t lint typecheck test --uncommitted && nx run-many -t archTest"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@nx/js": "catalog:",
+    "@nx/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "archunit": "catalog:",
+    "nx": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

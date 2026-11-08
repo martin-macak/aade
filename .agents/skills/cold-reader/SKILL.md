@@ -4,9 +4,10 @@ description: >-
   Quality gate for documentation pieces. Vale lints the piece, a cold reader
   on a cheap model restates it, and decisionkit scores the restatement and
   the slop. A piece is an edit to a skill or to an AGENTS.md, a README or
-  docs/ page, a comment in a config file, or a status report that a script
-  writes from data, such as a PR comment. Use this skill whenever you
-  write, change or review any of these, even one sentence. Load it before
+  docs/ page, a comment in a config file, a doc comment in code, or a status
+  report that a script writes from data, such as a PR comment. Use this
+  skill whenever you write, change or review any of these, even one
+  sentence. Load it before
   you judge such a piece yourself. Use it before you commit or open a pull
   request that holds one.
 ---
@@ -32,11 +33,11 @@ The procedure covers each of these pieces:
 - edits to skills and to `AGENTS.md` files, root and nested;
 - `README.md` and pages in `docs/`;
 - comments in config files that explain a setting;
+- doc comments in code that describe an exported interface;
 - status reports that a script writes from data, such as a PR comment.
 
-More kinds of piece join when the stack arrives. Doc comments in code and
-API descriptions are two examples. Add a bullet here and a row to the table
-in "Start the reader" for each new kind. The drift tests compare the
+A new kind of piece, such as an API description, needs a bullet here and
+a row in the table in "Start the reader". The drift tests compare the
 description, this list and the table, so update all three.
 
 ## Procedure
@@ -91,6 +92,7 @@ memory out of the reader. Give the reader this as the path:
 | Skill or `AGENTS.md` edit | The path of the file and the heading of the section |
 | README or docs page | The path of the page and the heading of the section |
 | Config comment | The path of the file and the key that the comment explains |
+| Doc comment | The path of the file and the name of the interface that the comment describes |
 | Status report | The path of the script that writes the report and the name of the report |
 
 ## Batch
@@ -213,7 +215,7 @@ and exits 0 only when each fixture is on its expected side:
 - `match/differ-*` holds restatements that must fail it.
 
 Many fixtures show piece kinds that this repository does not have yet, such
-as doc comments and API descriptions. They stay, because they calibrate the
+as API descriptions. They stay, because they calibrate the
 thresholds on prose, and those kinds join later. The `status-report-*`
 fixtures in `slop/good` and `slop/bad` contain only the fixed text of a
 report, because `Q_SLOP` scores only that text, as "Status reports" says.

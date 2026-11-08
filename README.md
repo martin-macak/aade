@@ -7,14 +7,15 @@ Project purpose: to be decided.
 1. Install [mise](https://mise.jdx.dev) and, optionally, [direnv](https://direnv.net).
 2. Run `mise trust && mise run setup`. It installs the pinned tools, the
    Vale styles and the pre-commit hooks.
-3. Set the decisionkit provider in `mise.local.toml`. Git ignores this file.
+3. Run `pnpm install`. It installs the dependencies of the code.
+4. Set the decisionkit provider in `mise.local.toml`. Git ignores this file.
 
    ```toml
    [env]
    DECISIONKIT_PROVIDER = "jev"
    ```
 
-4. Run `mise run agents:health` to verify the setup.
+5. Run `mise run agents:health` to verify the setup.
 
 `mise run check` runs the fast structural checks that CI runs on every
 pull request. `mise run test` runs the bats suites that your changes
@@ -23,6 +24,21 @@ parallel, one per CPU. The `ci` workflow runs both. The
 [knowledge-curator](.agents/skills/knowledge-curator/SKILL.md#check-contract)
 skill explains the check contract.
 `mise tasks` lists all tasks.
+
+## Code
+
+The code is a pnpm and Nx monorepo. `apps/` holds the runnable hosts,
+`modules/` the plug-ins that an app loads, `libs/` the shared code and
+`tools/` the repository tooling.
+
+- `pnpm build`, `pnpm test`, `pnpm lint` and `pnpm typecheck` run that
+  target in every project.
+- `pnpm archTest` runs the architecture rules.
+  [tools/arch/AGENTS.md](tools/arch/AGENTS.md) explains them.
+
+Nx reuses the result of an unchanged task from its cache. All worktrees
+share one cache in `~/.nx`. An agent sandbox needs write access to that
+folder, otherwise each worktree uses a separate cache.
 
 ## Working with AI agents
 
