@@ -8,6 +8,8 @@
 #
 # Usage:
 #   research.sh init <slug> --title <t> --author <a>... [--depth <d>] [--artifact <type>]...
+#   research.sh init <slug> --issue <n> [--title <t>] --author <a>...
+#       (the brief, depth and artifacts from a type:research issue)
 #   research.sh add <slug> <type> [--name <n>] --title <t> --author <a>...
 #       (a required type only when its file is missing)
 #   research.sh source add <slug> --kind <k> --author <a> --title <t> --url <u>
@@ -23,7 +25,7 @@
 # Run it from the repository root. RESEARCH_ROOT sets the research folder
 # (default docs/research). RESEARCH_TODAY sets the date in YYYY-MM-DD form
 # (default: the current date), so tests get fixed dates.
-# It needs yq and jq, and runs on bash 3.2.
+# It needs yq and jq, gh for init --issue, and runs on bash 3.2.
 # Exit codes: 0 done or no problem found, 1 a check failed or a value was
 # refused, 2 a usage error.
 
@@ -49,6 +51,16 @@ SLUG_PATH_RE='^[a-z0-9]+(-[a-z0-9]+)*(/[a-z0-9]+(-[a-z0-9]+)*)?$'
 DATE_RE='^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
 URL_RE='^https?://[^[:space:]]+$'
 FENCE='```'
+# init --issue reads an issue of the Research form in
+# .github/ISSUE_TEMPLATE/research.yml. Each "### <label>" section of its
+# body fills one brief section: <form label>=<brief heading>, split by ";".
+# The Depth, Artifacts and Slug sections set the front matter and the slug.
+# The drift test compares these labels with the form.
+ISSUE_LABEL="type:research"
+ISSUE_SECTIONS="Question=## Question;Background=## Background;In scope=### In scope;Out of scope=### Out of scope;Constraints=## Constraints;Done when=## Success criteria;Source policy=## Source policy"
+ISSUE_DEPTH="Depth"
+ISSUE_ARTIFACTS="Artifacts"
+ISSUE_SLUG="Slug"
 
 usage() {
 	{ sed -n '/^# Usage:/,/^# Run it/p' "${BASH_SOURCE[0]}" | sed '$d; s/^# \{0,1\}//'; } >&2
@@ -675,11 +687,82 @@ parse_common() {
 	export TITLE AUTHORS
 }
 
+# Print the "### $1" section of the issue body in ISSUE_BODY, without the
+# blank lines around it. Print nothing for a field without a response.
+issue_section() {
+	WANT="### $1" awk '
+		{ sub(/\r$/, "") }
+		/^### / { inside = ($0 == ENVIRON["WANT"]); next }
+		!inside { next }
+		/^[ \t]*$/ { if (n) blank++; next }
+		{ while (blank) { out = out "\n"; blank-- } out = out (n++ ? "\n" : "") $0 }
+		END { if (out != "_No response_") printf "%s", out }
+	' <<<"$ISSUE_BODY"
+}
+
+# Replace the first fill comment under the heading $2 of the file $1 with
+# the text in FILL.
+fill_section() {
+	H=$2 awk '
+		$0 == ENVIRON["H"] { inside = 1; print; next }
+		inside && /^#/ { inside = 0 }
+		inside && /^<!-- fill:/ { print ENVIRON["FILL"]; inside = 0; next }
+		{ print }
+	' "$1" >"$1.tmp" && mv "$1.tmp" "$1"
+}
+
+# Read the issue $1 for init --issue, and refuse one that is not a
+# research request. Sets ISSUE_TITLE, ISSUE_URL, ISSUE_BODY, and the depth,
+# artifacts and slug of the issue in ISSUE_DEPTH_VALUE, ISSUE_ARTIFACT_LIST
+# and ISSUE_SLUG_VALUE.
+read_issue() {
+	local json artifact
+	json=$(gh issue view "$1" --json title,body,labels,url) || die "gh could not read issue #$1."
+	jq -e --arg l "$ISSUE_LABEL" 'any(.labels[]; .name == $l)' <<<"$json" >/dev/null ||
+		die "Issue #$1 has no $ISSUE_LABEL label. Open a research request with: mise run issue:new research"
+	ISSUE_TITLE=$(jq -r '.title' <<<"$json")
+	ISSUE_URL=$(jq -r '.url' <<<"$json")
+	ISSUE_BODY=$(jq -r '.body // ""' <<<"$json")
+	ISSUE_DEPTH_VALUE=$(issue_section "$ISSUE_DEPTH")
+	one_of "$ISSUE_DEPTH_VALUE" $DEPTHS || die "Issue #$1: the $ISSUE_DEPTH section must be one of: $DEPTHS."
+	ISSUE_ARTIFACT_LIST=$(issue_section "$ISSUE_ARTIFACTS" | sed -nE 's/^- \[[xX]\] (.+)$/\1/p')
+	for artifact in $ISSUE_ARTIFACT_LIST; do
+		one_of "$artifact" $(optional_types) ||
+			die "Issue #$1: the artifact $artifact is not one of: $(optional_types | paste -sd ' ' -)."
+	done
+	ISSUE_SLUG_VALUE=$(issue_section "$ISSUE_SLUG")
+}
+
 cmd_init() {
-	local slug=${1-} dir depth=standard artifacts="[]" type parent="" status
+	local slug=${1-} dir depth=standard artifacts="[]" type parent="" status issue="" title_given=false
+	local args=() artifact label heading text own_type=""
 	[[ -n "$slug" ]] || usage
 	shift
-	parse_common "$@"
+	# --issue first, because the title of the issue is the default --title.
+	while (($#)); do
+		case $1 in
+		--issue)
+			[[ $# -ge 2 ]] || usage
+			[[ "$2" =~ ^[1-9][0-9]*$ ]] || die "--issue must be an issue number." 2
+			issue=$2; shift 2
+			;;
+		--title) title_given=true; args+=("$1" "${2-}"); shift 2 || usage ;;
+		--depth | --artifact) own_type=$1; args+=("$1" "${2-}"); shift 2 || usage ;;
+		*) args+=("$1"); shift ;;
+		esac
+	done
+	if [[ -n "$issue" ]]; then
+		[[ -z "$own_type" ]] || die "$own_type comes from the issue, so init --issue takes no $own_type." 2
+		read_issue "$issue"
+		$title_given || args+=(--title "$ISSUE_TITLE")
+		[[ -z "$ISSUE_SLUG_VALUE" || "$ISSUE_SLUG_VALUE" == "$slug" ]] ||
+			die "Issue #$issue names the slug $ISSUE_SLUG_VALUE, not $slug."
+		depth=$ISSUE_DEPTH_VALUE
+		for artifact in $ISSUE_ARTIFACT_LIST; do
+			args+=(--artifact "$artifact")
+		done
+	fi
+	parse_common ${args[@]+"${args[@]}"}
 	set -- ${REST[@]+"${REST[@]}"}
 	while (($#)); do
 		case $1 in
@@ -694,7 +777,7 @@ cmd_init() {
 	done
 	one_of "$depth" $DEPTHS || die "--depth must be one of: $DEPTHS." 2
 	dir=$(research_dir "$slug") || exit 2
-	[[ ! -e "$dir" ]] || die "$dir exists already."
+	[[ ! -e "$dir" ]] || die "$dir exists already. To continue that research, run research.sh progress $slug first."
 	# A child research needs its parent. init never changes the parent.
 	if [[ "$slug" == */* ]]; then
 		parent=${slug%/*}
@@ -706,6 +789,13 @@ cmd_init() {
 	done
 	DEPTH=$depth ARTIFACTS=$artifacts set_fields "$dir/brief.md" \
 		'.depth = strenv(DEPTH) | .artifacts = env(ARTIFACTS) | .artifacts style="" | .artifacts[] style=""'
+	if [[ -n "$issue" ]]; then
+		while IFS='=' read -r label heading; do
+			text=$(issue_section "$label")
+			[[ "$heading" != "## Background" ]] || text="${text:+$text$'\n\n'}Requested in issue [#$issue]($ISSUE_URL)."
+			[[ -z "$text" ]] || FILL=$text fill_section "$dir/brief.md" "$heading"
+		done < <(tr ';' '\n' <<<"$ISSUE_SECTIONS")
+	fi
 	[[ -n "$parent" ]] || return 0
 	status=$(field "$ROOT_DIR/$parent/report.md" status)
 	one_of "$status" $COMPLETE || return 0

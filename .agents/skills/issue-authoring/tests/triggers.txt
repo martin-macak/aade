@@ -8,3 +8,4 @@
 - Find the current GitHub Actions documentation for the permissions key of a workflow.
 - Decide whether this new instruction belongs in AGENTS.md or in a skill.
 - Check this README paragraph for slop before I commit it.
++ Open a Research issue that asks which Mermaid diagram types GitHub renders.

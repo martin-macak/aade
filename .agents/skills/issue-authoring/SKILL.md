@@ -24,13 +24,17 @@ Each issue has one `type:<x>` label and one `scope:<x>` label.
 
 - `.github/labels.yml` is the only list of labels. Read it to pick the
   type and the scope. The description of each type gives its
-  Conventional Commits type. `type:enhancement` becomes `feat`, `type:bug` becomes
-  `fix`.
+  Conventional Commits type. `type:enhancement` becomes `feat`,
+  `type:bug` becomes `fix` and `type:research` becomes `docs`.
 - Each type has one issue form in `.github/ISSUE_TEMPLATE/<type>.yml`.
   The form sets the type label.
 - The Scope dropdown of each form lists the scope values of `labels.yml`.
   The `issue-scope` workflow reads the `### Scope` section of the body
   and sets the `scope:<x>` label. It runs again when someone edits the body.
+
+A `type:research` issue requests a research in `docs/research/`. Its
+form contains the fields of a research brief. Load the `tech-research`
+skill before you write one, because it says what goes in each field.
 
 Never invent a type or a scope. A label that `labels.yml` does not list
 does not exist, and the next sync deletes it.

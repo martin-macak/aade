@@ -117,3 +117,34 @@ yes_no() { [[ "$1" == true ]] && echo yes || echo no; }
 	grep -qE '^ *final --> draft: reopen$' <<<"$diagram"
 	grep -qE '^reopen\) cmd_reopen' "$SCRIPT"
 }
+
+# The value of the one-line variable $1 of research.sh.
+script_var() { sed -nE "s/^$1=\"(.*)\"$/\1/p" "$SCRIPT"; }
+
+@test "the Research issue form has the fields that init --issue reads, and the same values" {
+	FORM="$ROOT/.github/ISSUE_TEMPLATE/research.yml"
+	[ "$(yq '.labels | join(",")' "$FORM")" = "$(script_var ISSUE_LABEL)" ]
+	sections=$(script_var ISSUE_SECTIONS | tr ';' '\n')
+	[ -n "$sections" ]
+	expected=$( (cut -d= -f1 <<<"$sections"; script_var ISSUE_DEPTH; script_var ISSUE_ARTIFACTS; script_var ISSUE_SLUG) | sort)
+	diff <(yq '.body[] | select(.id != "scope") | .attributes.label' "$FORM" | sort) <(echo "$expected")
+	while IFS= read -r heading; do
+		grep -qxF -- "$heading" "$DIR/references/templates/brief.md" || {
+			echo "The brief template has no heading '$heading'."
+			return 1
+		}
+	done < <(cut -d= -f2 <<<"$sections")
+	depth=$(script_var ISSUE_DEPTH)
+	[ "$(yq ".body[] | select(.attributes.label == \"$depth\") | .attributes.options | join(\" \")" "$FORM")" = "$(script_var DEPTHS)" ]
+	artifacts=$(script_var ISSUE_ARTIFACTS)
+	diff <(yq ".body[] | select(.attributes.label == \"$artifacts\") | .attributes.options[].label" "$FORM") \
+		<(yq 'to_entries | .[] | select(.value.required == false) | .key' "$TYPES")
+}
+
+@test "the skill names init --issue and the label of a research issue" {
+	[[ "$TEXT" == *"--issue <n>"* ]] || false
+	[[ "$TEXT" == *"\`$(script_var ISSUE_LABEL)\`"* ]] || false
+	for field in "$(script_var ISSUE_DEPTH)" "$(script_var ISSUE_ARTIFACTS)" "$(script_var ISSUE_SLUG)"; do
+		[[ "$TEXT" == *"$field"* ]] || false
+	done
+}

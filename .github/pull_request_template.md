@@ -1,7 +1,7 @@
 <!--
 Title: type(scope): summary, in Conventional Commits form.
-type is feat, fix, chore or ci. Use feat for a type:enhancement issue
-and fix for a type:bug issue.
+type is feat, fix, docs, chore or ci. Use feat for a type:enhancement
+issue, fix for a type:bug issue and docs for a type:research issue.
 scope is one of the scope:* labels in .github/labels.yml.
 The pr-shepherd skill defines the format of Requirements and Verify, and
 the pr-shepherd check enforces it. A PR without an issue gets the label

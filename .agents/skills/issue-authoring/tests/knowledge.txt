@@ -19,3 +19,6 @@ A: The `labels-sync` workflow applies them after merge to `main`. Running `mise 
 
 Q: How do you break lines in the body of a GitHub issue, PR or comment, and why?
 A: Each paragraph, list item and reference to an issue or PR goes on one line, because GitHub renders each newline in such a body as a line break. Markdown files in the repository keep their hard wraps.
+
+Q: Which skill must an agent load before it writes a `type:research` issue?
+A: The agent loads the `tech-research` skill.

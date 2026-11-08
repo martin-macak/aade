@@ -1,0 +1,102 @@
+# Issue form for a technical research in docs/research/. Each field fills
+# a part of the research brief: `research.sh init <slug> --issue <n>` of the
+# tech-research skill reads the issue and writes the brief. The skill
+# names the brief section of each field. Its drift test fails when the
+# labels below, the Depth options or the Artifacts options differ from
+# research.sh and references/types.yml. The issue-authoring skill tells
+# agents how to write the same body with scripts/issue-new.sh.
+name: Research
+description: A technical question to research, such as which tool to adopt or how a service works.
+labels: [type:research]
+body:
+  # The options must equal the scope:* labels in .github/labels.yml.
+  # `mise run taxonomy:check` fails when they differ.
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: The area that the answer affects. It becomes the scope:<x> label.
+      options:
+        - agents
+        - github
+        - docs
+        - repository
+        - tooling
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: The research question, as one sentence that ends with a question mark. Add sub-questions as a list.
+    validations:
+      required: true
+  - type: textarea
+    id: background
+    attributes:
+      label: Background
+      description: What we know today, what triggered the question, and links to issues or earlier research.
+    validations:
+      required: true
+  - type: textarea
+    id: in_scope
+    attributes:
+      label: In scope
+      description: A list of the topics, products or versions that the research covers.
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: A list of what the research does not cover, with a reason for each.
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      description: Hard limits on the answer, such as stack, licence, budget, hosting, compliance or deadline.
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: The success criteria of the brief. The research is done when each check has an answer.
+      placeholder: |
+        - [ ] ...
+    validations:
+      required: true
+  - type: dropdown
+    id: depth
+    attributes:
+      label: Depth
+      description: "The effort: quick needs at least 3 sources, standard 5 (2 primary), deep 10."
+      options:
+        - quick
+        - standard
+        - deep
+      default: 1
+    validations:
+      required: true
+  - type: checkboxes
+    id: artifacts
+    attributes:
+      label: Artifacts
+      description: >-
+        Optional artifact types beside the brief, report and sources.
+        comparison ranks options, recommendation records a decision,
+        tech-profile explains one technology, experiment runs a spike.
+      options:
+        - label: comparison
+        - label: recommendation
+        - label: tech-profile
+        - label: experiment
+  - type: textarea
+    id: sources
+    attributes:
+      label: Source policy
+      description: The source kinds to prefer, sources to avoid, and the oldest publish date that still counts.
+  - type: input
+    id: slug
+    attributes:
+      label: Slug
+      description: >-
+        The kebab-case folder name in docs/research/, such as vector-db-choice,
+        or <slug>/<sub-slug> for a part of a larger research. Name an
+        existing slug to continue that research.

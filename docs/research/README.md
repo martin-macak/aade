@@ -11,3 +11,9 @@ The [tech-research skill](../../.agents/skills/tech-research/SKILL.md)
 defines the format, the artifact types and the workflow. Its tool,
 `research.sh`, creates and checks the files. Run `mise run research:check` to check every
 research and every sub-slug. The `research-check` pre-commit hook and CI run the same check.
+
+To ask for a research, open an issue with the Research form. It is
+`.github/ISSUE_TEMPLATE/research.yml`, and its fields match the sections,
+the depth and the artifact types of the brief.
+`research.sh init <slug> --issue <number>` writes the brief from the
+issue, and the user approves it before the research starts.
