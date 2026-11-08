@@ -212,8 +212,12 @@ The skill folder holds a `Makefile` with the line
   `A: <expected answer>` line. The cold reader sees only `SKILL.md`, so ask
   about rules in `SKILL.md`, not in `references/`. Write each expected
   answer as a full sentence, because a fragment scores low even against a
-  right answer. decisionkit grades each answer with `Q_KNOW`. An answer
-  passes when its probability is `KNOW_MIN` or more.
+  right answer. The cold reader answers all questions in 3 runs, and
+  decisionkit grades each answer once with `Q_KNOW`. An answer passes when
+  its `Q_KNOW` probability is `KNOW_MIN` or more. A question passes when
+  its answer passes in more than half of the runs, such as 2 of 3. The
+  runs repeat the reader and not the grader, because the reader's wording
+  changes more between runs than the grader's score.
 - **slop** scores each section with `Q_SLOP` and `SLOP_MAX` from the
   `cold-reader` skill. A score below `SLOP_MAX`, but by less than 0.1,
   prints `WARN`.

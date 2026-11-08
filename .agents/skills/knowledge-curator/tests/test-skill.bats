@@ -209,7 +209,64 @@ knowledge() {
 	[ "$status" -eq 1 ]
 	[[ "$output" == *"WRONG"* ]] || false
 	[[ "$output" == *"expected: First fact."* ]] || false
-	[[ "$output" == *"answer:   answer 1"* ]] || false
+	[[ "$output" == *"answer:   [0.1] answer 1"* ]] || false
+}
+
+# A claude responder for the cold reader whose answer changes per run. Run r
+# answers with the r-th word of $READER_WORDS. The runs share a counter
+# file, so the tests run them one after another with SKILL_TEST_JOBS=1.
+varying_reader() {
+	fake claude - <<'EOF'
+r=$(($(cat "$FAKE_DIR/runs" 2>/dev/null || echo 0) + 1))
+echo "$r" >"$FAKE_DIR/runs"
+read -r -a words <<<"$READER_WORDS"
+if [[ "${words[r - 1]}" == fail ]]; then
+	printf '{"subtype":"error_max_turns"}\n'
+	exit 1
+fi
+printf '{"subtype":"success","structured_output":{"answers":[{"n":1,"answer":"%s"}]}}\n' "${words[r - 1]}"
+exit 0
+EOF
+	# decisionkit accepts the answer "good" and rejects any other.
+	dk_responder <<'EOF'
+if [[ "$text" == *"B:"$'\n'"good"* ]]; then
+	printf '{"answers":{"q":{"probability_true":0.9}}}\n'
+	exit 0
+fi
+printf '{"answers":{"q":{"probability_true":0.2}}}\n'
+exit 1
+EOF
+	export READER_WORDS=$1 SKILL_TEST_RUNS=3 SKILL_TEST_JOBS=1
+	knowledge "Q: First question?" "A: First fact."
+}
+
+@test "knowledge asks the cold reader SKILL_TEST_RUNS times and passes on a majority" {
+	varying_reader "good bad good"
+	run "$SCRIPT" knowledge "$DEMO"
+	[ "$status" -eq 0 ]
+	[ "$(claude_calls | grep -c '')" -eq 3 ]
+	[ "$(grep -c '' "$FAKE_DIR/decisionkit.argv")" -eq 3 ]
+	[[ "$output" == *"2/3   0.2   ok"* ]] || false
+}
+
+@test "knowledge fails without a majority and shows each failing answer once" {
+	varying_reader "bad good bad"
+	run "$SCRIPT" knowledge "$DEMO"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"1/3   0.2   WRONG"* ]] || false
+	[ "$(grep -cF 'answer:   [0.2] bad' <<<"$output")" -eq 1 ]
+	# A negated command does not fail a test, so the check uses if.
+	if [[ "$output" == *"good"* ]]; then
+		echo "The output shows a passing answer."
+		return 1
+	fi
+}
+
+@test "knowledge exits 2 when one cold reader run gives no answers" {
+	varying_reader "good fail good"
+	run "$SCRIPT" knowledge "$DEMO"
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"The cold reader gave no answers."* ]] || false
 }
 
 @test "knowledge exits 2 when decisionkit fails" {
@@ -610,10 +667,10 @@ EOF
 	knowledge "Q: First question?" "A: First fact." "Q: Second question?" "A: Second fact."
 	run "$SCRIPT" knowledge "$DEMO"
 	[ "$status" -eq 1 ]
-	grep -Eq '^0\.9 +ok +First question\?$' <<<"$output"
-	grep -Eq '^0\.1 +WRONG +Second question\?$' <<<"$output"
+	grep -Eq '^1/1 +0\.9 +ok +First question\?$' <<<"$output"
+	grep -Eq '^0/1 +0\.1 +WRONG +Second question\?$' <<<"$output"
 	[[ "$output" == *"expected: Second fact."* ]] || false
-	[[ "$output" == *"answer:   answer 2"* ]] || false
+	[[ "$output" == *"answer:   [0.1] answer 2"* ]] || false
 }
 
 @test "knowledge exits 2 when decisionkit gives no probability" {
@@ -845,7 +902,8 @@ exit 1
 EOF
 	run "$SCRIPT" knowledge "$DEMO"
 	[ "$status" -eq 2 ]
-	# One folder for each of the four runs, and none is left.
-	[ "$(grep -c '^mktemp -d$' "$FAKE_LOG")" -eq 4 ]
+	# One folder for triggers and slop. Two for each knowledge run: one for
+	# the run and one for its cold reader. None is left.
+	[ "$(grep -c '^mktemp -d$' "$FAKE_LOG")" -eq 6 ]
 	[ -z "$(ls -A "$FAKE_DIR/tmp")" ]
 }
