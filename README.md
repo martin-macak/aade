@@ -34,5 +34,7 @@ gives the home of each rule and fact.
 ## Issues and pull requests
 
 Open issues through the forms. Each issue gets a `type:<x>` and a
-`scope:<x>` label. [docs/github-taxonomy.md](docs/github-taxonomy.md)
-explains the labels and their automation.
+`scope:<x>` label. A pull request lists its follow-ups in its Leftovers
+section, and the merge files each one as an issue.
+[docs/github-taxonomy.md](docs/github-taxonomy.md) explains the labels
+and their automation.

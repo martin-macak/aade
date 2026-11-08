@@ -1,0 +1,2 @@
+Notes of the pull request:
+Residual risk: decisionkit scores drift by up to 0.1 between runs, and the lowest pass was 0.56. A random failure is now rare, but not impossible. A lasting fix would need a change to `Q_KNOW` and a new calibration, which the issue excludes.

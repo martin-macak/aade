@@ -23,6 +23,7 @@ setup() {
 	S="$SKILL_DIR/scripts/shepherd.sh"
 	export SHEPHERD=$S
 	export BASE="$SKILL_DIR/tests/fixtures/prs/base"
+	export SHEPHERD_LABELS="$BASE/labels.yml"
 	GOOD="$SKILL_DIR/tests/fixtures/prs/good"
 	export CASE="$BATS_TEST_TMPDIR/case"
 	mkdir -p "$CASE" "$BATS_TEST_TMPDIR/bin"
@@ -874,4 +875,345 @@ carry_setup() {
 	GH_FAIL="statuses/$AFTER -f" run --separate-stderr "$S" carry 42 "$BEFORE" "$AFTER"
 	[ "$status" -eq 2 ]
 	[[ "$stderr" == *"Cannot write the pr-shepherd/trace status." ]] || false
+}
+
+# -------------------------------------------------------------- leftovers
+
+# Write the base body plus a "## Leftovers" section with the lines "$@" to
+# the case. The PR has the state $STATE, MERGED by default.
+leftover_case() {
+	echo ".state = \"${STATE:-MERGED}\"" >"$CASE/pr.json.jq"
+	printf '%s\n' "$(cat "$BASE/body.txt")" '' '## Leftovers' '' "$@" >"$CASE/body.txt"
+}
+
+# Print the marker of the leftover text $2 of the PR $1.
+marker_of() {
+	(
+		source "$S"
+		leftover_marker "$1" "$2"
+	)
+}
+
+# Print the number of issues that the run filed.
+filed() {
+	[[ -f "$GH_LOG" ]] || {
+		echo 0
+		return
+	}
+	grep -c '^api repos/{owner}/{repo}/issues -f title=' "$GH_LOG" || true
+}
+
+@test "reply defers a finding to a leftover and tells the author to add the item" {
+	run "$S" reply 42 PRRT_bot deferred --reason "needs its own change" --leftover "chore(tooling):  fix the loop"
+	[ "$status" -eq 0 ]
+	[ "$output" = "$(printf '%s\n' 'Triaged thread PRRT_bot as deferred, and resolved it.' \
+		'Add this line to "## Leftovers" of PR #42: - [ ] chore(tooling): fix the loop')" ]
+	[ "$(logged_body)" = "$(printf '%s\n' 'triage: deferred' 'reason: needs its own change' 'leftover: chore(tooling): fix the loop')" ]
+	grep -q 'resolveReviewThread' "$GH_LOG"
+}
+
+@test "reply says nothing more when the body has the leftover item" {
+	STATE=OPEN leftover_case '- [ ] chore(tooling): fix the loop'
+	run "$S" reply 42 PRRT_bot deferred --reason later --leftover "chore(tooling): fix the loop"
+	[ "$status" -eq 0 ]
+	[ "$output" = "Triaged thread PRRT_bot as deferred, and resolved it." ]
+}
+
+@test "reply asks the user before it defers a human finding, and then records the user" {
+	run "$S" reply 42 503 deferred --reason later --leftover "chore(tooling): rename the test"
+	[ "$status" -eq 1 ]
+	[ "$output" = "A human wrote this finding. Ask the user to confirm the deferral, then add --confirmed-by-user." ]
+	[ ! -f "$GH_LOG" ]
+	run "$S" reply 42 503 deferred --reason later --leftover "chore(tooling): rename the test" --confirmed-by-user
+	[ "$status" -eq 0 ]
+	[[ "$output" == "Triaged review 503 as deferred."* ]] || false
+	[ "$(logged_body)" = "$(printf '%s\n' 'review: 503' 'triage: deferred' 'reason: later' 'leftover: chore(tooling): rename the test' 'confirmed-by-user: yes')" ]
+}
+
+@test "reply wants a valid leftover for a deferred finding, and no leftover for the others" {
+	run "$S" reply 42 PRRT_bot deferred --reason later
+	[ "$status" -eq 2 ]
+	[[ "$output" == *'A deferred finding needs --leftover'* ]] || false
+	run "$S" reply 42 PRRT_bot deferred --reason later --leftover "fix the loop"
+	[ "$status" -eq 2 ]
+	[[ "$output" == *'--leftover: "fix the loop" has no "<type>(<scope>): " prefix.'* ]] || false
+	run "$S" reply 42 PRRT_bot deferred --reason later --leftover "feat(tooling): fix the loop"
+	[ "$status" -eq 2 ]
+	[[ "$output" == *'"feat" is no type. Use one of: bug chore enhancement.'* ]] || false
+	run "$S" reply 42 PRRT_bot rejected --reason no --leftover "chore(tooling): fix the loop"
+	[ "$status" -eq 2 ]
+	[[ "$output" == *'Only a deferred finding takes --leftover.'* ]] || false
+	[ ! -f "$GH_LOG" ]
+}
+
+@test "check reads back a deferred triage, and passes once the body has the open item" {
+	echo '.reviewThreads.nodes[0].comments.nodes |= .[0:1]' >"$CASE/threads.json.jq"
+	run "$S" reply 42 PRRT_bot deferred --reason later --leftover "chore(tooling): fix the loop"
+	[ "$status" -eq 0 ]
+	jq --arg b "$(logged_body)" '.reviewThreads.nodes[0].comments.nodes[1] = {"author": {"login": "alice", "__typename": "User"}, "body": $b}' \
+		"$BASE/threads.json" >"$CASE/threads.json"
+	run "$S" check 42
+	[ "$status" -eq 1 ]
+	[ "$output" = 'Thread PRRT_bot (codex[bot]): "## Leftovers" has no open item for the deferred finding. Add: - [ ] chore(tooling): fix the loop' ]
+	STATE=OPEN leftover_case '- [ ] chore(tooling): fix the loop'
+	run "$S" check 42
+	[ "$status" -eq 0 ]
+}
+
+@test "merge lists the open leftovers that the merge turns into issues" {
+	STATE=OPEN leftover_case '- [ ] chore(tooling): first item' '  - a sub-item' '- [x] chore(tooling): dropped'
+	run "$S" merge 42
+	[ "$status" -eq 0 ]
+	[ "$output" = "$(printf '%s\n' 'Auto-merge is on for PR #42. GitHub merges it when every required check passes.' \
+		'After the merge, the leftovers workflow files one issue for each of these leftovers:' '- chore(tooling): first item')" ]
+}
+
+@test "leftovers files nothing for a PR that is not merged, and points to --dry-run" {
+	STATE=OPEN leftover_case '- [ ] chore(tooling): first item'
+	run "$S" leftovers 42
+	[ "$status" -eq 1 ]
+	[ "$output" = "PR #42 is open. Its leftovers become issues only after the merge. To see them, run: shepherd.sh leftovers 42 --dry-run" ]
+	[ ! -f "$GH_LOG" ]
+}
+
+@test "leftovers --dry-run prints each issue and files nothing" {
+	STATE=OPEN leftover_case '- [ ] chore(tooling): Pin the Vale package version' '  - .vale.ini names an exact release.' \
+		'- [ ] bug(agents): the loop skips the last item'
+	run "$S" leftovers 42 --dry-run
+	[ "$status" -eq 0 ]
+	[ "$output" = "$(printf '%s\n' 'Leftover 1' 'Title: Pin the Vale package version' 'Labels: type:chore scope:tooling origin:leftover' '' \
+		'### Scope' '' 'tooling' '' '### What and why' '' 'PR #42 listed this work in its Leftovers section, and the leftovers workflow filed this issue after the merge. This issue is a sub-issue of issue #11, which the PR worked on.' '' 'Before work starts, add the other required fields of the issue form of its type. Then make each Done-when item a checkable statement, because the pr-shepherd skill copies each one as an R item.' '' '### Done when' '' \
+		'- [ ] .vale.ini names an exact release.' '' "$(marker_of 42 'chore(tooling): Pin the Vale package version')" '' \
+		'Leftover 2' 'Title: the loop skips the last item' 'Labels: type:bug scope:agents origin:leftover' '' \
+		'### Scope' '' 'agents' '' '### What and why' '' 'PR #42 listed this work in its Leftovers section, and the leftovers workflow filed this issue after the merge. This issue is a sub-issue of issue #11, which the PR worked on.' '' 'Before work starts, add the other required fields of the issue form of its type. Then make each Done-when item a checkable statement, because the pr-shepherd skill copies each one as an R item.' '' '### Done when' '' \
+		'- [ ] the loop skips the last item' '' "$(marker_of 42 'bug(agents): the loop skips the last item')")" ]
+	[ ! -f "$GH_LOG" ]
+}
+
+@test "leftovers --dry-run names the problem of an item that check rejects" {
+	STATE=OPEN leftover_case '- [ ] feat(tooling): add a cache'
+	run "$S" leftovers 42 --dry-run
+	[ "$status" -eq 1 ]
+	[ "$output" = 'Leftover 1: Leftovers: "feat(tooling): add a cache": "feat" is no type. Use one of: bug chore enhancement.' ]
+}
+
+@test "leftovers files one issue per open item, links it to the issue of the PR and comments the links once" {
+	leftover_case '- [ ] chore(tooling): Pin the Vale package version' '  - .vale.ini names an exact release.' \
+		'- [x] chore(tooling): dropped' '- [ ] bug(agents): the loop skips the last item'
+	run "$S" leftovers 42
+	[ "$status" -eq 0 ]
+	[ "$output" = "$(printf '%s\n' 'Leftover 1: filed https://github.com/acme/app/issues/101' 'Leftover 2: filed https://github.com/acme/app/issues/102')" ]
+	[ "$(filed)" -eq 2 ]
+	grep -qx 'api repos/{owner}/{repo}/issues -f title=Pin the Vale package version -f body=### Scope' "$GH_LOG"
+	grep -qx -- '- \[ \] .vale.ini names an exact release.' "$GH_LOG"
+	grep -qF "$(marker_of 42 'chore(tooling): Pin the Vale package version') -f labels[]=type:chore -f labels[]=scope:tooling -f labels[]=origin:leftover --jq" "$GH_LOG"
+	grep -qF "$(marker_of 42 'bug(agents): the loop skips the last item') -f labels[]=type:bug -f labels[]=scope:agents -f labels[]=origin:leftover --jq" "$GH_LOG"
+	run ! grep -q 'dropped' "$GH_LOG"
+	grep -qx 'api -X POST repos/{owner}/{repo}/issues/11/sub_issues -F sub_issue_id=9101 --silent' "$GH_LOG"
+	grep -qx 'api -X POST repos/{owner}/{repo}/issues/11/sub_issues -F sub_issue_id=9102 --silent' "$GH_LOG"
+	[ "$(grep -c '^api repos/{owner}/{repo}/issues/42/comments' "$GH_LOG")" -eq 1 ]
+	grep -qx 'api repos/{owner}/{repo}/issues/42/comments --silent -f body=The leftovers workflow filed one issue for each open item of "## Leftovers" in this PR. Each issue has the type and scope labels of its item and the label origin:leftover. Each is a sub-issue of #11.' "$GH_LOG"
+	grep -qx -- '- https://github.com/acme/app/issues/101' "$GH_LOG"
+	grep -qx -- '- https://github.com/acme/app/issues/102' "$GH_LOG"
+	# The comment comes after the last issue.
+	[ "$(grep -n 'sub_issue_id=9102' "$GH_LOG" | cut -d: -f1)" -lt "$(grep -n 'issues/42/comments' "$GH_LOG" | cut -d: -f1)" ]
+}
+
+@test "leftovers files one issue for an item that the body repeats, and a rerun files nothing" {
+	leftover_case '- [ ] chore(tooling): first item' '- [ ] chore(tooling):   first item'
+	run "$S" leftovers 42
+	[ "$status" -eq 0 ]
+	[ "$output" = "$(printf '%s\n' 'Leftover 1: filed https://github.com/acme/app/issues/101' 'Leftover 2 has an issue already.')" ]
+	jq -n --arg a "From #42 $(marker_of 42 'chore(tooling): first item')" '[{body: $a}, {body: null}]' >"$CASE/leftover-issues.json"
+	rm "$GH_LOG"
+	run "$S" leftovers 42
+	[ "$status" -eq 0 ]
+	[ "$output" = "$(printf '%s\n' 'Leftover 1 has an issue already.' 'Leftover 2 has an issue already.')" ]
+	[ ! -f "$GH_LOG" ]
+}
+
+@test "leftovers does not skip an item whose marker belongs to another PR" {
+	leftover_case '- [ ] chore(tooling): first item'
+	jq -n --arg a "$(marker_of 7 'chore(tooling): first item')" '[{body: $a}]' >"$CASE/leftover-issues.json"
+	run "$S" leftovers 42
+	[ "$status" -eq 0 ]
+	[ "$(filed)" -eq 1 ]
+}
+
+@test "leftovers of a PR without an issue name only the PR and get no sub-issue link" {
+	echo '.state = "MERGED" | .labels = [{"name": "pr:no-issue"}]' >"$CASE/pr.json.jq"
+	printf '%s\n' '## Summary' '' '- A fix.' '' '## Leftovers' '' '- [ ] chore(tooling): first item' >"$CASE/body.txt"
+	run "$S" leftovers 42
+	[ "$status" -eq 0 ]
+	grep -qx 'PR #42 listed this work in its Leftovers section, and the leftovers workflow filed this issue after the merge.' "$GH_LOG"
+	grep -qx 'api repos/{owner}/{repo}/issues/42/comments --silent -f body=The leftovers workflow filed one issue for each open item of "## Leftovers" in this PR. Each issue has the type and scope labels of its item and the label origin:leftover.' "$GH_LOG"
+	run ! grep -q 'sub_issues' "$GH_LOG"
+}
+
+@test "leftovers does nothing for a PR without open leftovers or for a Dependabot PR" {
+	echo '.state = "MERGED"' >"$CASE/pr.json.jq"
+	run "$S" leftovers 42
+	[ "$status" -eq 0 ]
+	[ "$output" = "PR #42 has no open leftovers." ]
+	leftover_case '- [x] chore(tooling): dropped' '- [ ]' '<!-- - [ ] chore(tooling): a hint -->'
+	run "$S" leftovers 42
+	[ "$status" -eq 0 ]
+	[ "$output" = "PR #42 has no open leftovers." ]
+	echo '.state = "MERGED" | .author.login = "app/dependabot"' >"$CASE/pr.json.jq"
+	run "$S" leftovers 42
+	[ "$status" -eq 0 ]
+	[ "$output" = "PR #42 is a Dependabot PR. It has no leftovers." ]
+	[ ! -f "$GH_LOG" ]
+}
+
+@test "leftovers skips an item that check rejects, files the others and never prints the item" {
+	leftover_case '- [ ] feat(tooling): secret words' '- [ ] chore(tooling): second item'
+	run "$S" leftovers 42
+	[ "$status" -eq 1 ]
+	[ "$output" = "$(printf '%s\n' 'Leftover 1 is not valid, so it gets no issue. Run: shepherd.sh check 42' \
+		'Leftover 2: filed https://github.com/acme/app/issues/101')" ]
+	[ "$(filed)" -eq 1 ]
+}
+
+@test "leftovers passes \$(touch pwned) and backticks literally and never prints the item" {
+	local title='$(touch pwned) `touch pwned2` ${HOME} "quoted" ; touch pwned3'
+	leftover_case "- [ ] chore(tooling): $title"
+	cd "$BATS_TEST_TMPDIR"
+	run "$S" leftovers 42
+	[ "$status" -eq 0 ]
+	grep -qxF "api repos/{owner}/{repo}/issues -f title=$title -f body=### Scope" "$GH_LOG"
+	grep -qxF -- "- [ ] $title" "$GH_LOG"
+	[[ "$output" != *pwned* ]] || false
+	[ ! -e pwned ]
+	[ ! -e pwned2 ]
+	[ ! -e pwned3 ]
+}
+
+@test "leftovers cuts a long title to 256 characters and keeps the whole item in the body" {
+	local long
+	long=$(printf 'a%.0s' $(seq 1 300))
+	leftover_case "- [ ] chore(tooling): $long"
+	run "$S" leftovers 42
+	[ "$status" -eq 0 ]
+	grep -qxF "api repos/{owner}/{repo}/issues -f title=${long:0:256} -f body=### Scope" "$GH_LOG"
+	grep -qxF -- "- [ ] $long" "$GH_LOG"
+}
+
+@test "leftovers goes on after a failed issue, comments the others and exits 1" {
+	leftover_case '- [ ] chore(tooling): first item' '- [ ] chore(tooling): second item' '- [ ] chore(tooling): third item'
+	GH_FAIL="title=second item" run --separate-stderr "$S" leftovers 42
+	[ "$status" -eq 1 ]
+	[ "$output" = "$(printf '%s\n' 'Leftover 1: filed https://github.com/acme/app/issues/101' 'Cannot file leftover 2.' \
+		'Leftover 3: filed https://github.com/acme/app/issues/103')" ]
+	grep -qx -- '- https://github.com/acme/app/issues/103' "$GH_LOG"
+	run ! grep -qx -- '- https://github.com/acme/app/issues/102' "$GH_LOG"
+}
+
+@test "leftovers exits 1 when the sub-issue link or the comment fails, and keeps the issues" {
+	leftover_case '- [ ] chore(tooling): first item'
+	GH_FAIL="sub_issues" run --separate-stderr "$S" leftovers 42
+	[ "$status" -eq 1 ]
+	[ "$output" = "$(printf '%s\n' 'Leftover 1: filed https://github.com/acme/app/issues/101' 'Cannot add #101 as a sub-issue of #11.')" ]
+	grep -q 'issues/42/comments' "$GH_LOG"
+	rm "$GH_LOG"
+	GH_FAIL="issues/42/comments" run --separate-stderr "$S" leftovers 42
+	[ "$status" -eq 1 ]
+	[ "$output" = "$(printf '%s\n' 'Leftover 1: filed https://github.com/acme/app/issues/101' 'Cannot comment on PR #42.')" ]
+}
+
+@test "leftovers exits 2 and files nothing when it cannot read the leftover issues" {
+	leftover_case '- [ ] chore(tooling): first item'
+	GH_FAIL="labels=origin" run --separate-stderr "$S" leftovers 42
+	[ "$status" -eq 2 ]
+	[[ "$stderr" == *"Cannot read the existing leftover issues." ]] || false
+	[ "$(filed)" -eq 0 ]
+	echo 'not json' >"$CASE/leftover-issues.json"
+	run "$S" leftovers 42
+	[ "$status" -eq 2 ]
+	[ "$(filed)" -eq 0 ]
+}
+
+@test "a leftover issue has the headings that the scope workflow and requirements read" {
+	source "$S"
+	body=$(leftover_body 'chore(tooling): Pin the Vale package version' $'.vale.ini names an exact release.\037the lint results stay' 42 11)
+	[ "$(issue_items <<<"$body")" = "$(printf '%s\n' '.vale.ini names an exact release.' 'the lint results stay')" ]
+	# scripts/issue-scope-label.sh reads the first line after "### Scope".
+	[ "$(awk '/^### / { inside = ($0 == "### Scope"); next } inside && NF { print; exit }' <<<"$body")" = tooling ]
+	# The marker equals the one of the spring-ref-arch script for the same item.
+	[ "$(leftover_marker 7 'first item')" = '<!-- leftover:7:0bd30fb1d58d -->' ]
+}
+
+@test "leftover_items keeps open items with their sub-items and drops the rest" {
+	source "$S"
+	body=$(printf '%s\n' '- [ ] before the section' '## Leftovers' '' '- [ ]   chore(tooling):  first   item  ' \
+		'  - sub one' '' '    * [ ] sub two' '- [x] ticked' '  - sub of ticked' '* [ ] chore(agents): star item' \
+		'- plain' 'A paragraph.' '  - stray sub-item' '- [ ]' '## Notes' '- [ ] after the section')
+	[ "$(leftover_items <<<"$body")" = "$(printf '%s\n' $'item\tchore(tooling): first item\tsub one\037sub two' \
+		$'item\tchore(agents): star item\t' $'plain\tplain\t')" ]
+}
+
+# --------------------------------------------------------------- discover
+
+@test "discover lists each prose text and each rejection reason that states a follow-up" {
+	dk_responder <<<'[[ "$text" == *LATER* ]] || DK_P=0.1'
+	printf '%s\n' "$(cat "$BASE/body.txt")" '' '## Notes' '' '- R1: maps one to one.' '- LATER: run the workflow by hand on main.' >"$CASE/body.txt"
+	echo '.reviewThreads.nodes[1].comments.nodes[1].body = "triage: rejected\nreason: valid, but LATER in its own PR\nconfirmed-by-user: yes"' >"$CASE/threads.json.jq"
+	run "$S" discover 42
+	[ "$status" -eq 1 ]
+	[ "$output" = "$(printf '%s\n' 'These texts of PR #42 may state follow-up work:' \
+		'- Notes: "LATER: run the workflow by hand on main." (95 %)' \
+		'- Rejected finding: "valid, but LATER in its own PR" (95 %)' \
+		'Move each real follow-up to "## Leftovers". Leave a false alarm as it is.')" ]
+	[ "$(grep -c '^---$' "$FAKE_DIR/decisionkit.text")" -eq 4 ]
+	grep -qx 'Summary of the pull request:' "$FAKE_DIR/decisionkit.text"
+	grep -qx 'Notes of the pull request:' "$FAKE_DIR/decisionkit.text"
+	grep -qx 'Reason for a rejected review finding:' "$FAKE_DIR/decisionkit.text"
+	grep -q 'Does it state work that is still to do after this pull request' "$FAKE_LOG"
+}
+
+@test "discover asks nothing about the R, V and Leftovers items, the closing line, comments and code" {
+	dk_responder <<<'[[ "$text" == *LATER* ]] || DK_P=0.1'
+	printf '%s\n' 'Closes #11' '' '## Requirements' '' '- [x] R1: LATER' '  - evidence: x' '' '## Verify' '' '- [x] V1 (R1): LATER' '' \
+		'## Leftovers' '' '- [ ] chore(tooling): LATER' '' '## Summary' '' '<!-- LATER -->' '```' 'LATER' '```' 'Plain text.' >"$CASE/body.txt"
+	echo '.reviewThreads.nodes |= []' >"$CASE/threads.json.jq"
+	run "$S" discover 42
+	[ "$status" -eq 0 ]
+	[ "$output" = "No text of PR #42 states follow-up work. decisionkit checked 1 texts." ]
+	[ "$(grep -c '^---$' "$FAKE_DIR/decisionkit.text")" -eq 1 ]
+	run ! grep -q LATER "$FAKE_DIR/decisionkit.text"
+}
+
+@test "discover joins the lines of a paragraph and asks about each list item on its own" {
+	dk_responder <<<'DK_P=0.1'
+	printf '%s\n' 'A text before the first heading.' '' '## Notes' '' 'First line' 'second line.' '' '- item one' '  - nested item' '### A heading' >"$CASE/body.txt"
+	echo '.reviewThreads.nodes |= []' >"$CASE/threads.json.jq"
+	run "$S" discover 42
+	[ "$status" -eq 0 ]
+	grep -qx 'Body of the pull request:' "$FAKE_DIR/decisionkit.text"
+	grep -qx 'First line second line.' "$FAKE_DIR/decisionkit.text"
+	grep -qx 'item one' "$FAKE_DIR/decisionkit.text"
+	grep -qx 'nested item' "$FAKE_DIR/decisionkit.text"
+	run ! grep -q 'A heading' "$FAKE_DIR/decisionkit.text"
+}
+
+@test "discover marks a true answer below 0.8 as uncertain" {
+	dk_responder <<<'if [[ "$text" == *LATER* ]]; then DK_P=0.6; else DK_P=0.1; fi'
+	printf '%s\n' '## Notes' '' '- LATER: score it again.' >"$CASE/body.txt"
+	echo '.reviewThreads.nodes |= []' >"$CASE/threads.json.jq"
+	run "$S" discover 42
+	[ "$status" -eq 1 ]
+	[[ "$output" == *'- Notes: "LATER: score it again." (60 %, uncertain)'* ]] || false
+}
+
+@test "discover exits 2 when decisionkit or a read fails, and skips a Dependabot PR" {
+	DK_FAIL=1 run --separate-stderr "$S" discover 42
+	[ "$status" -eq 2 ]
+	[[ "$stderr" == *"decisionkit failed. Run: decisionkit status"* ]] || false
+	GH_FAIL="reviewThreads" run --separate-stderr "$S" discover 42
+	[ "$status" -eq 2 ]
+	[[ "$stderr" == *"Cannot read the reviews of PR #42."* ]] || false
+	echo '.author.login = "app/dependabot"' >"$CASE/pr.json.jq"
+	run "$S" discover 42
+	[ "$status" -eq 0 ]
+	[ "$output" = "PR #42 is a Dependabot PR. It has no leftovers." ]
 }

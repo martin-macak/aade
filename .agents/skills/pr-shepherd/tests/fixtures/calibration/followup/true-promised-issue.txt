@@ -1,0 +1,2 @@
+Notes of the pull request:
+Uncertain trace rows (decided by the shepherd, not by decisionkit): every carry-over cell (0.48 to 0.73) and the evidence cells of R1, R2, R3, R6, R7 and R8 (0.50 to 0.78) are below 0.8. I checked each row by hand. Each R item copies its issue item verbatim. Each sub-task covers one part of it, and each evidence path is in the diff or each command ran with the stated result. Calibration puts correct carry-over at 0.55 to 0.84, so these scores fit correct items. A follow-up issue will widen the calibration set.

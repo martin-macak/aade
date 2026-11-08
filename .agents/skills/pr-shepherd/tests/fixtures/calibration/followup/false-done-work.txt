@@ -1,0 +1,2 @@
+Notes of the pull request:
+Two new `-` trigger tasks were ambiguous: the agent loaded tech-research next to the right skill. One was dropped, because an existing `-` task covers the case. The other was reworded.

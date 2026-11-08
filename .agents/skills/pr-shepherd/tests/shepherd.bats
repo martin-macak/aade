@@ -23,6 +23,7 @@ setup() {
 	S="$SKILL_DIR/scripts/shepherd.sh"
 	export SHEPHERD=$S
 	export BASE="$SKILL_DIR/tests/fixtures/prs/base"
+	export SHEPHERD_LABELS="$BASE/labels.yml"
 	GOOD="$SKILL_DIR/tests/fixtures/prs/good"
 	BAD="$SKILL_DIR/tests/fixtures/prs/bad"
 	export GH_LOG="$BATS_TEST_TMPDIR/gh.log"

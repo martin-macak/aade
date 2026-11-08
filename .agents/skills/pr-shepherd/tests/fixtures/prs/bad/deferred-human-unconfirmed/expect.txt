@@ -1,0 +1,1 @@
+Thread PRRT_human (bob): a deferral of a human finding needs "confirmed-by-user: yes". Ask the user first.

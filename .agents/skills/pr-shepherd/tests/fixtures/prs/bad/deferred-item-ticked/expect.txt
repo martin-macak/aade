@@ -1,0 +1,1 @@
+Thread PRRT_bot (codex[bot]): "## Leftovers" has no open item for the deferred finding. Add: - [ ] chore(tooling): fix the loop

@@ -72,6 +72,10 @@ run = ".agents/skills/tech-research/scripts/research.sh check"
 description = "Fail if the issue forms and .github/labels.yml differ"
 run = "scripts/taxonomy-check.sh"
 
+[tasks."markers:check"]
+description = "Fail if a tracked file holds a task marker (TODO, FIXME, XXX, HACK)"
+run = "scripts/markers-check.sh"
+
 [tasks."labels:sync"]
 description = "Make the GitHub labels equal .github/labels.yml (--dry-run to preview)"
 run = "scripts/labels-sync.sh"
@@ -106,7 +110,7 @@ run = "git ls-files -z '*.md' | xargs -0 vale"
 # the tests and the packages of the code layer.
 [tasks.check]
 description = "Run the structural checks of the repository, as CI does (fast, no bats suites)"
-depends = ["agents:check", "knowledge:size", "knowledge:lint", "scripts:coverage", "research:check", "taxonomy:check", "prose:lint"]
+depends = ["agents:check", "knowledge:size", "knowledge:lint", "scripts:coverage", "research:check", "taxonomy:check", "markers:check", "prose:lint"]
 
 [tasks.test]
 description = "Run the bats suites that the changed files affect (--all runs every suite)"

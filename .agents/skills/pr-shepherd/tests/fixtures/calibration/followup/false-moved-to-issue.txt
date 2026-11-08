@@ -1,0 +1,2 @@
+Notes of the pull request:
+The issue item about the first weekly run (Monday 2026-11-09) moved to #35, because that run happens on main only after the merge. V5 is a manual run of the same full workflow on this branch.

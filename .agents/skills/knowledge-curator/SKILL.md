@@ -82,7 +82,7 @@ Current skills:
 | `library-docs` | Current library docs through Context7. |
 | `issue-authoring` | GitHub issues, pull requests and the label taxonomy in `.github/`. |
 | `tech-research` | Technical research in `docs/research/`: brief, sources, typed artifacts. |
-| `pr-shepherd` | Pull requests until merge: issue carry-over, evidence, review triage, the trace. |
+| `pr-shepherd` | Pull requests until merge: issue carry-over, evidence, review triage, the trace, leftovers. |
 
 ## Triage a new instruction
 

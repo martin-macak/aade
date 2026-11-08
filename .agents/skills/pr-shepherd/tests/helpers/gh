@@ -9,6 +9,9 @@
 # says otherwise.
 # rules-<branch>.json overrides rules.json for that base branch.
 # statuses-<sha>.json overrides statuses.json for that commit.
+# leftover-issues.json holds the issues with the origin:leftover label. It
+# defaults to an empty list. Each issue write answers "<number> <id> <url>",
+# number 101 for the first write of a test, 102 for the next.
 # Two switches let a test break a call. GH_FAIL is a text: a call whose
 # arguments hold it logs itself and fails, as gh does on a network or a
 # permission error. GH_CHECKS_EXIT is the exit code of "pr checks", which
@@ -52,6 +55,13 @@ case $args in
 " api graphql "*"reviewThreads"*) fixture threads.json ;;
 " api graphql "*"closedByPullRequestsReferences"*) fixture closing.txt || true ;;
 " api repos/{owner}/{repo}/issues/"*"/comments?per_page=100 "*) fixture comments.json ;;
+" api repos/{owner}/{repo}/issues?labels="*) fixture leftover-issues.json || echo '[]' ;;
+" api repos/{owner}/{repo}/issues -f title="*)
+	n=1
+	[[ -f "$GH_LOG" ]] && n=$(($(grep -c '^api repos/{owner}/{repo}/issues -f title=' "$GH_LOG") + 1))
+	echo "$*" >>"$GH_LOG"
+	echo "$((100 + n)) $((9100 + n)) https://github.com/acme/app/issues/$((100 + n))"
+	;;
 " api repos/{owner}/{repo}/commits/"*"/statuses"*)
 	# shellcheck source=../../scripts/shepherd.sh
 	source "$SHEPHERD"

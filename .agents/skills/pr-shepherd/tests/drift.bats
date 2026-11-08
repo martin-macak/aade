@@ -14,6 +14,7 @@ setup() {
 	CALIBRATION="$DIR/tests/fixtures/calibration"
 	TEMPLATE="$ROOT/.github/pull_request_template.md"
 	WORKFLOW="$ROOT/.github/workflows/pr-shepherd.yml"
+	LEFTOVERS_WORKFLOW="$ROOT/.github/workflows/leftovers.yml"
 	LABELS="$ROOT/.github/labels.yml"
 	MISE="$ROOT/mise.toml"
 	# The prose on one line, so a rewrapped paragraph still matches.
@@ -48,7 +49,7 @@ section() {
 
 @test "the questions in the skill match questions.yml, and each has fixtures" {
 	names=$(yq '.questions[].name' "$QUESTIONS")
-	[ "$(echo $names)" = "carryover evidence finding-valid finding-severity" ]
+	[ "$(echo $names)" = "carryover evidence finding-valid finding-severity followup" ]
 	for name in $names; do
 		[[ "$TEXT" == *"\`$name\`"* ]] || {
 			echo "SKILL.md does not name the question $name."
@@ -142,4 +143,68 @@ section() {
 @test "the Makefile calibrates with the decisionkit facade" {
 	grep -qF '../decisionkit/scripts/decide.sh calibrate references/questions.yml tests/fixtures/calibration' "$DIR/Makefile"
 	[[ "$TEXT" == *'make -C .agents/skills/pr-shepherd calibrate'* ]] || false
+}
+
+@test "the leftover label of the script exists in labels.yml, and the skill names it" {
+	grep -qxF 'LEFTOVER_LABEL=origin:leftover' "$SCRIPT"
+	grep -qxF 'LEFTOVER_QUERY=origin%3Aleftover' "$SCRIPT"
+	yq -e '.[] | select(.name == "origin:leftover")' "$LABELS" >/dev/null
+	[[ "$TEXT" == *'`origin:leftover`'* ]] || false
+}
+
+@test "the PR template has the Leftovers section with the item format of the skill" {
+	grep -qx '## Leftovers' "$TEMPLATE"
+	grep -qx -- '- \[ \] chore(tooling): Pin the Vale package version' "$TEMPLATE"
+	grep -qF '^## Leftovers[ \t]*$' "$SCRIPT"
+	[[ "$TEXT" == *'`- [ ] <type>(<scope>): <title>`'* ]] || false
+	# The example of the skill uses the item of the template.
+	section Leftovers | grep -qx -- '- \[ \] chore(tooling): Pin the Vale package version'
+}
+
+@test "the leftovers workflow runs the leftovers command after a merge, on the merge commit" {
+	yq -e '.on.pull_request_target.types[] | select(. == "closed")' "$LEFTOVERS_WORKFLOW" >/dev/null
+	[ "$(yq '.on | keys | length' "$LEFTOVERS_WORKFLOW")" -eq 1 ]
+	[ "$(yq '.jobs.file.if' "$LEFTOVERS_WORKFLOW")" = 'github.event.pull_request.merged == true' ]
+	[ "$(yq '.jobs.file.steps[0].with.ref' "$LEFTOVERS_WORKFLOW")" = '${{ github.event.pull_request.merge_commit_sha }}' ]
+	[ "$(yq '.jobs.file.steps[0].with.persist-credentials' "$LEFTOVERS_WORKFLOW")" = false ]
+	[ "$(yq '.jobs.file.steps[-1].run' "$LEFTOVERS_WORKFLOW")" = 'mise run pr:shepherd leftovers "$PR"' ]
+	[ "$(yq '.jobs.file.permissions.issues' "$LEFTOVERS_WORKFLOW")" = write ]
+	# Only the issues permission writes. The body never enters an expression.
+	[ "$(yq '[.jobs.file.permissions | to_entries | .[] | select(.value == "write")] | length' "$LEFTOVERS_WORKFLOW")" -eq 1 ]
+	! grep -qF 'pull_request.body' "$LEFTOVERS_WORKFLOW" || false
+	[[ "$TEXT" == *'the `leftovers` workflow runs `$P leftovers <pr>`'* ]] || false
+	[[ "$TEXT" == *'`pull_request_target`'* ]] || false
+}
+
+# A new issue type must keep the fields that a leftover issue and
+# requirements read, so leftovers keep working when the taxonomy grows.
+@test "every issue form has the Scope dropdown and the criteria field that a leftover issue keeps" {
+	for form in "$ROOT"/.github/ISSUE_TEMPLATE/*.yml; do
+		[ "$(basename "$form")" = config.yml ] && continue
+		[ "$(yq '.body[] | select(.id == "scope") | .attributes.label' "$form")" = Scope ] || {
+			echo "$form has no Scope dropdown."
+			return 1
+		}
+		yq -e '.body[] | select(.attributes.label == "Done when" or .attributes.label == "Acceptance criteria")' "$form" >/dev/null || {
+			echo "$form has no \"Done when\" or \"Acceptance criteria\" field."
+			return 1
+		}
+	done
+	grep -qF '### (Done when|Acceptance criteria)' "$SCRIPT"
+}
+
+@test "the growth rules name the files that own each step" {
+	section Leftovers | grep -qF '`scripts/markers-check.sh`'
+	[ -f "$ROOT/scripts/markers-check.sh" ]
+	section Leftovers | grep -qF '`tests/fixtures/calibration/followup/true-<name>.txt`'
+	[ -d "$DIR/tests/fixtures/calibration/followup" ]
+	# Each label line that discover sends starts a followup fixture.
+	for file in "$DIR"/tests/fixtures/calibration/followup/*.txt; do
+		head -n 1 "$file" | grep -qE '^[A-Z][^:]* of the pull request:$|^Reason for a rejected review finding:$' || {
+			echo "$file starts with no label line of discover."
+			return 1
+		}
+	done
+	grep -qF '"Reason for a rejected review finding"' "$SCRIPT"
+	grep -qF 'label="$src of the pull request"' "$SCRIPT"
 }

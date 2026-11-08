@@ -1,0 +1,2 @@
+Notes of the pull request:
+The form schema is checked only once, by hand. A follow-up can add `check-jsonschema` to `mise run check`.

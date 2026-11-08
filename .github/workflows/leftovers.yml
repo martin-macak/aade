@@ -1,0 +1,46 @@
+# Files the leftovers of a merged pull request as issues. Each open item
+# "- [ ] <type>(<scope>): <title>" of its "## Leftovers" section becomes
+# one issue with the labels type:<x>, scope:<x> and origin:leftover. The
+# issue is a sub-issue of the issue that the PR closes. The pr-shepherd
+# skill explains the format. A rerun files no item twice.
+# pull_request_target gives a write token also to a PR from a fork, where
+# pull_request gets a read-only token. The job runs only after a merge, and
+# it checks out the merge commit, which is on the base branch. So it never
+# runs code that the base branch has not accepted.
+name: leftovers
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: leftovers-${{ github.event.pull_request.number }}
+
+jobs:
+  file:
+    # A PR that closes without a merge leaves no work behind.
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          persist-credentials: false
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: gh jq yq
+      # The script reads the body through gh. The body is untrusted input,
+      # so it never goes into an expression of this file.
+      - run: mise run pr:shepherd leftovers "$PR"
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}

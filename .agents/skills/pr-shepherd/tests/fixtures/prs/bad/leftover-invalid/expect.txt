@@ -1,0 +1,4 @@
+Leftovers: "pin the Vale version" has no "<type>(<scope>): " prefix. Write "- [ ] <type>(<scope>): <title>" with a type and a scope of .github/labels.yml.
+Leftovers: "feat(tooling): add a cache": "feat" is no type. Use one of: bug chore enhancement.
+Leftovers: "chore(api): split the module": "api" is no scope. Use one of: agents tooling.
+Leftovers: "plain bullet without a box" has no checkbox. Write "- [ ] <type>(<scope>): <title>", or move the line out of the section.

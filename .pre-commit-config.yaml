@@ -49,6 +49,13 @@ repos:
         language: system
         pass_filenames: false
         files: ^(\.github/ISSUE_TEMPLATE/|\.github/dependabot\.yml$|\.github/labels\.yml$|scripts/taxonomy-check\.sh$)
+      - id: markers-check
+        name: no task markers in tracked files
+        entry: mise exec -- scripts/markers-check.sh
+        language: system
+        # Work notes go in the pull request, not in a file. Pre-commit passes
+        # the staged text files. CI checks every tracked file.
+        types: [text]
       - id: research-check
         name: research format (tech-research skill)
         entry: mise run research:check

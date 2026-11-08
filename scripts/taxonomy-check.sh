@@ -3,8 +3,9 @@
 # Check that the issue forms and .github/labels.yml agree.
 # - Each label has a unique name, a quoted 6-digit hex color and a
 #   description of at most 100 characters.
-# - Each label is a type:*, a scope:*, a pr:* or a ci:* label. pr:* and ci:*
-#   labels flag pull requests, so no form uses them.
+# - Each label is a type:*, a scope:*, a pr:*, a ci:* or an origin:* label.
+#   pr:* and ci:* labels flag pull requests, and a workflow sets origin:*
+#   labels, so no form uses them.
 # - Each form sets exactly one type:* label, and each type:* label has
 #   exactly one form. Every label of a form exists in labels.yml.
 # - The Scope dropdown of each form lists the scope:* values of labels.yml,
@@ -27,7 +28,7 @@ dupes=$(sort <<<"$names" | uniq -d)
 [[ -z "$dupes" ]] || fail "$LABELS: duplicate labels: $dupes"
 while IFS= read -r bad; do
 	[[ -n "$bad" ]] && fail "$LABELS: $bad"
-done < <(yq '.[] | select((.name | test("^(type|scope|pr|ci):[a-z0-9-]+$") | not)) | .name + ": the name must be type:<x>, scope:<x>, pr:<x> or ci:<x> in lower case."' "$LABELS"
+done < <(yq '.[] | select((.name | test("^(type|scope|pr|ci|origin):[a-z0-9-]+$") | not)) | .name + ": the name must be type:<x>, scope:<x>, pr:<x>, ci:<x> or origin:<x> in lower case."' "$LABELS"
 	yq '.[] | select((.color | tag) != "!!str") | .name + ": the color must be 6 hex digits in quotes."' "$LABELS"
 	yq '.[] | select((.color | tag) == "!!str") | select(.color | test("^[0-9a-fA-F]{6}$") | not) | .name + ": the color must be 6 hex digits in quotes."' "$LABELS"
 	yq '.[] | select((.description // "" | length) == 0 or (.description | length) > 100) | .name + ": the description must have 1 to 100 characters."' "$LABELS")
@@ -43,6 +44,7 @@ for form in "$FORMS"/*.yml; do
 		[[ -z "$label" ]] && continue
 		grep -qx "$label" <<<"$names" || fail "$form: label $label is not in $LABELS."
 		[[ "$label" == pr:* ]] && fail "$form: label $label flags pull requests, so no form may set it."
+		[[ "$label" == origin:* ]] && fail "$form: label $label is set by a workflow, so no form may set it."
 	done <<<"$labels"
 	own=$(grep '^type:' <<<"$labels")
 	if [[ $(grep -c . <<<"$own") -ne 1 ]]; then

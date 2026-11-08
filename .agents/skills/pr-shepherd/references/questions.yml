@@ -4,7 +4,10 @@
 # The decisionkit skill explains the format in the section "Facade".
 # Each threshold sits in the middle of the gap that calibration printed
 # with decisionkit 0.4.0 and the Jev provider: carryover 0.30 to 0.55,
-# evidence 0.11 to 0.75, finding-valid 0.48 to 0.79. Run
+# evidence 0.11 to 0.75, finding-valid 0.48 to 0.79, followup 0.21 to
+# 0.68. Each followup fixture quotes the prose of a past PR of this
+# repository, as discover sends it. Only true-rejected-later-synthetic.txt
+# is made up, because no past PR rejected a finding for later work. Run
 # `make -C .agents/skills/pr-shepherd calibrate` after every change here.
 questions:
   - name: carryover
@@ -50,3 +53,18 @@ questions:
       missing test or a maintainability cost. high means data loss, a
       security hole, a broken build or wrong behaviour in the main path.
     options: [low, medium, high]
+  - name: followup
+    kind: binary
+    text: >-
+      The text is one paragraph or list item from the description of a pull
+      request, or the reason for a rejected review finding. Does it state
+      work that is still to do after this pull request, needed or optional,
+      without the number of an issue that tracks it? True means a promise,
+      a deferral, a follow-up or an optional cleanup for later, such as "a
+      follow-up can add X", "after this merges, do Y", "I will run Z by
+      hand later", "a follow-up issue will cover W" or "valid, but a later
+      PR should fix it". False means a fact about the work that this pull
+      request did, a reason, a measurement, a decision, a risk without a
+      task, or a follow-up that names the number of its issue, such as
+      "moved to #35" or "#14 lists the rest".
+    threshold: 0.45

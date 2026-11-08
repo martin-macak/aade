@@ -44,6 +44,7 @@ skill at no new line.
 | ID | Instruction | Class | Freq | Impact | Now in | Reason | Date |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | K1 | Write each paragraph, list item and issue or PR reference of a GitHub issue, PR or comment body on one line. Keep hard wraps in repository files. | general 0.61 | 1.73 | 0.36 | `issue-authoring`, pointer in `pr-shepherd` | Rule 5 points to `AGENTS.md`, but issue #17 names the skill. V4 already loads `issue-authoring` before an agent opens an issue or PR. The rule loads with it. Low impact: a ragged body is easy to edit. | 2026-11-07 |
+| K2 | Never leave a task marker (TODO, FIXME, XXX, HACK) in a tracked file. Put each follow-up that a pull request leaves as an open item under the Leftovers section of its body. The leftovers workflow files it as an issue after the merge. | general 0.84 | 1.85 | 0.56 | `pr-shepherd`, `issue-authoring`, the `markers-check` hook | Rule 3 points to `AGENTS.md`. The `markers-check` hook and `mise run check` enforce the first sentence on every commit, and the hook message points to the Leftovers section. V4 already loads `pr-shepherd` before an agent changes a PR, and that skill states the rest. Low impact: a missed follow-up still sits in the PR body. Issue #47. | 2026-11-08 |
 
 M1 left before the triage of this ledger. It was not scored, because it was a table, not one rule.
 

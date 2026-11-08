@@ -1,0 +1,2 @@
+Notes of the pull request:
+R2: R2.1 and R2.2 cover the merged and the closed PR, and R2.3 covers the gh log checks, so the sub-tasks map one to one to the clauses of the item. The two named tests pass.

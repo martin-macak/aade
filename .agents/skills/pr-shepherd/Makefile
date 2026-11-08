@@ -11,7 +11,7 @@ test: calibrate
 
 # Score the synthetic fixtures in tests/fixtures/calibration with the
 # questions in references/questions.yml. It sends them to decisionkit,
-# about 50 calls. Run it after a change to a question, a threshold or a
+# about 65 calls. Run it after a change to a question, a threshold or a
 # fixture.
 calibrate:
 	@mise exec -- ../decisionkit/scripts/decide.sh calibrate references/questions.yml tests/fixtures/calibration

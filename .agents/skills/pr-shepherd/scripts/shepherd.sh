@@ -7,19 +7,27 @@
 #        shepherd.sh check <pr>
 #        shepherd.sh verify <pr>
 #        shepherd.sh findings <pr> [--no-advice]
-#        shepherd.sh reply <pr> <thread-id|review-id> accepted|rejected --reason <text> [--fix <text>] [--confirmed-by-user]
+#        shepherd.sh reply <pr> <thread-id|review-id> accepted|rejected|deferred --reason <text> [--fix <text>] [--leftover <item>] [--confirmed-by-user]
 #        shepherd.sh checks <pr> [--watch]
 #        shepherd.sh merge <pr> [--confirmed-by-user]
+#        shepherd.sh discover <pr>
+#        shepherd.sh leftovers <pr> [--dry-run]
 #        shepherd.sh disarm <issue>
 #        shepherd.sh carry <pr> <before> <after>
 # requirements prints the R skeleton of an issue. check is deterministic,
 # and CI runs it. verify asks decisionkit through decide.sh and writes the
 # trace: a commit status and a PR comment. findings lists the untriaged
-# review findings. reply triages one finding. checks lists the other PR
-# checks that did not pass. merge turns on auto-merge. It refuses a merged
-# or closed PR before any write. While the trace has a review row, merge
-# needs --confirmed-by-user: the user read the row. merge then records the
-# confirmation in a PR comment.
+# review findings. reply triages one finding. A deferred finding names its
+# leftover item. checks lists the other PR checks that did not pass. merge
+# turns on auto-merge. It refuses a merged or closed PR before any write.
+# While the trace has a review row, merge needs --confirmed-by-user: the
+# user read the row. merge then records the confirmation in a PR comment.
+# discover asks decisionkit which prose of the body and which reasons of
+# rejected findings state follow-up work, so the shepherd can move it to
+# "## Leftovers". It only advises, and CI never runs it.
+# leftovers files each open item of "## Leftovers" of a merged PR as an
+# issue. The leftovers workflow runs it after the merge. --dry-run prints
+# the issues and files nothing.
 # disarm turns off auto-merge on the open PRs that close an edited issue.
 # carry copies a fresh success trace from the previous head to the new head.
 # gh picks the repository from the git remote, or from GH_REPO. Run it from
@@ -38,6 +46,19 @@ CHECK_NAME=pr-shepherd
 NO_ISSUE_LABEL=pr:no-issue
 # GitHub refuses a commit status description that is longer.
 DESC_MAX=140
+# The type and scope labels of a leftover come from this file. The path is
+# relative to the repository root. A test sets SHEPHERD_LABELS.
+LABELS=${SHEPHERD_LABELS:-.github/labels.yml}
+LEFTOVER_LABEL=origin:leftover
+# The label in the query string of the issues API, with the colon encoded.
+LEFTOVER_QUERY=origin%3Aleftover
+# A leftover item: <type>(<scope>): <title>.
+LEFTOVER_RE='^([a-z]+)\(([a-z0-9-]+)\): (.+)$'
+# GitHub refuses a longer issue title. The body keeps the whole item.
+TITLE_MAX=256
+LEFTOVERS=""
+TYPES=""
+SCOPES=""
 STATUS=0
 REVIEW_ROWS=""
 
@@ -150,6 +171,118 @@ normalise() {
 
 sha8() {
 	if command -v sha256sum >/dev/null 2>&1; then sha256sum; else shasum -a 256; fi | cut -c 1-8
+}
+
+sha12() {
+	if command -v sha256sum >/dev/null 2>&1; then sha256sum; else shasum -a 256; fi | cut -c 1-12
+}
+
+# Print the leftovers of a clean body on stdin, one per line, as three
+# tab-separated fields: the kind, the text and the sub-items, joined by the
+# unit separator. Kind "item" is an open top-level "- [ ] <text>" line of
+# the "## Leftovers" section. Each indented list line below it is a
+# sub-item. Kind "plain" is a top-level list line without a checkbox. A
+# ticked item and its sub-items are dropped. An item without text is no
+# item.
+leftover_items() {
+	awk '
+		function trim(s) { gsub(/[ \t]+/, " ", s); sub(/^ /, "", s); sub(/ $/, "", s); return s }
+		function flush() { if (cur != "") print "item\t" cur "\t" subs; cur = ""; subs = "" }
+		/^## / { flush(); inside = ($0 ~ /^## Leftovers[ \t]*$/); attach = 0; next }
+		!inside { next }
+		/^[-*] \[ \]([ \t]|$)/ { flush(); cur = trim(substr($0, 6)); attach = (cur != ""); next }
+		/^[-*] \[[xX]\]/ { flush(); attach = 0; next }
+		/^[-*] / { flush(); attach = 0; t = trim(substr($0, 3)); if (t != "") print "plain\t" t "\t"; next }
+		/^[ \t]+[-*] / {
+			if (!attach) next
+			s = $0; sub(/^[ \t]+[-*] (\[[ xX]\] )?/, "", s); s = trim(s)
+			if (s != "") subs = subs (subs == "" ? "" : "\037") s
+			next
+		}
+		/^[ \t]*$/ { next }
+		{ flush(); attach = 0 }
+		END { flush() }'
+}
+
+# Print the prose of a clean body on stdin, one text per line: the section
+# name, a tab and the text. A text is a paragraph or a list item, joined to
+# one line. Nested list items are texts of their own. The sections
+# Requirements, Verify and Leftovers are no prose, and neither is the
+# closing line. Text before the first "## " heading has the section "Body".
+prose_units() {
+	awk '
+		function trim(s) { gsub(/[ \t]+/, " ", s); sub(/^ /, "", s); sub(/ $/, "", s); return s }
+		function flush() { cur = trim(cur); if (cur != "") print sec "\t" cur; cur = "" }
+		BEGIN { sec = "Body" }
+		/^## / { flush(); sec = trim(substr($0, 4)); skip = (sec ~ /^(Requirements|Verify|Leftovers)$/); next }
+		skip { next }
+		/^#+ / { flush(); next }
+		/^[ \t]*$/ { flush(); next }
+		/^(Closes|Fixes|Resolves) #[0-9]+[ \t]*$/ { flush(); next }
+		/^[ \t]*[-*] / { flush(); cur = $0; sub(/^[ \t]*[-*] /, "", cur); next }
+		{ cur = cur " " $0 }
+		END { flush() }'
+}
+
+# Print the label values with the prefix $1 of $LABELS, one per line.
+label_values() {
+	[[ -r "$LABELS" ]] || die "Cannot read $LABELS. Run shepherd.sh from the repository root."
+	yq '.[].name' "$LABELS" | sed -n "s/^$1://p"
+}
+
+# Load the leftovers of $BODY into LEFTOVERS. When there is one, load the
+# type and scope values of $LABELS into TYPES and SCOPES.
+load_leftovers() {
+	LEFTOVERS=$(leftover_items <<<"$BODY")
+	[[ -n "$LEFTOVERS" ]] || return 0
+	TYPES=$(label_values type) || exit 2
+	SCOPES=$(label_values scope) || exit 2
+}
+
+# Print the problem of the leftover text $1, or nothing when it is valid.
+leftover_problem() {
+	local text=$1 label
+	label="Leftovers: \"${text:0:60}\""
+	if [[ ! "$text" =~ $LEFTOVER_RE ]]; then
+		echo "$label has no \"<type>(<scope>): \" prefix. Write \"- [ ] <type>(<scope>): <title>\" with a type and a scope of .github/labels.yml."
+	elif ! grep -qxF -- "${BASH_REMATCH[1]}" <<<"$TYPES"; then
+		# shellcheck disable=SC2086 # one value per word.
+		echo "$label: \"${BASH_REMATCH[1]}\" is no type. Use one of: $(echo $TYPES)."
+	elif ! grep -qxF -- "${BASH_REMATCH[2]}" <<<"$SCOPES"; then
+		# shellcheck disable=SC2086
+		echo "$label: \"${BASH_REMATCH[2]}\" is no scope. Use one of: $(echo $SCOPES)."
+	fi
+}
+
+# Print the texts of the open leftover items in $LEFTOVERS as a JSON array.
+open_leftovers_json() {
+	awk -F '\t' '$1 == "item" { print $2 }' <<<"$LEFTOVERS" | jq -R . | jq -s .
+}
+
+leftover_marker() {
+	printf '<!-- leftover:%s:%s -->' "$1" "$(printf '%s' "$2" | sha12)"
+}
+
+# Print the issue body of the valid leftover $1 with the sub-items $2 of
+# the PR $3. $4 is the issue that the PR closes, or empty. The body has the
+# headings of the issue forms that the scope workflow and the requirements
+# command read. Without sub-items, the title is the only Done-when item.
+leftover_body() {
+	local text=$1 subs=$2 pr=$3 issue=$4 item
+	[[ "$text" =~ $LEFTOVER_RE ]] || return 1
+	printf '### Scope\n\n%s\n\n### What and why\n\n' "${BASH_REMATCH[2]}"
+	printf 'PR #%s listed this work in its Leftovers section, and the leftovers workflow filed this issue after the merge.' "$pr"
+	[[ -z "$issue" ]] || printf ' This issue is a sub-issue of issue #%s, which the PR worked on.' "$issue"
+	printf '\n\nBefore work starts, add the other required fields of the issue form of its type. Then make each Done-when item a checkable statement, because the pr-shepherd skill copies each one as an R item.\n\n'
+	printf '### Done when\n\n'
+	if [[ -n "$subs" ]]; then
+		while IFS= read -r item; do
+			printf -- '- [ ] %s\n' "$item"
+		done < <(tr '\037' '\n' <<<"$subs")
+	else
+		printf -- '- [ ] %s\n' "${BASH_REMATCH[3]}"
+	fi
+	printf '\n%s\n' "$(leftover_marker "$pr" "$text")"
 }
 
 # Print the items of the "### Done when" or "### Acceptance criteria"
@@ -267,11 +400,12 @@ item_label() {
 }
 
 # Check the ticks of every item and the evidence of each ticked leaf in
-# Requirements and Verify. $ITEMS holds the output of parse_items.
+# Requirements and Verify. $ITEMS holds the output of parse_items. An open
+# item of "## Leftovers" is work for later, so it needs no tick.
 check_ticks() {
 	local sec ind tick leaf text ev label line
 	while IFS=$'\t' read -r sec ind tick leaf text ev; do
-		[[ -z "$sec" ]] && continue
+		[[ -z "$sec" || "$sec" == Leftovers ]] && continue
 		label=$(item_label "$text")
 		if [[ "$tick" != x ]]; then
 			problem "$label: not ticked. Finish the task, then tick it, or remove it."
@@ -355,6 +489,21 @@ check_requirements() {
 	((vcount > 0)) || problem "Verify: the PR has no V item. Add at least one: - [ ] V1 (R1): <check>"
 }
 
+# Check each leftover in $LEFTOVERS: an item has a checkbox and a type and
+# a scope of $LABELS.
+check_leftovers() {
+	local kind text subs line
+	while IFS=$'\t' read -r kind text subs; do
+		[[ -z "$kind" ]] && continue
+		if [[ "$kind" == plain ]]; then
+			problem "Leftovers: \"${text:0:60}\" has no checkbox. Write \"- [ ] <type>(<scope>): <title>\", or move the line out of the section."
+			continue
+		fi
+		line=$(leftover_problem "$text")
+		[[ -n "$line" ]] && problem "$line"
+	done <<<"$LEFTOVERS"
+}
+
 # Print the IDs of all top R items in $ITEMS, so a V item may name a later R.
 all_rids() {
 	awk -F '\t' '$1 == "Requirements" && $2 == 0 && $5 ~ /^R[0-9]+: / { sub(/:.*/, "", $5); printf " %s", $5 }' <<<"$ITEMS"
@@ -419,11 +568,14 @@ def kind: if (.__typename == "Bot") or ((.login // "") | endswith("[bot]")) then
 def who: (.author // {login: "ghost", __typename: "User"});
 def triage:
 	[ .[] | (split("\n") | map(sub("\r$"; ""))) as $l
-	| select(any($l[]; test("^triage: (accepted|rejected)$")))
+	| select(any($l[]; test("^triage: (accepted|rejected|deferred)$")))
 	| { verdict: ([$l[] | select(test("^triage: "))][0] | sub("^triage: "; "")),
 	    fix: (([$l[] | select(test("^fix: "))][0] // "fix: ") | sub("^fix: "; "") | sub("^ +"; "")),
+	    leftover: (([$l[] | select(test("^leftover: "))][0] // "leftover: ") | sub("^leftover: "; "")
+	      | gsub("[[:space:]]+"; " ") | sub("^ "; "") | sub(" $"; "")),
+	    reason: (([$l[] | select(test("^reason: "))][0] // "reason: ") | sub("^reason: "; "")),
 	    confirmed: any($l[]; . == "confirmed-by-user: yes") } ] | last;
-def triage_problems($what; $kind):
+def triage_problems($what; $kind; $open):
 	if . == null then empty
 	elif .verdict == "accepted" and (.fix | length) == 0 then
 		"\($what): the accepted triage has no \"fix:\" line. Fix the finding, then reply again with --fix."
@@ -431,6 +583,12 @@ def triage_problems($what; $kind):
 		"\($what): \"fix:\" names a commit SHA. A rebase changes it. Name the changed path or the change."
 	elif .verdict == "rejected" and $kind == "human" and (.confirmed | not) then
 		"\($what): a rejection of a human finding needs \"confirmed-by-user: yes\". Ask the user first."
+	elif .verdict == "deferred" and $kind == "human" and (.confirmed | not) then
+		"\($what): a deferral of a human finding needs \"confirmed-by-user: yes\". Ask the user first."
+	elif .verdict == "deferred" and (.leftover | length) == 0 then
+		"\($what): the deferred triage has no \"leftover:\" line. Reply again with --leftover."
+	elif .verdict == "deferred" and (.leftover as $t | any($open[]; . == $t) | not) then
+		"\($what): \"## Leftovers\" has no open item for the deferred finding. Add: - [ ] \(.leftover)"
 	else empty end;
 def threads:
 	[ .reviewThreads.nodes[]
@@ -449,24 +607,25 @@ def review_bodies($comments):
 
 # Check the review threads and the reviews of the PR $1.
 check_reviews() {
-	local pr=$1 reviews comments line
+	local pr=$1 reviews comments open line
 	reviews=$(gh_reviews "$pr") || die "Cannot read the reviews of PR #$pr."
 	comments=$(gh_comments "$pr") || die "Cannot read the comments of PR #$pr."
+	open=$(open_leftovers_json) || die "Cannot list the leftovers of PR #$pr."
 	while IFS= read -r line; do
 		[[ -n "$line" ]] && problem "$line"
-	done < <(jq -r --argjson comments "$comments" --arg pr "$pr" "$JQ_DEFS"'
+	done < <(jq -r --argjson comments "$comments" --argjson open "$open" --arg pr "$pr" "$JQ_DEFS"'
 		(threads[]
 		| "Thread \(.id) (\(.author))" as $w
 		| if .triage == null then
-			"\($w): not triaged. Run: shepherd.sh reply \($pr) \(.id) accepted|rejected --reason <text>"
-		  else (.kind as $k | .triage | triage_problems($w; $k)),
+			"\($w): not triaged. Run: shepherd.sh reply \($pr) \(.id) accepted|rejected|deferred --reason <text>"
+		  else (.kind as $k | .triage | triage_problems($w; $k; $open)),
 			(if .resolved then empty else "\($w): triaged, but not resolved. Resolve the thread." end)
 		  end),
 		(review_bodies($comments)[]
 		| "Review \(.id) (\(.author))" as $w
 		| if .triage == null then
-			"\($w): the review body is not triaged. Run: shepherd.sh reply \($pr) \(.id) accepted|rejected --reason <text>"
-		  else (.kind as $k | .triage | triage_problems($w; $k)) end),
+			"\($w): the review body is not triaged. Run: shepherd.sh reply \($pr) \(.id) accepted|rejected|deferred --reason <text>"
+		  else (.kind as $k | .triage | triage_problems($w; $k; $open)) end),
 		([.reviews.nodes[] | select(.state != "COMMENTED" and .state != "PENDING")]
 		| group_by(.author.login // "ghost")[] | last
 		| select(.state == "CHANGES_REQUESTED")
@@ -502,6 +661,8 @@ run_check() {
 	FILES=$(gh_files "$pr") || die "Cannot read the files of PR #$pr."
 	ITEMS=$(parse_items <<<"$BODY")
 	check_ticks
+	load_leftovers
+	check_leftovers
 	if has_label "$NO_ISSUE_LABEL" <<<"$PR_JSON"; then
 		echo "PR #$pr has the label $NO_ISSUE_LABEL. It needs no issue items and no trace."
 	else
@@ -940,12 +1101,12 @@ cmd_findings() {
 }
 
 cmd_reply() {
-	local pr target verdict reason="" fix="" confirmed=0 reviews kind body
+	local pr target verdict reason="" fix="" leftover="" confirmed=0 reviews kind body line
 	(($# >= 3)) || usage
 	pr=$1 target=$2 verdict=$3
 	shift 3
 	[[ "$pr" =~ ^[0-9]+$ ]] || usage
-	[[ "$verdict" == accepted || "$verdict" == rejected ]] || usage
+	[[ "$verdict" == accepted || "$verdict" == rejected || "$verdict" == deferred ]] || usage
 	while (($# > 0)); do
 		case $1 in
 		--reason)
@@ -958,6 +1119,11 @@ cmd_reply() {
 			fix=$2
 			shift 2
 			;;
+		--leftover)
+			(($# >= 2)) || usage
+			leftover=$2
+			shift 2
+			;;
 		--confirmed-by-user)
 			confirmed=1
 			shift
@@ -967,10 +1133,20 @@ cmd_reply() {
 	done
 	reason=$(tr '\n' ' ' <<<"$reason" | normalise)
 	fix=$(tr '\n' ' ' <<<"$fix" | normalise)
+	leftover=$(tr '\n' ' ' <<<"$leftover" | normalise)
 	[[ -n "$reason" ]] || die "Give a reason with --reason."
 	if [[ "$verdict" == accepted ]]; then
 		[[ -n "$fix" ]] || die "An accepted finding needs --fix: the changed path or the change."
 		is_sha "$fix" && die "--fix names a commit SHA. A rebase changes it. Name the changed path or the change."
+	fi
+	if [[ "$verdict" == deferred ]]; then
+		[[ -n "$leftover" ]] || die "A deferred finding needs --leftover: the item \"<type>(<scope>): <title>\" that you add to \"## Leftovers\"."
+		TYPES=$(label_values type) || exit 2
+		SCOPES=$(label_values scope) || exit 2
+		line=$(leftover_problem "$leftover")
+		[[ -z "$line" ]] || die "--leftover: ${line#Leftovers: }"
+	elif [[ -n "$leftover" ]]; then
+		die "Only a deferred finding takes --leftover."
 	fi
 	reviews=$(gh_reviews "$pr") || die "Cannot read the reviews of PR #$pr."
 	if [[ "$target" =~ ^[0-9]+$ ]]; then
@@ -983,14 +1159,20 @@ cmd_reply() {
 		echo "A human wrote this finding. Ask the user to confirm the rejection, then add --confirmed-by-user."
 		return 1
 	fi
+	if [[ "$verdict" == deferred && "$kind" == human ]] && ((!confirmed)); then
+		echo "A human wrote this finding. Ask the user to confirm the deferral, then add --confirmed-by-user."
+		return 1
+	fi
 	body=""
 	[[ "$target" =~ ^[0-9]+$ ]] && body="review: $target"$'\n'
 	body+="triage: $verdict"$'\n'"reason: $reason"
 	[[ -n "$fix" ]] && body+=$'\n'"fix: $fix"
+	[[ -n "$leftover" ]] && body+=$'\n'"leftover: $leftover"
 	((confirmed)) && body+=$'\n'"confirmed-by-user: yes"
 	if [[ "$target" =~ ^[0-9]+$ ]]; then
 		gh api "repos/{owner}/{repo}/issues/$pr/comments" -f body="$body" --silent || die "Cannot write the triage comment."
 		echo "Triaged review $target as $verdict."
+		remind_leftover "$pr" "$leftover"
 		return 0
 	fi
 	gh api graphql -f id="$target" -f body="$body" -f query='
@@ -1001,6 +1183,17 @@ mutation($id: ID!, $body: String!) {
 mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { isResolved } } }' --silent ||
 		die "Cannot resolve thread $target."
 	echo "Triaged thread $target as $verdict, and resolved it."
+	remind_leftover "$pr" "$leftover"
+}
+
+# Tell the author to add the leftover $2 of a deferred finding to the body
+# of the PR $1, unless the body has it as an open item.
+remind_leftover() {
+	[[ -n "$2" ]] || return 0
+	load_pr "$1"
+	LEFTOVERS=$(leftover_items <<<"$BODY")
+	awk -F '\t' '$1 == "item" { print $2 }' <<<"$LEFTOVERS" | grep -qxF -- "$2" ||
+		echo "Add this line to \"## Leftovers\" of PR #$1: - [ ] $2"
 }
 
 # Print one problem for each check of the PR $1 that did not pass. The
@@ -1083,6 +1276,153 @@ The user read the review rows $(row_list $REVIEW_ROWS) of the trace on ${SHA:0:8
 	# A squash still keeps the history linear.
 	gh pr merge "$pr" --auto --squash || die "Cannot turn on auto-merge for PR #$pr."
 	echo "Auto-merge is on for PR #$pr. GitHub merges it when every required check passes."
+	leftover_plan
+}
+
+# Ask the followup question for each prose text of the PR $1 and for the
+# reason of each rejected finding. Print each text with a true answer: the
+# shepherd moves real follow-ups to "## Leftovers". Exit 1 when a text has
+# a true answer, so a script can stop on it.
+cmd_discover() {
+	local pr reviews comments texts src text answer p uncertain label n=0 hits=""
+	(($# == 1)) && [[ "$1" =~ ^[0-9]+$ ]] || usage
+	pr=$1
+	load_pr "$pr"
+	if is_dependabot <<<"$PR_JSON"; then
+		echo "PR #$pr is a Dependabot PR. It has no leftovers."
+		return 0
+	fi
+	reviews=$(gh_reviews "$pr") || die "Cannot read the reviews of PR #$pr."
+	comments=$(gh_comments "$pr") || die "Cannot read the comments of PR #$pr."
+	texts=$(prose_units <<<"$BODY") || die "Cannot read the body of PR #$pr."
+	texts+=$'\n'$(jq -r --argjson comments "$comments" "$JQ_DEFS"'
+		(threads[], review_bodies($comments)[]) | .triage
+		| select(. != null and .verdict == "rejected" and (.reason | test("[^[:space:]]")))
+		| "Rejected finding\t" + (.reason | gsub("[[:space:]]+"; " "))' <<<"$reviews") ||
+		die "Cannot read the triage of PR #$pr."
+	while IFS=$'\t' read -r -u 3 src text; do
+		[[ -n "$text" ]] || continue
+		n=$((n + 1))
+		if [[ "$src" == "Rejected finding" ]]; then
+			label="Reason for a rejected review finding"
+		else
+			label="$src of the pull request"
+		fi
+		read -r answer p uncertain < <(ask followup "$(printf '%s:\n%s\n' "$label" "$text")") ||
+			die "decisionkit failed. Run: decisionkit status"
+		[[ -n "${answer:-}" ]] || die "decisionkit failed. Run: decisionkit status"
+		[[ "$answer" == true ]] || continue
+		hits+="- $src: \"$text\" ($(percent <<<"$p")$([[ "$uncertain" == true ]] && echo ', uncertain'))"$'\n'
+	done 3<<<"$texts"
+	if [[ -z "$hits" ]]; then
+		echo "No text of PR #$pr states follow-up work. decisionkit checked $n texts."
+		return 0
+	fi
+	echo "These texts of PR #$pr may state follow-up work:"
+	printf '%s' "$hits"
+	echo "Move each real follow-up to \"## Leftovers\". Leave a false alarm as it is."
+	return 1
+}
+
+# Print the open leftovers in $LEFTOVERS that the merge turns into issues.
+leftover_plan() {
+	local items
+	items=$(awk -F '\t' '$1 == "item" { print "- " $2 }' <<<"$LEFTOVERS")
+	[[ -n "$items" ]] || return 0
+	echo "After the merge, the leftovers workflow files one issue for each of these leftovers:"
+	printf '%s\n' "$items"
+}
+
+# File each open leftover of the merged PR $1 as an issue. A marker in the
+# body of each issue lets a rerun skip the items that have an issue. The
+# item text is untrusted input: it reaches gh only as an argument, and the
+# output names an item by its number, never by its text.
+cmd_leftovers() {
+	local pr dry=0 state issue kind text subs n=0 problem_line title body marker existing="" out number id url failed=0
+	local created=() labels=()
+	(($# == 1 || $# == 2)) && [[ "$1" =~ ^[0-9]+$ ]] || usage
+	pr=$1
+	if (($# == 2)); then
+		[[ "$2" == --dry-run ]] || usage
+		dry=1
+	fi
+	load_pr "$pr"
+	if is_dependabot <<<"$PR_JSON"; then
+		echo "PR #$pr is a Dependabot PR. It has no leftovers."
+		return 0
+	fi
+	state=$(jq -r '.state // ""' <<<"$PR_JSON")
+	if ((!dry)) && [[ "$state" != MERGED ]]; then
+		echo "PR #$pr is $(tr '[:upper:]' '[:lower:]' <<<"${state:-in an unknown state}"). Its leftovers become issues only after the merge. To see them, run: shepherd.sh leftovers $pr --dry-run"
+		return 1
+	fi
+	load_leftovers
+	if ! grep -q $'^item\t' <<<"$LEFTOVERS"; then
+		echo "PR #$pr has no open leftovers."
+		return 0
+	fi
+	issue=$(closing_issue <<<"$BODY")
+	if ((!dry)); then
+		existing=$(gh api "repos/{owner}/{repo}/issues?labels=$LEFTOVER_QUERY&state=all&per_page=100" --paginate |
+			jq -r '.[].body // empty') || die "Cannot read the existing leftover issues."
+	fi
+	while IFS=$'\t' read -r -u 3 kind text subs; do
+		[[ "$kind" == item ]] || continue
+		n=$((n + 1))
+		problem_line=$(leftover_problem "$text")
+		if [[ -n "$problem_line" ]]; then
+			if ((dry)); then
+				echo "Leftover $n: $problem_line"
+			else
+				echo "Leftover $n is not valid, so it gets no issue. Run: shepherd.sh check $pr"
+			fi
+			failed=1
+			continue
+		fi
+		[[ "$text" =~ $LEFTOVER_RE ]]
+		title=${BASH_REMATCH[3]:0:TITLE_MAX}
+		labels=("type:${BASH_REMATCH[1]}" "scope:${BASH_REMATCH[2]}" "$LEFTOVER_LABEL")
+		body=$(leftover_body "$text" "$subs" "$pr" "$issue")
+		if ((dry)); then
+			printf 'Leftover %d\nTitle: %s\nLabels: %s\n\n%s\n\n' "$n" "$title" "${labels[*]}" "$body"
+			continue
+		fi
+		marker=$(leftover_marker "$pr" "$text")
+		if grep -qF -- "$marker" <<<"$existing"; then
+			echo "Leftover $n has an issue already."
+			continue
+		fi
+		if ! out=$(gh api "repos/{owner}/{repo}/issues" -f title="$title" -f body="$body" \
+			-f "labels[]=${labels[0]}" -f "labels[]=${labels[1]}" -f "labels[]=${labels[2]}" \
+			--jq '"\(.number) \(.id) \(.html_url)"'); then
+			echo "Cannot file leftover $n."
+			failed=1
+			continue
+		fi
+		read -r number id url <<<"$out"
+		existing+=$'\n'"$marker"
+		created+=("$url")
+		echo "Leftover $n: filed $url"
+		# The sub-issue links the leftover to the issue that the PR closes.
+		if [[ -n "$issue" ]] && ! gh api -X POST "repos/{owner}/{repo}/issues/$issue/sub_issues" \
+			-F sub_issue_id="$id" --silent; then
+			echo "Cannot add #$number as a sub-issue of #$issue."
+			failed=1
+		fi
+	done 3<<<"$LEFTOVERS"
+	((dry)) && return "$failed"
+	# The issues exist even when the comment fails. A rerun skips them.
+	if ((${#created[@]} > 0)); then
+		if ! gh api "repos/{owner}/{repo}/issues/$pr/comments" --silent \
+			-f body="$(printf 'The leftovers workflow filed one issue for each open item of "## Leftovers" in this PR. Each issue has the type and scope labels of its item and the label origin:leftover.'
+				[[ -z "$issue" ]] || printf ' Each is a sub-issue of #%s.' "$issue"
+				printf '\n\n'
+				printf -- '- %s\n' "${created[@]}")"; then
+			echo "Cannot comment on PR #$pr."
+			failed=1
+		fi
+	fi
+	return "$failed"
 }
 
 cmd_disarm() {
@@ -1186,6 +1526,8 @@ findings) cmd_findings "$@" ;;
 reply) cmd_reply "$@" ;;
 checks) cmd_checks "$@" ;;
 merge) cmd_merge "$@" ;;
+discover) cmd_discover "$@" ;;
+leftovers) cmd_leftovers "$@" ;;
 disarm) cmd_disarm "$@" ;;
 carry) cmd_carry "$@" ;;
 *) usage ;;
