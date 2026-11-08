@@ -3,7 +3,7 @@
 # The steps from a PR that passes check to a PR that merges. verify writes
 # the trace that check demands. findings and reply triage the reviews.
 # checks and merge guard the merge. disarm takes the merge back when the
-# issue changes. The usage errors and check are in shepherd.bats.
+# issue changes. carry keeps the trace over a push. The usage errors and check are in shepherd.bats.
 
 # run --separate-stderr needs bats 1.5 or later.
 bats_require_minimum_version 1.5.0
@@ -741,4 +741,98 @@ JQ
 	GH_FAIL="closedByPullRequestsReferences" run "$S" disarm 11
 	[ "$status" -eq 2 ]
 	[[ "$output" == *"Cannot read the PRs that close issue #11."* ]] || false
+}
+
+# carry reads the trace of the old head $BEFORE from statuses.json and
+# writes to the new head, the head of the base PR. The new head has no
+# trace unless a test says so.
+carry_setup() {
+	BEFORE=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+	AFTER=0123456789abcdef0123456789abcdef01234567
+	echo '[]' >"$CASE/statuses-$AFTER.json"
+}
+
+@test "carry copies a fresh success trace to the new head, and check then passes" {
+	carry_setup
+	run "$S" carry 42 "$BEFORE" "$AFTER"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"Trace: carried success from bbbbbbbb to 01234567."* ]] || false
+	grep -q "^api repos/{owner}/{repo}/statuses/$AFTER -f state=success -f context=pr-shepherd/trace -f description=req=[0-9a-f]\{8\} issue=[0-9a-f]\{8\} carried from bbbbbbbb -f target_url=https://github.com/acme/app/pull/42#issuecomment-9002 --silent$" "$GH_LOG"
+	desc=$(sed -n 's/.*-f description=\(.*\) -f target_url.*/\1/p' "$GH_LOG")
+	jq --arg d "$desc" '.[0].description = $d' "$BASE/statuses.json" >"$CASE/statuses-$AFTER.json"
+	run "$S" check 42
+	[ "$status" -eq 0 ]
+}
+
+@test "carry writes nothing when the old trace is stale or not a success" {
+	carry_setup
+	for change in '.[0].state = "failure"' '.[0].description = "req=deadbeef issue=@ISSUE@"' \
+		'.[0].description = "req=@REQ@ issue=deadbeef"' '[]'; do
+		jq "$change" "$BASE/statuses.json" >"$CASE/statuses.json"
+		run "$S" carry 42 "$BEFORE" "$AFTER"
+		[ "$status" -eq 0 ]
+		[[ "$output" == *"Run: shepherd.sh verify 42"* ]] || false
+	done
+	[[ "$output" == *"bbbbbbbb has no trace."* ]] || false
+	[ ! -f "$GH_LOG" ]
+}
+
+@test "carry names the cause when it writes nothing" {
+	carry_setup
+	jq '.[0].state = "failure"' "$BASE/statuses.json" >"$CASE/statuses.json"
+	run "$S" carry 42 "$BEFORE" "$AFTER"
+	[ "$output" = "The trace of bbbbbbbb is failure. Run: shepherd.sh verify 42" ]
+	jq '.[0].description = "req=deadbeef issue=@ISSUE@"' "$BASE/statuses.json" >"$CASE/statuses.json"
+	run "$S" carry 42 "$BEFORE" "$AFTER"
+	[ "$output" = "The Requirements section changed after verify. Run: shepherd.sh verify 42" ]
+	jq '.[0].description = "req=@REQ@ issue=deadbeef"' "$BASE/statuses.json" >"$CASE/statuses.json"
+	run "$S" carry 42 "$BEFORE" "$AFTER"
+	[ "$output" = "Issue #11 changed after verify. Run: shepherd.sh verify 42" ]
+}
+
+@test "carry keeps a trace that the new head has already" {
+	carry_setup
+	rm "$CASE/statuses-$AFTER.json"
+	run "$S" carry 42 "$BEFORE" "$AFTER"
+	[ "$status" -eq 0 ]
+	[ "$output" = "01234567 has a trace already. Nothing to carry." ]
+	[ ! -f "$GH_LOG" ]
+}
+
+@test "carry writes nothing for a commit that is no longer the head" {
+	carry_setup
+	run "$S" carry 42 "$BEFORE" cccccccccccccccccccccccccccccccccccccccc
+	[ "$status" -eq 0 ]
+	[ "$output" = "cccccccc is no longer the head of PR #42. Nothing to carry." ]
+	[ ! -f "$GH_LOG" ]
+}
+
+@test "carry writes nothing for an exempt PR, a PR without a closing line or an issue without items" {
+	carry_setup
+	echo '.labels = [{"name": "pr:no-issue"}]' >"$CASE/pr.json.jq"
+	run "$S" carry 42 "$BEFORE" "$AFTER"
+	[[ "$output" == *"exempt"* ]] || false
+	rm "$CASE/pr.json.jq"
+	cp "$SKILL_DIR/tests/fixtures/prs/bad/no-closes/body.txt.sed" "$CASE/"
+	run "$S" carry 42 "$BEFORE" "$AFTER"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *'no "Closes #<issue>" line. Nothing to carry.'* ]] || false
+	rm "$CASE/body.txt.sed"
+	cp "$SKILL_DIR/tests/fixtures/prs/bad/issue-without-items/issue.txt.sed" "$CASE/"
+	run "$S" carry 42 "$BEFORE" "$AFTER"
+	[ "$status" -eq 0 ]
+	[ "$output" = "Issue #11 has no items. Nothing to carry." ]
+	[ ! -f "$GH_LOG" ]
+}
+
+@test "carry exits 2 on a wrong SHA, a failed read or a failed write" {
+	carry_setup
+	run "$S" carry 42 "$BEFORE" HEAD
+	[ "$status" -eq 2 ]
+	GH_FAIL="commits/$BEFORE/statuses" run --separate-stderr "$S" carry 42 "$BEFORE" "$AFTER"
+	[ "$status" -eq 2 ]
+	[[ "$stderr" == *"Cannot read the statuses of $BEFORE." ]] || false
+	GH_FAIL="statuses/$AFTER -f" run --separate-stderr "$S" carry 42 "$BEFORE" "$AFTER"
+	[ "$status" -eq 2 ]
+	[[ "$stderr" == *"Cannot write the pr-shepherd/trace status." ]] || false
 }

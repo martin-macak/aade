@@ -11,6 +11,7 @@
 #        shepherd.sh checks <pr> [--watch]
 #        shepherd.sh merge <pr> [--confirmed-by-user]
 #        shepherd.sh disarm <issue>
+#        shepherd.sh carry <pr> <before> <after>
 # requirements prints the R skeleton of an issue. check is deterministic,
 # and CI runs it. verify asks decisionkit through decide.sh and writes the
 # trace: a commit status and a PR comment. findings lists the untriaged
@@ -19,6 +20,7 @@
 # a review row, merge needs --confirmed-by-user: the user read the row.
 # merge then records the confirmation in a PR comment.
 # disarm turns off auto-merge on the open PRs that close an edited issue.
+# carry copies a fresh success trace from the previous head to the new head.
 # gh picks the repository from the git remote, or from GH_REPO. Run it from
 # the repository root. It needs gh, jq and yq, and runs on bash 3.2.
 # Exit codes: 0 pass, 1 a rule fails, 2 wrong usage or a failed call.
@@ -357,13 +359,19 @@ all_rids() {
 	awk -F '\t' '$1 == "Requirements" && $2 == 0 && $5 ~ /^R[0-9]+: / { sub(/:.*/, "", $5); printf " %s", $5 }' <<<"$ITEMS"
 }
 
+# Print the newest trace status of the commit $1 as JSON, or nothing.
+trace_status() {
+	local json
+	json=$(gh_statuses "$1") || die "Cannot read the statuses of $1."
+	jq -c --arg c "$CONTEXT" '[.[] | select(.context == $c)][0] // empty' <<<"$json"
+}
+
 # Check the trace status of the head SHA $1 against the hashes $2 and $3.
 # Each review row of the trace needs a justification in the Notes of the
 # body $BODY. Fill REVIEW_ROWS with the R numbers of the review rows.
 check_trace() {
 	local sha=$1 req=$2 issue_hash=$3 issue=$4 pr=$5 json state desc url n re=' review=([0-9,]*) '
-	json=$(gh_statuses "$sha") || die "Cannot read the statuses of $sha."
-	json=$(jq -c --arg c "$CONTEXT" '[.[] | select(.context == $c)][0] // empty' <<<"$json")
+	json=$(trace_status "$sha") || exit 2
 	if [[ -z "$json" ]]; then
 		problem "Trace: no $CONTEXT status on ${sha:0:8}. Run: shepherd.sh verify $pr"
 		return
@@ -1093,6 +1101,65 @@ query($owner: String!, $name: String!, $issue: Int!) {
 	return "$STATUS"
 }
 
+# Copy the trace of the commit $2 to the commit $3 of the PR $1, when the
+# trace is a success and its hashes equal those of the body and the issue.
+# A rebase or a push that keeps both gets the same answers from verify,
+# because verify never sends the diff. In every other case it writes
+# nothing, and check fails as before. The pr-shepherd workflow runs it on
+# each push.
+cmd_carry() {
+	local pr before after issue req json state desc url
+	(($# == 3)) && [[ "$1" =~ ^[0-9]+$ && "$2" =~ ^[0-9a-f]{40}$ && "$3" =~ ^[0-9a-f]{40}$ ]] || usage
+	pr=$1 before=$2 after=$3
+	load_pr "$pr"
+	if is_dependabot <<<"$PR_JSON" || has_label "$NO_ISSUE_LABEL" <<<"$PR_JSON"; then
+		echo "PR #$pr is exempt. It needs no trace."
+		return 0
+	fi
+	if [[ "$after" != "$SHA" ]]; then
+		echo "${after:0:8} is no longer the head of PR #$pr. Nothing to carry."
+		return 0
+	fi
+	issue=$(closing_issue <<<"$BODY")
+	if [[ -z "$issue" ]]; then
+		echo "The body has no \"Closes #<issue>\" line. Nothing to carry."
+		return 0
+	fi
+	load_issue "$issue"
+	if [[ -z "$ISSUE_ITEMS" ]]; then
+		echo "Issue #$issue has no items. Nothing to carry."
+		return 0
+	fi
+	json=$(trace_status "$after") || exit 2
+	if [[ -n "$json" ]]; then
+		echo "${after:0:8} has a trace already. Nothing to carry."
+		return 0
+	fi
+	json=$(trace_status "$before") || exit 2
+	if [[ -z "$json" ]]; then
+		echo "${before:0:8} has no trace. Run: shepherd.sh verify $pr"
+		return 0
+	fi
+	state=$(jq -r '.state' <<<"$json")
+	desc=$(jq -r '.description // ""' <<<"$json")
+	url=$(jq -r '.target_url // ""' <<<"$json")
+	req=$(requirements_section <<<"$BODY" | sha8)
+	if [[ "$state" != success ]]; then
+		echo "The trace of ${before:0:8} is $state. Run: shepherd.sh verify $pr"
+	elif [[ "$desc" != *"req=$req"* ]]; then
+		echo "The Requirements section changed after verify. Run: shepherd.sh verify $pr"
+	elif [[ "$desc" != *"issue=$ISSUE_HASH"* ]]; then
+		echo "Issue #$issue changed after verify. Run: shepherd.sh verify $pr"
+	else
+		desc="req=$req issue=$ISSUE_HASH carried from ${before:0:8}"
+		gh api "repos/{owner}/{repo}/statuses/$after" -f state=success -f context="$CONTEXT" \
+			-f description="$desc" -f target_url="$url" --silent ||
+			die "Cannot write the $CONTEXT status."
+		echo "Trace: carried success from ${before:0:8} to ${after:0:8}."
+	fi
+	return 0
+}
+
 # A test can source this file to use the functions.
 [[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0
 
@@ -1108,5 +1175,6 @@ reply) cmd_reply "$@" ;;
 checks) cmd_checks "$@" ;;
 merge) cmd_merge "$@" ;;
 disarm) cmd_disarm "$@" ;;
+carry) cmd_carry "$@" ;;
 *) usage ;;
 esac
