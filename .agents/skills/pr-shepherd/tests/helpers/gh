@@ -8,6 +8,7 @@
 # hashes of the served body and issue, so a trace is fresh unless a case
 # says otherwise.
 # rules-<branch>.json overrides rules.json for that base branch.
+# statuses-<sha>.json overrides statuses.json for that commit.
 # Two switches let a test break a call. GH_FAIL is a text: a call whose
 # arguments hold it logs itself and fails, as gh does on a network or a
 # permission error. GH_CHECKS_EXIT is the exit code of "pr checks", which
@@ -56,7 +57,10 @@ case $args in
 	source "$SHEPHERD"
 	req=$(pr_json | jq -r .body | clean_body | requirements_section | sha8)
 	issue=$(issue_json | jq -r .body | issue_items | sha8)
-	fixture statuses.json | sed "s/@REQ@/$req/g; s/@ISSUE@/$issue/g"
+	# statuses-<sha>.json serves one commit. statuses.json serves the others.
+	sha=${args##*/commits/}
+	sha=${sha%%/*}
+	{ fixture "statuses-$sha.json" || fixture statuses.json; } | sed "s/@REQ@/$req/g; s/@ISSUE@/$issue/g"
 	;;
 " api repos/{owner}/{repo}/rules/branches/"*)
 	# rules-<branch>.json serves one branch. rules.json serves the others.

@@ -61,7 +61,10 @@ Run a new pass after each push and after each new review.
    then run it again. Justify each `review` row in the `## Notes`
    section (see [Review rows](#review-rows)).
    Run it after the last push, because the trace belongs to the head
-   commit.
+   commit. After a later push, CI carries the trace when the
+   Requirements section and the issue did not change. Run verify again
+   only in the cases that
+   [Trace on a new head commit](#trace-on-a-new-head-commit) lists.
 6. **Check.** Run `$P check <pr>`. Fix each problem. Each line says how to
    fix it.
 7. **Checks.** Run `$P checks <pr> --watch`. It waits for every other
@@ -156,10 +159,42 @@ it and leaves a trace that CI can read.
 The check fails when the head commit has no trace status, when the status
 is not `success`, when a hash differs, or when the description has no
 `review=` list. It also fails for each `review` row without a
-justification in the Notes. A new commit, an edit of the
-Requirements section or an edit of the issue makes the trace stale, so run
-verify again. Only users with write access can set a commit status, so a
-fork cannot forge a trace.
+justification in the Notes. Only users with write access can
+set a commit status, so a fork cannot forge a trace.
+
+### Trace on a new head commit
+
+The `carry` job of the `pr-shepherd` workflow runs on each push to a PR,
+before the `pr-shepherd` check job. It runs `shepherd.sh carry <pr> <before> <after>`. The
+job copies the trace of the previous head to the new head when all of
+these hold:
+
+- the trace of the previous head is `success`;
+- its `req` and `issue` hashes equal those of the current body and issue;
+- the new head has no trace yet, and is still the head of the PR.
+
+Otherwise it doesn't write a status, and it prints the cause.
+The copy keeps the state, the comment link and the description with its
+`review=` list. The description then ends with `carried from <sha>`. When
+that makes it longer than 140 characters, the job doesn't write a status. The new run of verify would give the same answers,
+because verify never sends the diff to decisionkit. `check` still tests
+the evidence paths against the new diff.
+
+Each push that leaves the Requirements section and the issue items as
+they were keeps the trace. Examples are a rebase with "Update branch" and
+a push by Copilot.
+
+Run verify again after one of these:
+
+- an edit of the Requirements section or of the issue items;
+- a push onto a trace that is `failure`, or onto a head without a trace;
+- a push to a PR from a fork, because its token cannot write a status;
+- two pushes so fast that the second cancels the `carry` job of the first.
+
+A carried trace keeps the `command -> result` lines of the old head, such
+as a test count. When a push changes what such a line proves, run the
+command again, update the line and run verify. The trace comment
+still shows the old head commit.
 
 The comment calls `carryover` "Plan matches issue" and `evidence` "Proof
 of done". Each check of an R item gets one status:
@@ -285,6 +320,7 @@ shepherd.sh reply <pr> <thread-id|review-id> accepted|rejected --reason <text> [
 shepherd.sh checks <pr> [--watch]
 shepherd.sh merge <pr> [--confirmed-by-user]
 shepherd.sh disarm <issue>
+shepherd.sh carry <pr> <before> <after>
 ```
 
 Exit codes: `0` pass, `1` a rule fails, `2` wrong usage or a failed call.
@@ -326,7 +362,7 @@ files, without an LLM and without the network:
   `expect.txt` with every problem line. For a new rule, add a bad case and
   write its `expect.txt` by hand.
 - `tests/verify.bats` tests `verify`, `findings`, `reply`, `checks`,
-  `merge` and `disarm` with a fake `gh` and a fake `decisionkit`. It
+  `merge`, `disarm` and `carry` with a fake `gh` and a fake `decisionkit`. It
   compares the trace comment of `verify` with the golden file
   `tests/fixtures/trace/pr20/comment.txt`, built from the scores of PR
   #20. After a change to the layout or the hints, update the golden

@@ -2,7 +2,8 @@
 # skill explains them. The check is deterministic: no LLM runs in CI. It
 # reads the trace that `shepherd.sh verify` writes as a commit status.
 # A resolved thread and a new status fire no workflow event, so verify
-# re-runs this workflow itself.
+# re-runs this workflow itself. On a push, the carry job first copies a
+# fresh trace from the previous head to the new head.
 name: pr-shepherd
 
 on:
@@ -24,9 +25,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # The rulesets require this job by its name, pr-shepherd.
+  # On each push to a PR, run shepherd.sh carry. It copies a success trace
+  # of the previous head to the new head. Both hashes must still match the
+  # Requirements section and the issue, and the new head must have no
+  # trace yet.
+  # The job may write statuses. It checks out the base commit and runs its
+  # script, not the code of the PR. A fork PR gets a read-only token. The
+  # job skips such a PR.
+  carry:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'synchronize' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      statuses: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: gh jq yq
+      - run: mise run pr:shepherd carry "$PR" "$BEFORE" "$AFTER"
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+
+  # The rulesets require this job by its name, pr-shepherd. It runs the
+  # check after carry ends. A failed or skipped carry does not stop it.
   pr-shepherd:
-    if: github.event_name != 'issues'
+    needs: carry
+    if: ${{ !cancelled() && github.event_name != 'issues' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

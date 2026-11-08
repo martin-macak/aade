@@ -112,6 +112,26 @@ section() {
 	[[ "$TEXT" == *'The `pr-shepherd` workflow runs `mise run pr:check`'* ]] || false
 }
 
+@test "the workflow job carry copies the trace on a push, with the code of the base" {
+	[ "$(yq '.jobs.carry.steps[-1].run' "$WORKFLOW")" = 'mise run pr:shepherd carry "$PR" "$BEFORE" "$AFTER"' ]
+	[ "$(yq '.jobs.carry.steps[-1].env.BEFORE' "$WORKFLOW")" = '${{ github.event.before }}' ]
+	[ "$(yq '.jobs.carry.steps[-1].env.AFTER' "$WORKFLOW")" = '${{ github.event.after }}' ]
+	yq -e '.on.pull_request.types[] | select(. == "synchronize")' "$WORKFLOW" >/dev/null
+	cond=$(yq '.jobs.carry.if' "$WORKFLOW")
+	[[ "$cond" == *"github.event.action == 'synchronize'"* ]] || false
+	# A fork PR gets a read-only token.
+	[[ "$cond" == *"github.event.pull_request.head.repo.full_name == github.repository"* ]] || false
+	# The job may write statuses, so it must not run the code of the PR.
+	[ "$(yq '.jobs.carry.steps[0].with.ref' "$WORKFLOW")" = '${{ github.event.pull_request.base.sha }}' ]
+	[ "$(yq '.jobs.carry.permissions.statuses' "$WORKFLOW")" = write ]
+	[ "$(yq '[.jobs[] | select(.permissions.statuses == "write")] | length' "$WORKFLOW")" -eq 1 ]
+	# The check reads the carried trace in the same run, also when carry
+	# is skipped or fails.
+	[ "$(yq '.jobs["pr-shepherd"].needs' "$WORKFLOW")" = carry ]
+	[[ "$(yq '.jobs["pr-shepherd"].if' "$WORKFLOW")" == *'!cancelled()'* ]] || false
+	[[ "$TEXT" == *'The `carry` job of the `pr-shepherd` workflow'* ]] || false
+}
+
 @test "the mise tasks run the script, and check does not depend on them" {
 	[ "$(yq -p toml '.tasks["pr:check"].run' "$MISE")" = ".agents/skills/pr-shepherd/scripts/shepherd.sh check" ]
 	[ "$(yq -p toml '.tasks["pr:shepherd"].run' "$MISE")" = ".agents/skills/pr-shepherd/scripts/shepherd.sh" ]
