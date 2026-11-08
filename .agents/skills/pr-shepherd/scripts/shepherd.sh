@@ -1103,6 +1103,8 @@ query($owner: String!, $name: String!, $issue: Int!) {
 
 # Copy the trace of the commit $2 to the commit $3 of the PR $1, when the
 # trace is a success and its hashes equal those of the body and the issue.
+# The copy keeps the description, with its review= list, and ends it with
+# "carried from <sha>" in place of an older one.
 # A rebase or a push that keeps both gets the same answers from verify,
 # because verify never sends the diff. In every other case it writes
 # nothing, and check fails as before. The pr-shepherd workflow runs it on
@@ -1150,8 +1152,9 @@ cmd_carry() {
 		echo "The Requirements section changed after verify. Run: shepherd.sh verify $pr"
 	elif [[ "$desc" != *"issue=$ISSUE_HASH"* ]]; then
 		echo "Issue #$issue changed after verify. Run: shepherd.sh verify $pr"
+	elif desc="${desc% carried from *} carried from ${before:0:8}" && ((${#desc} > DESC_MAX)); then
+		echo "The carried description is longer than $DESC_MAX characters. Run: shepherd.sh verify $pr"
 	else
-		desc="req=$req issue=$ISSUE_HASH carried from ${before:0:8}"
 		gh api "repos/{owner}/{repo}/statuses/$after" -f state=success -f context="$CONTEXT" \
 			-f description="$desc" -f target_url="$url" --silent ||
 			die "Cannot write the $CONTEXT status."

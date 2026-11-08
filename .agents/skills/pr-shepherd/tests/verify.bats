@@ -757,11 +757,29 @@ carry_setup() {
 	run "$S" carry 42 "$BEFORE" "$AFTER"
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"Trace: carried success from bbbbbbbb to 01234567."* ]] || false
-	grep -q "^api repos/{owner}/{repo}/statuses/$AFTER -f state=success -f context=pr-shepherd/trace -f description=req=[0-9a-f]\{8\} issue=[0-9a-f]\{8\} carried from bbbbbbbb -f target_url=https://github.com/acme/app/pull/42#issuecomment-9002 --silent$" "$GH_LOG"
+	grep -q "^api repos/{owner}/{repo}/statuses/$AFTER -f state=success -f context=pr-shepherd/trace -f description=req=[0-9a-f]\{8\} issue=[0-9a-f]\{8\} review= carried from bbbbbbbb -f target_url=https://github.com/acme/app/pull/42#issuecomment-9002 --silent$" "$GH_LOG"
 	desc=$(sed -n 's/.*-f description=\(.*\) -f target_url.*/\1/p' "$GH_LOG")
 	jq --arg d "$desc" '.[0].description = $d' "$BASE/statuses.json" >"$CASE/statuses-$AFTER.json"
 	run "$S" check 42
 	[ "$status" -eq 0 ]
+}
+
+@test "carry keeps the review list and replaces an older carried-from part" {
+	carry_setup
+	jq '.[0].description = "req=@REQ@ issue=@ISSUE@ review=2,4 carried from aaaaaaaa"' "$BASE/statuses.json" >"$CASE/statuses.json"
+	run "$S" carry 42 "$BEFORE" "$AFTER"
+	[ "$status" -eq 0 ]
+	grep -q -- "-f description=req=[0-9a-f]\{8\} issue=[0-9a-f]\{8\} review=2,4 carried from bbbbbbbb -f target_url" "$GH_LOG"
+}
+
+@test "carry writes nothing when the carried description would pass 140 characters" {
+	carry_setup
+	rows=$(seq -s, 1 40)
+	jq --arg r "$rows" '.[0].description = "req=@REQ@ issue=@ISSUE@ review=\($r)"' "$BASE/statuses.json" >"$CASE/statuses.json"
+	run "$S" carry 42 "$BEFORE" "$AFTER"
+	[ "$status" -eq 0 ]
+	[ "$output" = "The carried description is longer than 140 characters. Run: shepherd.sh verify 42" ]
+	[ ! -f "$GH_LOG" ]
 }
 
 @test "carry writes nothing when the old trace is stale or not a success" {

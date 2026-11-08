@@ -174,8 +174,9 @@ these hold:
 - the new head has no trace yet, and is still the head of the PR.
 
 Otherwise it doesn't write a status, and it prints the cause.
-The copy keeps the state and the comment link. Its description ends with
-`carried from <sha>`. The new run of verify would give the same answers,
+The copy keeps the state, the comment link and the description with its
+`review=` list. The description then ends with `carried from <sha>`. When
+that makes it longer than 140 characters, the job doesn't write a status. The new run of verify would give the same answers,
 because verify never sends the diff to decisionkit. `check` still tests
 the evidence paths against the new diff.
 
