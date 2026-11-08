@@ -16,9 +16,10 @@
 # and CI runs it. verify asks decisionkit through decide.sh and writes the
 # trace: a commit status and a PR comment. findings lists the untriaged
 # review findings. reply triages one finding. checks lists the other PR
-# checks that did not pass. merge turns on auto-merge. While the trace has
-# a review row, merge needs --confirmed-by-user: the user read the row.
-# merge then records the confirmation in a PR comment.
+# checks that did not pass. merge turns on auto-merge. It refuses a merged
+# or closed PR before any write. While the trace has a review row, merge
+# needs --confirmed-by-user: the user read the row. merge then records the
+# confirmation in a PR comment.
 # disarm turns off auto-merge on the open PRs that close an edited issue.
 # carry copies a fresh success trace from the previous head to the new head.
 # gh picks the repository from the git remote, or from GH_REPO. Run it from
@@ -58,7 +59,7 @@ problem() {
 # --- GitHub reads. Each read is one function, so a test stub can serve it.
 
 gh_pr() {
-	gh pr view "$1" --json number,body,author,labels,headRefOid,baseRefName,url
+	gh pr view "$1" --json number,state,body,author,labels,headRefOid,baseRefName,url
 }
 
 gh_files() {
@@ -1038,12 +1039,20 @@ cmd_checks() {
 }
 
 cmd_merge() {
-	local pr rules confirmed=0
+	local pr rules state confirmed=0
 	(($# == 1 || $# == 2)) && [[ "$1" =~ ^[0-9]+$ ]] || usage
 	pr=$1
 	if (($# == 2)); then
 		[[ "$2" == --confirmed-by-user ]] || usage
 		confirmed=1
+	fi
+	# A merged or closed PR has nothing to merge. Stop before the checks and
+	# before any write, so no confirmation comment lands after the merge.
+	load_pr "$pr"
+	state=$(jq -r '.state // ""' <<<"$PR_JSON")
+	if [[ "$state" != OPEN ]]; then
+		echo "PR #$pr is $(tr '[:upper:]' '[:lower:]' <<<"${state:-in an unknown state}"). There is nothing to merge."
+		return 1
 	fi
 	if ! run_check "$pr" || ! run_checks "$pr"; then
 		echo "Fix the problems above before merge."

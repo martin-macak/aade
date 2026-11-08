@@ -294,7 +294,10 @@ dismiss it.
 
 ## Merge
 
-`$P merge <pr>` runs the check and the checks, and stops on a problem.
+`$P merge <pr>` first reads the state of the PR. On a merged or closed
+PR it exits 1, names the state and writes nothing to GitHub, because a
+confirmation comment after the merge would be false.
+Then it runs the check and the checks, and stops on a problem.
 It also stops while the trace has a `review` row and the call has no
 `--confirmed-by-user` (see [Review rows](#review-rows)). Then it reads the
 ruleset rules of the base branch from
