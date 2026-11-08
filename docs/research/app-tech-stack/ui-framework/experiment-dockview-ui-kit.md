@@ -1,7 +1,7 @@
 ---
 type: experiment
 title: "Component libraries in dockview panels"
-status: review
+status: final
 created: "2026-11-08"
 updated: "2026-11-08"
 authors:

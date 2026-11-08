@@ -1,7 +1,7 @@
 ---
 type: recommendation
 title: "Recommended stack for the main application"
-status: review
+status: final
 created: "2026-11-08"
 updated: "2026-11-08"
 authors:

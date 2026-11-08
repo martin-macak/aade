@@ -12,15 +12,22 @@ artifacts: []
 
 # Tech stack for the main application
 
-The aade maintainers need one place that collects the stack decisions for the main application.
+This parent research lists the technology decisions for the main application and links the child research behind each decision.
 
 ## Question
 
-Which technologies make up the stack of the main application?
+Which technologies make up the stack of the main application, and which child research decides each one?
+
+Sub-questions:
+
+- Which parts of the stack have a decision?
+- Which parts of the stack still need a child research?
+
+The answer is a list of the parts of the stack. Each entry gives the chosen technology and its child research, or states that the decision is open.
 
 ## Background
 
-Issue [#46](https://github.com/martin-macak/aade/issues/46) asks for the stack of the main application and names the slug `app-tech-stack/ui-framework`. This parent research covers the umbrella question. Each part of the stack is a child research. The first child is `ui-framework`.
+Issue [#46](https://github.com/martin-macak/aade/issues/46) asks for the stack of the main application and names the slug `app-tech-stack/ui-framework`. `research.sh` requires the parent `app-tech-stack` before it creates that child. The parent lists the parts of the stack, and each part with a decision has its own child research. `ui-framework` is the first child.
 
 ## Scope
 

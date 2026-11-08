@@ -1,7 +1,7 @@
 ---
 type: tech-profile
 title: "React and component libraries"
-status: review
+status: final
 created: "2026-11-08"
 updated: "2026-11-08"
 authors:

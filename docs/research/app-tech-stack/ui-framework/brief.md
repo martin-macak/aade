@@ -16,7 +16,7 @@ artifacts:
 
 # UI framework for the main application
 
-The aade maintainers need this answer to pick the application framework and the UI stack before the main application gets its first code.
+This research ranks application frameworks, desktop runtimes, docking libraries and React component libraries for the main application. The aade maintainers need the ranking before they write the first application code.
 
 ## Question
 
@@ -24,10 +24,11 @@ Which maintained, cross-platform stack should power the composable IDE of the ma
 
 Sub-questions:
 
-- Is an existing composite application framework such as Lumino a better base than an own kernel on a docking library?
-- Which desktop runtime carries that framework on macOS, Windows and Linux?
-- Which docking and React component libraries fit the framework?
-- What does each option cost us to own and to keep current?
+- Is Lumino or another existing composite framework a better base than an own kernel on a docking library?
+- Does Electron or Tauri run that framework on macOS, Windows and Linux?
+- Which of dockview, Lumino DockPanel, FlexLayout and Golden Layout fits as the docking library?
+- Which of Radix UI, Base UI and shadcn/ui fits as the component library?
+- How many lines of our own code does each option need, and how much upgrade work does it add?
 
 ## Background
 
@@ -87,9 +88,9 @@ A preliminary study from 6 and 7 November 2026 exists outside this repository. I
 - The application runs on macOS, Windows and Linux desktops. A browser host is welcome and not required.
 - An option that cannot host React views fails.
 - An option provides dependency injection, plugins, composable UI, events, commands, workspaces and workitems. It provides each one built in, or with an amount of our own code that the comparison states.
-- Each direct runtime dependency uses a permissive licence, such as MIT, Apache-2.0 or BSD. A copyleft licence or a paid licence fails. The research reports copyleft parts further down the dependency tree.
+- Each package that the application imports directly uses the MIT, Apache-2.0, BSD or ISC licence. A copyleft licence, such as EPL or GPL, or a paid licence fails the option. A copyleft licence deeper in the dependency tree does not fail the option, and the research reports it.
 - The first release runs first-party plugins. Third-party plugins are a later goal, and the first release does not sandbox untrusted code.
-- This repository is public. The research must not publish personal paths or material that we may not redistribute.
+- This repository is public. The research must not publish file paths from a developer machine or material that we may not redistribute.
 
 ## Success criteria
 

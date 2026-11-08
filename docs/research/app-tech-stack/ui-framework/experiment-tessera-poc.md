@@ -1,7 +1,7 @@
 ---
 type: experiment
 title: "Re-run of the Tessera proof of concept"
-status: review
+status: final
 created: "2026-11-08"
 updated: "2026-11-08"
 authors:

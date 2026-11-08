@@ -1,7 +1,7 @@
 ---
 type: experiment
 title: "Electron host for the demo"
-status: review
+status: final
 created: "2026-11-08"
 updated: "2026-11-08"
 authors:

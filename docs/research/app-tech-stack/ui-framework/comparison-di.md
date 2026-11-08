@@ -1,7 +1,7 @@
 ---
 type: comparison
 title: "Dependency injection comparison"
-status: review
+status: final
 created: "2026-11-08"
 updated: "2026-11-08"
 authors:

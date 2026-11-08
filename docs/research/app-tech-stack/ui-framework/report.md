@@ -1,7 +1,7 @@
 ---
 type: report
 title: "UI framework for the main application"
-status: review
+status: final
 created: "2026-11-08"
 updated: "2026-11-08"
 authors:
