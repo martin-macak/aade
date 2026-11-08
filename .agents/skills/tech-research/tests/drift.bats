@@ -124,6 +124,8 @@ script_var() { sed -nE "s/^$1=\"(.*)\"$/\1/p" "$SCRIPT"; }
 @test "the Research issue form has the fields that init --issue reads, and the same values" {
 	FORM="$ROOT/.github/ISSUE_TEMPLATE/research.yml"
 	[ "$(yq '.labels | join(",")' "$FORM")" = "$(script_var ISSUE_LABEL)" ]
+	# issue_section of research.sh names the Scope label of every form.
+	[ "$(yq '.body[] | select(.id == "scope") | .attributes.label' "$FORM")" = Scope ]
 	sections=$(script_var ISSUE_SECTIONS | tr ';' '\n')
 	[ -n "$sections" ]
 	expected=$( (cut -d= -f1 <<<"$sections"; script_var ISSUE_DEPTH; script_var ISSUE_ARTIFACTS; script_var ISSUE_SLUG) | sort)

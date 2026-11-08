@@ -689,10 +689,15 @@ parse_common() {
 
 # Print the "### $1" section of the issue body in ISSUE_BODY, without the
 # blank lines around it. Print nothing for a field without a response.
+# Only a "### <label>" line of a form field ends a section, so a "###"
+# heading that a user writes inside a field stays in its text.
 issue_section() {
-	WANT="### $1" awk '
+	local labels
+	labels=$(printf '%s\n' Scope "$ISSUE_DEPTH" "$ISSUE_ARTIFACTS" "$ISSUE_SLUG"; tr ';' '\n' <<<"$ISSUE_SECTIONS" | cut -d= -f1)
+	WANT="### $1" LABELS=$labels awk '
+		BEGIN { n_labels = split(ENVIRON["LABELS"], list, "\n"); for (i = 1; i <= n_labels; i++) field["### " list[i]] = 1 }
 		{ sub(/\r$/, "") }
-		/^### / { inside = ($0 == ENVIRON["WANT"]); next }
+		$0 in field { inside = ($0 == ENVIRON["WANT"]); next }
 		!inside { next }
 		/^[ \t]*$/ { if (n) blank++; next }
 		{ while (blank) { out = out "\n"; blank-- } out = out (n++ ? "\n" : "") $0 }

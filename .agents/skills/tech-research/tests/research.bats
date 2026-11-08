@@ -1308,6 +1308,14 @@ issue_body() {
 	[ "$(grep -c '_No response_' "$b")" -eq 0 ]
 }
 
+@test "init --issue keeps a ### heading that the user writes inside a field" {
+	issue_reply < <(issue_body | awk '/^### Constraints$/ { print; getline; print; print "Stay within the budget."; print ""; print "### Data residency"; print ""; print "EU regions only."; getline; next } 1')
+	"$R" init q --issue 50 --author A >/dev/null
+	expected=$(printf '%s\n' "## Constraints" "" "Stay within the budget." "" "### Data residency" "" "EU regions only.")
+	[[ "$(cat "$RESEARCH_ROOT/q/brief.md")" == *"$expected"* ]] || false
+	grep -qx -- '- \[ \] Each queue has a cost estimate.' "$RESEARCH_ROOT/q/brief.md"
+}
+
 @test "init --issue takes a --title in place of the issue title" {
 	issue_reply < <(issue_body)
 	"$R" init q --issue 50 --title "Order queue" --author A >/dev/null
