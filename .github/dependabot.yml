@@ -1,6 +1,21 @@
-# Keeps the commit SHAs of the pinned GitHub Actions up to date.
+# Keeps the commit SHAs of the pinned GitHub Actions and the versions of the
+# pnpm catalog up to date.
 version: 2
 updates:
+  # The cooldown equals minimumReleaseAge in pnpm-workspace.yaml. A pull
+  # request for a newer version would fail to install.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      npm:
+        patterns: ["*"]
+    commit-message:
+      prefix: chore(repository)
+    labels: [type:chore, scope:repository]
   - package-ecosystem: github-actions
     directory: /
     schedule:

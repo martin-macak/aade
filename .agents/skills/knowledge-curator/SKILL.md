@@ -56,6 +56,7 @@ same files. `docs/agentic-setup.md` explains how each agent finds them.
 | `docs/` | Longer human docs, such as the agent setup. | Humans |
 | `docs/research/<slug>/` | The brief, sources and typed artifacts of one technical research, in the format of the `tech-research` skill. | Humans and agents |
 | Config file comments | Why one setting exists. | Everyone who edits it |
+| Doc comments in code | What one exported interface does, its inputs, results and limits. | Everyone who calls it |
 | `CLAUDE.md`, `GEMINI.md` | Symlinks to an `AGENTS.md`. Never edit or replace them. | Claude Code, Gemini CLI |
 
 Human docs link to skills instead of copying them. Skills are plain
@@ -312,7 +313,7 @@ placement stay your job.
 The repository has two layers. The repo layer contains the scripts,
 skills, agent config, docs, the GitHub config and `mise.toml`. mise pins
 every tool and runs the tasks of this layer. The code layer contains the
-later pnpm monorepo, and pnpm builds, tests and packages it. A mise
+pnpm monorepo, and pnpm builds, tests and packages it. A mise
 task never calls pnpm, and mise only pins node and pnpm. Otherwise CI
 could not skip the repo jobs for a change that touches only code.
 
@@ -324,8 +325,10 @@ could not skip the repo jobs for a change that touches only code.
   files to the suites, and it holds the paths of the code layer. An
   unknown path counts as repo layer, so no check skips without notice.
 - The `ci` workflow runs `check` and the affected suites on a pull
-  request, and only `check` on a push to main. Its `ci-gate` job is the
-  required check. `.github/rulesets/main.json` is a snapshot of the
+  request, and `check` without the suites on a push to main. Its `code` job
+  runs the targets of the code layer when that layer changes and on each
+  push to main, which fills the cache. Its `ci-gate` job is the required
+  check. `.github/rulesets/main.json` is a snapshot of the
   ruleset. GitHub does not read it, so apply a change with
   `gh api -X PUT repos/{owner}/{repo}/rulesets/<id> --input .github/rulesets/main.json`.
   `gh api repos/{owner}/{repo}/rulesets` lists the ids. Change the

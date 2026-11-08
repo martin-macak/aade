@@ -1,6 +1,6 @@
-# Pre-commit is the quality gate. Each hook calls a mise task or a script
-# through `mise exec`, so it uses the tool versions pinned in mise.toml.
-# CI runs the same checks with `mise run check` and `mise run test`.
+# Pre-commit is the quality gate. Each hook calls a mise task, a script or
+# pnpm through `mise exec`, so it uses the tool versions pinned in mise.toml.
+# CI runs the same checks with `mise run check`, `mise run test` and pnpm.
 # Install the hooks with `mise run setup`.
 repos:
   - repo: local
@@ -55,6 +55,14 @@ repos:
         language: system
         pass_filenames: false
         files: ^docs/research/
+      - id: code
+        name: lint, typecheck and test of the affected code, and archTest
+        # A mise task must not call pnpm. This hook calls pnpm directly.
+        # Nx finds the affected projects from the staged change.
+        entry: mise exec -- pnpm run check:staged
+        language: system
+        pass_filenames: false
+        files: ^(apps/|modules/|libs/|tools/|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|nx\.json$|biome\.json$|tsconfig\.base\.json$|tsconfig\.json$)
       - id: vale
         name: vale (prose lint)
         entry: mise exec -- vale

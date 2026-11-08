@@ -1,0 +1,11 @@
+' The approved dependencies between the projects of the monorepo.
+' `archTest` fails on any dependency between projects that is not listed here.
+' Use the exact project names and the bracket form on both sides of an arrow.
+' ArchUnitTS compares the text of an arrow with the project name. An alias
+' does not match.
+@startuml
+component [@aade/contracts]
+component [@aade/core]
+
+[@aade/core] --> [@aade/contracts]
+@enduml

@@ -7,7 +7,8 @@ instructions take precedence.
 
 ## Project
 
-aade. The purpose and the stack are not decided yet.
+aade. A TypeScript monorepo on pnpm and Nx. The purpose and the stack of
+the main application are not decided yet.
 
 ## Constitution
 
@@ -20,6 +21,9 @@ aade. The purpose and the stack are not decided yet.
   scoring and ranking. Load the `decisionkit` skill first.
 - Pin every tool to an exact version in `mise.toml`. Run tools and checks
   through mise, so every agent and CI use the same versions.
+- Build, test and lint code with `pnpm build`, `pnpm test`, `pnpm lint`
+  and `pnpm archTest`, because `mise run test` runs only the bats suites
+  of the repository.
 - Pre-commit is the quality gate. Never bypass it with `--no-verify`.
 - Keep secrets, credentials and personal data out of commits, MCP config
   and external services such as decisionkit.

@@ -64,16 +64,45 @@ value() {
 }
 
 @test "plan: a code-only change runs no repo job" {
-	# The code layer is empty until the monorepo exists. Add a path here.
-	# The edited copy is not executable, so bash runs it: no test writes
-	# an executable file.
-	rm "$S"
-	sed 's|^CODE_PATHS=()$|CODE_PATHS=(packages/)|' "$ROOT/scripts/ci-plan.sh" >"$S"
-	run bash "$S" plan packages/app/index.ts packages/app/README.md
+	run "$S" plan libs/app/index.ts libs/app/README.md
 	[ "$output" = "$(printf '%s\n' repo=false code=true full=false test=false)" ]
-	run bash "$S" plan packages/app/index.ts README.md
+	run "$S" plan libs/app/index.ts README.md
 	[ "$(value repo)" = true ]
 	[ "$(value code)" = true ]
+}
+
+@test "plan: each code folder and root config file is code layer" {
+	for file in apps/a/x.ts modules/m/x.ts libs/l/x.ts tools/t/x.ts package.json pnpm-lock.yaml \
+		pnpm-workspace.yaml nx.json biome.json tsconfig.base.json tsconfig.json; do
+		run "$S" plan "$file"
+		[ "$output" = "$(printf '%s\n' repo=false code=true full=false test=false)" ]
+	done
+}
+
+@test "plan: agent instructions in a code folder stay repo layer" {
+	for file in libs/AGENTS.md tools/arch/CLAUDE.md libs/core/GEMINI.md; do
+		run "$S" plan "$file"
+		[ "$(value repo)" = true ]
+		[ "$(value code)" = false ]
+	done
+}
+
+@test "plan: the code hook of pre-commit matches every path of the code layer" {
+	# A path that the hook misses would reach CI without a local check.
+	pattern=$(yq '.repos[].hooks[] | select(.id == "code") | .files' "$ROOT/.pre-commit-config.yaml")
+	[ -n "$pattern" ]
+	eval "$(sed -n '/^CODE_PATHS=(/,/^)/p' "$ROOT/scripts/ci-plan.sh")"
+	[ "${#CODE_PATHS[@]}" -gt 0 ]
+	for path in "${CODE_PATHS[@]}"; do
+		case $path in
+		*/) file="${path}pkg/x.ts" ;;
+		*) file=$path ;;
+		esac
+		grep -qE "$pattern" <<<"$file" || {
+			echo "The code hook does not match $file."
+			false
+		}
+	done
 }
 
 @test "plan: a changed helper or the CI workflow runs every suite" {
@@ -84,21 +113,30 @@ value() {
 	done
 }
 
+@test "plan: the CI workflow runs the code job, and a helper does not" {
+	run "$S" plan .github/workflows/ci.yml
+	[ "$(value code)" = true ]
+	run "$S" plan tests/scripts/helpers/common.bash
+	[ "$(value code)" = false ]
+}
+
 @test "plan: a task edit in mise.toml runs only the suites that read mise.toml" {
 	printf '\n[tasks.test]\nrun = "true"\n' >>mise.toml
 	run "$S" plan mise.toml
 	[ "$(value full)" = false ]
+	[ "$(value code)" = false ]
 	[ "$(value test)" = true ]
 	run "$S" test mise.toml
 	[ "$status" -eq 0 ]
 	[ "$(calls)" = "$(printf '%s\n' "bats tests/scripts/mise-tasks.bats" "bats .agents/skills/alpha/tests/drift.bats")" ]
 }
 
-@test "plan: a tool version edit in mise.toml runs every suite" {
+@test "plan: a tool version edit in mise.toml runs every suite and the code job" {
 	sed -i.bak 's/1.8.2/1.8.3/' mise.toml
 	run "$S" plan mise.toml
 	[ "$status" -eq 0 ]
 	[ "$(value full)" = true ]
+	[ "$(value code)" = true ]
 }
 
 @test "plan --full: the ci:full label runs every suite" {

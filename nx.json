@@ -1,0 +1,53 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "defaultBase": "main",
+  "neverConnectToCloud": true,
+  "namedInputs": {
+    "sharedGlobals": ["{workspaceRoot}/tsconfig.base.json"],
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default",
+      "!{projectRoot}/**/*.spec.ts",
+      "!{projectRoot}/tsconfig.spec.json",
+      "!{projectRoot}/vitest.config.ts"
+    ]
+  },
+  "plugins": [
+    {
+      "plugin": "@nx/js/typescript",
+      "options": {
+        "typecheck": { "targetName": "typecheck" },
+        "build": { "targetName": "build", "configName": "tsconfig.lib.json" }
+      }
+    },
+    { "plugin": "@nx/vitest", "options": { "testTargetName": "test" } }
+  ],
+  "sync": { "applyChanges": true },
+  "targetDefaults": {
+    "build": { "dependsOn": ["^build"], "cache": true },
+    "test": { "dependsOn": ["^build"], "cache": true },
+    "lint": {
+      "cache": true,
+      "inputs": [
+        "default",
+        "{workspaceRoot}/biome.json",
+        { "externalDependencies": ["@biomejs/biome"] }
+      ],
+      "outputs": []
+    },
+    "archTest": {
+      "cache": true,
+      "inputs": [
+        "{workspaceRoot}/apps/**/*",
+        "{workspaceRoot}/modules/**/*",
+        "{workspaceRoot}/libs/**/*",
+        "{workspaceRoot}/tools/arch/**/*",
+        "{workspaceRoot}/tsconfig*.json",
+        "{workspaceRoot}/nx.json",
+        "{workspaceRoot}/pnpm-workspace.yaml",
+        { "externalDependencies": ["archunit", "vitest"] }
+      ],
+      "outputs": []
+    }
+  }
+}
