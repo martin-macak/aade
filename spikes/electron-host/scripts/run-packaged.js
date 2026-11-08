@@ -55,7 +55,8 @@ for (let i = 0; i < runs; i += 1) {
   const started = process.hrtime.bigint();
   const result = spawnSync(binary, ['--smoke'], { encoding: 'utf8', timeout: 45000 });
   const wallMs = Number(process.hrtime.bigint() - started) / 1e6;
-  const lines = (result.stdout || '').split('\n').filter((l) => l.length > 0);
+  // On Windows the diagnostics of the main process share stdout, so select the one JSON result line.
+  const lines = (result.stdout || '').split('\n').filter((l) => l.trim().startsWith('{'));
   let parsed = null;
   try {
     parsed = lines.length === 1 ? JSON.parse(lines[0]) : null;
