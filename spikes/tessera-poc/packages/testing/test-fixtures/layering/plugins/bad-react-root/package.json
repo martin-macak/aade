@@ -1,0 +1,6 @@
+{
+  "name": "@fixture/bad-react-root-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "peerDependencies": { "@tessera/plugin-api": "*", "@tessera/react": "*" }
+}

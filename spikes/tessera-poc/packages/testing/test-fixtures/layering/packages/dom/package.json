@@ -1,0 +1,1 @@
+{ "name": "@tessera/dom", "version": "0.0.0", "type": "module", "dependencies": { "@tessera/base": "*" } }

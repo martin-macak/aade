@@ -1,0 +1,27 @@
+{
+  "name": "@tessera/rpc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "RPC protocol over a transport: handshake, ack, cancel, events, validation. In-memory and MessagePort transports.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*",
+    "@tessera/reactive": "*",
+    "@tessera/interceptors": "*",
+    "@tessera/contracts": "*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@tessera/persistence": "*",
+    "@tessera/testing": "*",
+    "vitest": "5.1.0"
+  }
+}

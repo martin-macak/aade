@@ -1,0 +1,28 @@
+{
+  "id": "sample.tasks",
+  "name": "Tasks",
+  "version": "1.0.0",
+  "description": "A task list: one view type shown in two places with shared selection and per-placement scroll, commands, menus, a keybinding and a persisted layout state with a v1 to v2 migration.",
+  "publisher": "tessera-poc",
+  "engines": { "tessera": "^1.0.0" },
+  "main": "./src/main.ts",
+  "ui": { "react": "./src/ui-react.tsx" },
+  "provides": ["sample.tasks/TaskStore"],
+  "contributes": {
+    "commands": [
+      { "id": "tasks.add", "title": "Add Task", "category": "Tasks" },
+      { "id": "tasks.complete", "title": "Complete Task", "category": "Tasks", "enablement": "tasks.hasSelection" },
+      { "id": "tasks.clearCompleted", "title": "Clear Completed Tasks", "category": "Tasks" }
+    ],
+    "menus": [
+      { "menu": "commandPalette", "command": "tasks.add" },
+      { "menu": "commandPalette", "command": "tasks.complete" },
+      { "menu": "commandPalette", "command": "tasks.clearCompleted" },
+      { "menu": "view/title", "command": "tasks.add", "group": "navigation", "order": 1, "when": "view == tasks.list" },
+      { "menu": "view/title", "command": "tasks.complete", "group": "navigation", "order": 2, "when": "view == tasks.list" }
+    ],
+    "keybindings": [{ "key": "mod+alt+t", "command": "tasks.add" }],
+    "workspaces": [{ "id": "tasks.sidebar", "title": "Tasks", "kind": "tabs", "part": "primarySideBar" }],
+    "views": [{ "id": "tasks.list", "title": "Tasks", "workspace": "tasks.sidebar", "visibleByDefault": false, "workItem": "root/tasks" }]
+  }
+}

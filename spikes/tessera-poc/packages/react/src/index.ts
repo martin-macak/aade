@@ -1,0 +1,20 @@
+// @tessera/react: the React 19 rendering adapter (contracts.md 18.2). The only package that imports React.
+export { useObservable } from './use-observable.ts';
+export { useService, useServices, useViewContext } from './contexts.ts';
+export { defineReactUi, defineReactView, REACT_RENDERER_ID } from './define.ts';
+export type { ReactUiModule, ReactViewDefinition, ReactViewProps } from './define.ts';
+export { createReactRenderer } from './renderer.tsx';
+export type { ReactRenderer, ReactRendererOptions } from './renderer.tsx';
+export { ReactViewMounter, ViewPortals } from './view-mounter.tsx';
+export type { ReactViewMounterOptions } from './view-mounter.tsx';
+export { ChromeBoundary, PlacementBoundary, DefaultErrorFallback } from './boundary.tsx';
+export type { ErrorFallback, ErrorFallbackProps } from './boundary.tsx';
+export { ViewHub } from './hub.ts';
+export type { MountedView } from './hub.ts';
+export { MenuToolbar, useMenu } from './menus.tsx';
+export { StatusBar } from './status-bar.tsx';
+export { QuickInput } from './palette.tsx';
+export { Notifications } from './notifications.tsx';
+export { Workbench, PlacementHost } from './workbench.tsx';
+export type { PlaceholderProps } from './config.ts';
+export { defaultStyles } from './styles.ts';

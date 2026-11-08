@@ -1,0 +1,62 @@
+{
+  "name": "tessera-poc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tessera proof of concept: npm workspaces monorepo (stage C: DOM helpers, React binding, dockview surface, web host, Vite demo app; on top of stages A and B).",
+  "workspaces": [
+    "packages/*",
+    "plugins/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "build": "node scripts/tsc-all.mjs build",
+    "typecheck": "node scripts/tsc-all.mjs typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "oxlint --config .oxlintrc.json --deny-warnings packages plugins apps",
+    "check:layers": "node scripts/check-deps.mjs && node scripts/depcruise.mjs",
+    "check": "npm run typecheck && npm run check:layers && npm run check:api && npm run check:docs && npm run lint && npm test",
+    "sync": "node scripts/sync-tsconfigs.mjs",
+    "demo:headless": "vitest run --project apps/headless test/demo-scenario.test.ts",
+    "demo": "npm run dev -w @tessera-poc/demo",
+    "build:demo": "npm run build:app -w @tessera-poc/demo",
+    "test:browser": "vitest run --project packages/layout-dockview:browser --project apps/demo:browser",
+    "test:jsdom": "vitest run --project packages/dom:jsdom --project packages/react:jsdom --project packages/host-web:jsdom --project plugins/tasks:jsdom --project plugins/audit:jsdom --project apps/demo:jsdom",
+    "check:api": "node scripts/api-snapshot.mjs check",
+    "api:update": "node scripts/api-snapshot.mjs update",
+    "check:codes": "node scripts/check-codes.mjs",
+    "check:exports": "node scripts/package-exports.mjs",
+    "check:docs": "npm run check:codes && npm run check:exports",
+    "coverage": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reportsDirectory=coverage --project '!*:browser'",
+    "bench": "node bench/ladder.mjs",
+    "bench:strict": "node bench/ladder.mjs --strict",
+    "bench:leak": "node --expose-gc bench/leak.mjs",
+    "bench:rpc": "node bench/rpc.mjs",
+    "bench:heap": "node --expose-gc bench/heap.mjs 500",
+    "bench:qp": "node bench/qp.mjs",
+    "bench:menu": "node bench/menu.mjs",
+    "bench:shutdown": "node bench/shutdown.mjs"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.16.22",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "26.6.6",
+    "@typescript/typescript6": "6.0.2",
+    "@vitest/browser-playwright": "5.1.0",
+    "@vitest/coverage-v8": "5.1.0",
+    "dependency-cruiser": "18.7.2",
+    "jsdom": "31.0.0",
+    "oxlint": "1.92.0",
+    "playwright": "1.65.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.6",
+    "vitest": "5.1.0"
+  }
+}

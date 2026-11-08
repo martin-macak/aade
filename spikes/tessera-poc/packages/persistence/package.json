@@ -1,0 +1,27 @@
+{
+  "name": "@tessera/persistence",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "StorageService (write-behind, versioned values, mementos), ConfigurationService, the configuration point, an in-memory StorageBackend.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*",
+    "@tessera/reactive": "*",
+    "@tessera/di": "*",
+    "@tessera/interceptors": "*",
+    "@tessera/contracts": "*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@tessera/testing": "*",
+    "vitest": "5.1.0"
+  }
+}

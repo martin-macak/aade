@@ -1,0 +1,25 @@
+{
+  "name": "@tessera/host-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser host: HostEnvironment with a localStorage backend, static plugin catalog and loader, startWebApp.",
+  "sideEffects": false,
+  "exports": {
+    ".": { "types": "./src/index.ts", "default": "./src/index.ts" },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*",
+    "@tessera/contracts": "*",
+    "@tessera/di": "*",
+    "@tessera/dom": "*",
+    "@tessera/reactive": "*",
+    "@tessera/shell": "*"
+  },
+  "devDependencies": {
+    "@tessera/testing": "*",
+    "jsdom": "31.0.0",
+    "vitest": "5.1.0"
+  }
+}

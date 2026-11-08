@@ -1,0 +1,10 @@
+{
+  "id": "acme.hello",
+  "name": "Hello",
+  "version": "1.0.0",
+  "engines": { "tessera": "^1.0.0" },
+  "main": "./src/main.ts",
+  "contributes": {
+    "commands": [{ "id": "acme.hello.say", "title": "Say Hello", "category": "Hello" }]
+  }
+}

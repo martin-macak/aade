@@ -1,0 +1,16 @@
+export { DefaultContributionRegistry } from './contribution-registry.ts';
+export { ACTIVATE_TIMEOUT_MS, DEACTIVATE_TIMEOUT_MS, InProcessPluginHost, PluginActivationError } from './host.ts';
+export { PLUGIN_ID_PATTERN, parseManifest, pluginManifestSchema } from './manifest.ts';
+export type { ManifestParse } from './manifest.ts';
+export { pluginsModule } from './module.ts';
+export { DefaultPluginManager } from './plugin-manager.ts';
+export type { PluginManagerOptions } from './plugin-manager.ts';
+export { interceptorsPoint } from './points.ts';
+export { resolvePlugins } from './resolver.ts';
+export type { ResolutionCode, ResolutionResult, ResolutionState, ResolveInput } from './resolver.ts';
+export { REGISTERING_MEMBERS } from './facades.ts';
+export { createPluginRuntime } from './runtime.ts';
+export type { PluginRuntime } from './runtime.ts';
+export { decideCapabilities, defaultPluginPolicy, hostServicesOf } from './policy.ts';
+export type { CapabilityDecision } from './policy.ts';
+export { PLUGIN_TRANSITIONS, isAllowedTransition } from './plugin-transitions.ts';

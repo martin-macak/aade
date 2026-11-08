@@ -1,0 +1,29 @@
+{
+  "name": "@tessera-poc/plugin-task-stats",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "sample.taskStats: a status bar item with the open task count, through the TaskStore token.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/main.ts",
+      "default": "./src/main.ts"
+    },
+    "./manifest": {
+      "types": "./src/manifest.ts",
+      "default": "./src/manifest.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "devDependencies": {
+    "@tessera/base": "*",
+    "@tessera/contracts": "*",
+    "@tessera/testing": "*",
+    "vitest": "5.1.0",
+    "@tessera/plugin-api": "*"
+  },
+  "peerDependencies": {
+    "@tessera/plugin-api": "^1.0.0"
+  }
+}

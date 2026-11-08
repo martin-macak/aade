@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.l0-l3.json",
+  "exclude": [
+    "src/ui-*"
+  ],
+  "include": [
+    "src",
+    "tessera-plugin.json"
+  ]
+}

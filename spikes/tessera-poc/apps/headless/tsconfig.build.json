@@ -1,0 +1,54 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src",
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../plugins/audit/tsconfig.build.json"
+    },
+    {
+      "path": "../../plugins/faulty/tsconfig.build.json"
+    },
+    {
+      "path": "../../plugins/task-stats/tsconfig.build.json"
+    },
+    {
+      "path": "../../plugins/tasks/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/base/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/contracts/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/di/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/interceptors/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/persistence/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/plugin-api/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/plugins/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/reactive/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/shell/tsconfig.build.json"
+    }
+  ]
+}

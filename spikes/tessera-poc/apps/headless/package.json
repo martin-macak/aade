@@ -1,0 +1,35 @@
+{
+  "name": "@tessera-poc/headless",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Headless integration app: createTestApp, the four sample plugins, the demo scenario in Node.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera-poc/plugin-audit": "*",
+    "@tessera-poc/plugin-faulty": "*",
+    "@tessera-poc/plugin-task-stats": "*",
+    "@tessera-poc/plugin-tasks": "*",
+    "@tessera/base": "*",
+    "@tessera/contracts": "*",
+    "@tessera/di": "*",
+    "@tessera/interceptors": "*",
+    "@tessera/persistence": "*",
+    "@tessera/plugin-api": "*",
+    "@tessera/plugins": "*",
+    "@tessera/reactive": "*",
+    "@tessera/shell": "*"
+  },
+  "devDependencies": {
+    "@tessera/dom": "*",
+    "@tessera/testing": "*",
+    "vitest": "5.1.0"
+  }
+}

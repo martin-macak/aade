@@ -1,0 +1,38 @@
+{
+  "name": "@tessera/reactive",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tessera L0 kernel: reactive facade (state, computed, effect, batch, transact, resources) over a pluggable signal engine.",
+  "sideEffects": [
+    "./src/index.ts"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./alien": {
+      "types": "./src/alien.ts",
+      "default": "./src/alien.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@preact/signals-core": "1.14.5",
+    "@tessera/base": "*"
+  },
+  "peerDependencies": {
+    "alien-signals": "3.2.1"
+  },
+  "peerDependenciesMeta": {
+    "alien-signals": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@tessera/testing": "*",
+    "alien-signals": "3.2.1",
+    "vitest": "5.1.0"
+  }
+}

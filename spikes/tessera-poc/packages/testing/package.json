@@ -1,0 +1,32 @@
+{
+  "name": "@tessera/testing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tessera test support: harnesses, fakes and conformance suites. Dev dependency only.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*",
+    "@tessera/contracts": "*",
+    "@tessera/di": "*",
+    "@tessera/interceptors": "*",
+    "@tessera/persistence": "*",
+    "@tessera/plugins": "*",
+    "@tessera/reactive": "*",
+    "@tessera/rpc": "*",
+    "@tessera/shell": "*"
+  },
+  "peerDependencies": {
+    "vitest": "5.1.0"
+  },
+  "devDependencies": {
+    "vitest": "5.1.0"
+  }
+}

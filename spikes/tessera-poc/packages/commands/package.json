@@ -1,0 +1,28 @@
+{
+  "name": "@tessera/commands",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Context keys, when-clauses, commands, keybindings, menus, status bar and undo.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*",
+    "@tessera/reactive": "*",
+    "@tessera/di": "*",
+    "@tessera/interceptors": "*",
+    "@tessera/contracts": "*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@tessera/events": "*",
+    "@tessera/testing": "*",
+    "vitest": "5.1.0"
+  }
+}

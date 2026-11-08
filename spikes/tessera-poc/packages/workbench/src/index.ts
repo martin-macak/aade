@@ -1,0 +1,15 @@
+export { DefaultDialogService } from './dialog-model.ts';
+export { DockBinding } from './dock-sync.ts';
+export { PlacementStateAutosave } from './placement-state-autosave.ts';
+export { DefaultViewInstanceRegistry, GRACE_MS, MAX_CLOSED_INSTANCES } from './instances.ts';
+export type { InstanceEntry } from './instances.ts';
+export { DefaultLayoutStore, MAX_VIEW_STATE_BYTES, SAVE_DEBOUNCE_MS, emptySnapshot, layoutMigrations, layoutSchema, workbenchSnapshotSchema } from './layout-store.ts';
+export * as model from './model.ts';
+export { workbenchModule } from './module.ts';
+export { DefaultNotificationService } from './notifications.ts';
+export { PlacementImpl } from './placement.ts';
+export { viewsHandler, viewsPoint, workspacesPoint } from './points.ts';
+export { DefaultQuickInputService } from './quick-input.ts';
+export { DefaultSelectionService } from './selection.ts';
+export { DefaultViewRegistry } from './view-registry.ts';
+export { DefaultWorkbenchService } from './workbench-service.ts';

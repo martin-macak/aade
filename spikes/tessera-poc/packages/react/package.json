@@ -1,0 +1,41 @@
+{
+  "name": "@tessera/react",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "React 19 rendering adapter: ViewMounter, WorkbenchRenderer, hooks, per-placement error boundaries, menus, status bar, palette, notifications.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./ui": {
+      "types": "./src/ui.ts",
+      "default": "./src/ui.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@tessera/base": "*",
+    "@tessera/contracts": "*",
+    "@tessera/di": "*",
+    "@tessera/dom": "*",
+    "@tessera/reactive": "*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tessera/testing": "*",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "jsdom": "31.0.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "vitest": "5.1.0"
+  }
+}

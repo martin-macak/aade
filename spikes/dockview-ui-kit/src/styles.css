@@ -1,0 +1,10 @@
+/* Plain styles for the two test views. Nothing here is dockview-specific. */
+.view { padding: 12px; font: 14px/1.4 system-ui, sans-serif; color: #111; background: #fff; box-sizing: border-box; min-height: 100%; }
+.btn { font: inherit; padding: 4px 10px; border: 1px solid #667; border-radius: 4px; background: #eef; cursor: pointer; }
+.row { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+.checkbox { all: unset; box-sizing: border-box; width: 20px; height: 20px; border: 2px solid #335; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; background: #fff; cursor: pointer; }
+.checkbox[data-state='checked'], .checkbox[data-checked] { background: #cdf; }
+.popup { box-sizing: border-box; width: 220px; padding: 12px; border: 1px solid #335; border-radius: 6px; background: #ffe; color: #111; box-shadow: 0 4px 16px rgb(0 0 0 / 35%); font: 14px/1.4 system-ui, sans-serif; }
+/* z-index of the popup layer. The tests set --popup-z on <html> (1000) unless VITE_POPUP_Z=off is set. With the variable unset
+   the layer has z-index: auto. Radix copies the z-index of .popup (its content) to its own wrapper; Base UI needs it on the positioner. */
+.popup, .positioner { z-index: var(--popup-z, auto); }
