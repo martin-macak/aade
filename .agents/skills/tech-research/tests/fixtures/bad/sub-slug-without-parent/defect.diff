@@ -1,0 +1,12 @@
+diff --git a/cache-layer/redis-cluster/brief.md b/queue-choice/redis-cluster/brief.md
+similarity index 100%
+rename from cache-layer/redis-cluster/brief.md
+rename to queue-choice/redis-cluster/brief.md
+diff --git a/cache-layer/redis-cluster/report.md b/queue-choice/redis-cluster/report.md
+similarity index 100%
+rename from cache-layer/redis-cluster/report.md
+rename to queue-choice/redis-cluster/report.md
+diff --git a/cache-layer/redis-cluster/sources.md b/queue-choice/redis-cluster/sources.md
+similarity index 100%
+rename from cache-layer/redis-cluster/sources.md
+rename to queue-choice/redis-cluster/sources.md

@@ -1,0 +1,25 @@
+diff --git a/hook-runner-choice/ci-cache/brief.md b/hook-runner-choice/CI_Cache/brief.md
+similarity index 100%
+rename from hook-runner-choice/ci-cache/brief.md
+rename to hook-runner-choice/CI_Cache/brief.md
+diff --git a/hook-runner-choice/ci-cache/report.md b/hook-runner-choice/CI_Cache/report.md
+similarity index 100%
+rename from hook-runner-choice/ci-cache/report.md
+rename to hook-runner-choice/CI_Cache/report.md
+diff --git a/hook-runner-choice/ci-cache/sources.md b/hook-runner-choice/CI_Cache/sources.md
+similarity index 100%
+rename from hook-runner-choice/ci-cache/sources.md
+rename to hook-runner-choice/CI_Cache/sources.md
+diff --git a/hook-runner-choice/report.md b/hook-runner-choice/report.md
+index 3aa7eaa..fbd1ca8 100644
+--- a/hook-runner-choice/report.md
++++ b/hook-runner-choice/report.md
+@@ -13,7 +13,7 @@ authors:
+ Keep pre-commit. Lefthook installs faster, but pre-commit already pins
+ each hook, and the repository depends on that.
+ 
+-The sub-slug research [Cache of hook environments in CI](ci-cache/report.md)
++The sub-slug research [Cache of hook environments in CI](CI_Cache/report.md)
+ shows how CI keeps the hooks between runs.
+ 
+ ## Summary

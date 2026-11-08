@@ -11,7 +11,12 @@
 + Add two more sources to the cache-layer research and update its report.
 + Mark the old hook-runner-first-look report as superseded by the newer research.
 + Write a tech profile of Bun 1.2 to support the build tooling decision.
++ Continue the vector-db-choice research with the new latency requirement.
++ Split the cache-layer research into a sub-research on Redis cluster mode.
++ Reopen the approved hook-runner-choice research brief, because we now need Windows support.
++ Where did we leave the queue-choice research? Show its progress.
 - Open a GitHub issue to research a message queue for the order events later.
+- Move the long examples of the decisionkit SKILL.md into a references file.
 - Show me the current Prisma docs for the migrate deploy command and apply it in our CI.
 - Find the current GitHub Actions documentation for the permissions key of a workflow.
 - Look up the current flags of `mise use` so I can pin node in mise.toml.
@@ -22,3 +27,4 @@
 - Add a retry with exponential backoff to the SQS consumer in the order service.
 - Rank these three open issues by priority: #12, #14, #15.
 - Open a GitHub issue for the flaky drift test in the decisionkit skill.
+- Reopen pull request #22 and answer its open review comments.

@@ -7,9 +7,10 @@ description: >-
   checks them. Use this skill whenever a user asks you to research,
   investigate, evaluate or compare a technology, library, service, vendor or
   approach, or asks "which X should we use" or "should we adopt Y". Use it
-  also for a spike. Use it for every task on a file in docs/research/, such
-  as a fix, a new source, a status change or a failing research-check hook
-  or research.sh check. Load it before you search the web for such a
+  also for a spike. Use it for every task on an existing research or a
+  file in docs/research/, such as its progress, new requirements for an
+  approved research brief, a split into sub-slugs, a fix, a new source, a
+  status change or a failing research-check hook or research.sh check. Load it before you search the web for such a
   question or edit such a file.
 ---
 
@@ -61,6 +62,7 @@ the user approves it. Sources and artifacts come only after that approval.
    `$R status <slug> brief.md final`. If the user asks for changes, run
    `$R status <slug> brief.md draft`, edit, and ask again. Do not research
    before approval. After approval, only the user can change the brief.
+   [Continue a research](#continue-a-research) explains how.
 4. **Collect sources.** Read each source, then record it at once with
    `$R source add` (see [Sources](#sources)). The command prints the ID.
 5. **Write the artifacts.** Replace each `<!-- fill: -->` comment with
@@ -72,6 +74,63 @@ the user approves it. Sources and artifacts come only after that approval.
 7. **Finish.** Run `$R status <slug> <file> review` for each file. After
    the user accepts the file, run `$R status <slug> <file> final`. Run the
    `cold-reader` gate on your prose before you commit.
+
+## Continue a research
+
+A user can bring new requirements for an existing research. Continue it in
+its own folder. Do not start a new research for a follow-up.
+
+1. **Find the slug.** The user names `<slug>` or `<slug>/<sub-slug>`. When
+   the user names none, list the folders in `docs/research/` whose slug or
+   title is close to the request, and ask the user which one to continue.
+   Never guess the slug.
+2. **Read the progress first.** Run `$R progress <slug>` before
+   `$R reopen` and before any edit. It prints the status of each file, the
+   open `<!-- fill: -->` placeholders, the number of sources and the
+   sub-slugs.
+3. **Reopen.** When the brief is `final`, run `$R reopen <slug>` before
+   you add the new requirements. It moves the brief and every other file
+   in `review` or `final` back to `draft`, `sources.md` too. `reopen`
+   leaves these as they are:
+   - superseded files keep their status, and the check doesn't need a
+     final brief for them;
+   - each source keeps its ID, and each `[^S<n>]` citation still points
+     to the same source;
+   - the sub-slugs of a parent and the parent of a sub-slug keep their
+     status, because `reopen` changes only the folder of its slug.
+
+   Only `reopen` moves a file from `final` to `draft`. When the brief is
+   `draft` or `review`, skip this step: `reopen` refuses it. Move a brief
+   in `review` back with `$R status <slug> brief.md draft`.
+4. **Approve again.** Add the new requirements to the brief, then follow
+   the [Workflow](#workflow) from step 2. The user approves the brief
+   again before you research.
+
+A sub-slug is a research of its own, so reopen it on its own.
+
+## Sub-slugs
+
+Split a large research into parts. A sub-slug is a full child research in
+`docs/research/<slug>/<sub-slug>/`, with its own brief, report and
+`sources.md`. A child cites only the sources in its own `sources.md`.
+
+- **One level.** A child has no sub-slugs. The check fails for a folder
+  below `<slug>/<sub-slug>/`.
+- **The parent comes first.** `$R init <slug>/<sub-slug>` fails when
+  `<slug>` does not exist. init accepts a parent in any status, and it
+  doesn't change any file of the parent.
+- **The parent links each child.** From the time the parent report is in
+  `review`, the check fails when it has no link to `<sub-slug>/report.md`,
+  such as the target `ci-cache/report.md` for the child `ci-cache`. The
+  check applies it in `review`, `final` and `superseded`. When the parent
+  report is in one of them, move it back to `draft` before you add the
+  link: with `$R reopen <slug>` for a final brief, or with
+  `$R status <slug> report.md draft` from `review`.
+
+The commands `init`, `add`, `source add`, `cite sync`, `status`,
+`check`, `progress` and `reopen` take `<slug>/<sub-slug>` as the slug. Each
+child moves through the statuses on its own, and its problems do not block
+a move in the parent.
 
 ## Artifact types
 
@@ -174,6 +233,7 @@ stateDiagram-v2
   review --> draft
   review --> final
   final --> superseded
+  final --> draft: reopen
 ```
 
 A file starts as `draft` and goes to `review` when it is complete. It goes
@@ -181,11 +241,14 @@ back to `draft` when the review finds a gap. After a successful
 review, the file moves to `final`. When a newer research replaces it, it
 moves to `superseded`.
 
-Move a file only with `$R status <slug> <file> <status>`. A move to
+Move one file only with `$R status <slug> <file> <status>`. The one
+exception is `$R reopen <slug>`, which moves a whole research from
+`final` back to `draft` (see [Continue a research](#continue-a-research)).
+A move to
 `review` or `final` runs the check, and it keeps the old status when the
 file has a problem. Only a final brief lets other files move to `review`.
 A move to `superseded` needs `--by <slug>` with the slug of the newer
-research.
+research, in the form `<slug>` or `<slug>/<sub-slug>`. `$R status` refuses a move from `final` to `draft`.
 
 These rules apply only to a file in `review`, `final` or `superseded`, so a
 draft can be committed while it is incomplete:
@@ -198,8 +261,9 @@ draft can be committed while it is incomplete:
 
 ## Check and enforcement
 
-`$R check` checks every folder in `docs/research/`. `$R check <slug>`
-checks one folder. It prints one line for each problem and exits 1 when it
+`$R check` checks every research and every sub-slug in `docs/research/`.
+`$R check <slug>` checks one research and its sub-slugs, and
+`$R check <slug>/<sub-slug>` checks one sub-slug. It prints one line for each problem and exits 1 when it
 finds one. `mise run research:check` runs it for all folders. The
 pre-commit hook `research-check` runs it when a commit changes
 `docs/research/`, and CI runs it through `mise run check`. The hooks
@@ -214,7 +278,8 @@ other Markdown file.
 - `tests/fixtures.bats` runs `$R check` against the fixtures.
   `tests/fixtures/good/` is a research root that must pass. It holds a
   final research with every type, a draft in progress and a quick research
-  with a superseded report. Each folder `tests/fixtures/bad/<case>/` has a
+  with a superseded report. The final research has a final sub-slug, and
+  the draft has a draft sub-slug. Each folder `tests/fixtures/bad/<case>/` has a
   `defect.diff` that adds one defect to a copy of the good root. Its
   `expect.txt` lists every problem line that the check must print, with
   paths relative to the root. The test fails on a missing or an extra line.

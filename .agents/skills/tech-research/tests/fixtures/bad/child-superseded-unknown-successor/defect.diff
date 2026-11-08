@@ -1,0 +1,14 @@
+diff --git a/hook-runner-choice/ci-cache/report.md b/hook-runner-choice/ci-cache/report.md
+index 6fd25f0..df352d4 100644
+--- a/hook-runner-choice/ci-cache/report.md
++++ b/hook-runner-choice/ci-cache/report.md
+@@ -1,7 +1,8 @@
+ ---
+ type: report
+ title: "Cache of hook environments in CI"
+-status: final
++status: superseded
++superseded_by: hook-runner-choice/ci-cache-v2
+ created: "2026-11-03"
+ updated: "2026-11-04"
+ authors:

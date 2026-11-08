@@ -1,0 +1,47 @@
+---
+type: brief
+title: "Cache of hook environments in CI"
+status: final
+created: "2026-11-03"
+updated: "2026-11-04"
+authors:
+  - aade maintainers
+depth: quick
+artifacts: []
+---
+
+# Cache of hook environments in CI
+
+This research is a test fixture of the tech-research skill. It shows a
+final sub-slug research below its parent hook-runner-choice.
+
+## Question
+
+Can CI keep the pre-commit hook environments between runs?
+
+## Background
+
+The parent research picks pre-commit. Each CI run installs the hook
+environments again.
+
+## Scope
+
+### In scope
+
+- The cache of pre-commit in GitHub Actions.
+
+### Out of scope
+
+- Other CI systems, because the repository uses GitHub Actions only.
+
+## Constraints
+
+- Every tool runs through mise.
+
+## Success criteria
+
+- The research says which folder CI must cache.
+
+## Source policy
+
+- Prefer the docs of pre-commit and GitHub.

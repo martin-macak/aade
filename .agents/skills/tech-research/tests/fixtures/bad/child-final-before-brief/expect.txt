@@ -1,0 +1,2 @@
+hook-runner-choice/ci-cache/report.md: the status is final, but brief.md is draft. Get the approval of the user and run: research.sh status hook-runner-choice/ci-cache brief.md final
+hook-runner-choice/ci-cache/sources.md: the status is final, but brief.md is draft. Get the approval of the user and run: research.sh status hook-runner-choice/ci-cache brief.md final

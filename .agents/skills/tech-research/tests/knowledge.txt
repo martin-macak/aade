@@ -16,3 +16,27 @@ A: A prose paragraph that explains what the diagram shows and why it matters. Th
 
 Q: Which files does `$R init` create, and where?
 A: It creates the files brief.md, report.md and sources.md in docs/research/<slug>/.
+
+Q: A user brings new requirements for an existing research whose brief is final. What does the agent run, in which order?
+A: The agent first runs `$R progress <slug>`, then runs `$R reopen <slug>`, adds the new requirements to the brief, and asks the user to approve the brief again before it researches.
+
+Q: The user wants to continue a research but names no slug. What does the agent do?
+A: The agent lists the folders in docs/research/ whose slug or title is close to the request and asks the user which one to continue; it never guesses the slug.
+
+Q: Which files does `$R reopen <slug>` move, and to which status?
+A: It moves the brief and every other file in review or final back to draft, sources.md too.
+
+Q: What stays the same when `$R reopen <slug>` runs?
+A: Superseded files keep their status, each source keeps its ID, and the sub-slugs keep their status.
+
+Q: Can `$R status` move a file from final to draft?
+A: No. `$R status` refuses a move from final to draft, and only `$R reopen` moves a research from final back to draft.
+
+Q: Where does a sub-slug research live, how deep may sub-slugs go, and what does it own?
+A: A sub-slug lives in docs/research/<slug>/<sub-slug>/ as a full research with its own brief, report and sources.md, and sub-slugs go only one level deep.
+
+Q: When does `$R init <slug>/<sub-slug>` fail, and what does it do to the parent?
+A: It fails when the parent research <slug> does not exist, and it leaves the parent unchanged whatever its status.
+
+Q: What must the report of a parent research contain, and from when does the check enforce it?
+A: The parent report must link each child by its report, as <sub-slug>/report.md, and the check fails on a missing link from the time the parent report is in review.

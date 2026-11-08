@@ -1,0 +1,13 @@
+diff --git a/hook-runner-choice/ci-cache/brief.md b/hook-runner-choice/ci-cache/brief.md
+index 54e9a61..65b2295 100644
+--- a/hook-runner-choice/ci-cache/brief.md
++++ b/hook-runner-choice/ci-cache/brief.md
+@@ -1,7 +1,7 @@
+ ---
+ type: brief
+ title: "Cache of hook environments in CI"
+-status: final
++status: draft
+ created: "2026-11-03"
+ updated: "2026-11-04"
+ authors:

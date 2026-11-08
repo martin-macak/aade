@@ -1,0 +1,3 @@
+queue-choice: the required file brief.md is missing. Run: research.sh add queue-choice brief --title <t> --author <a>
+queue-choice: the required file report.md is missing. Run: research.sh add queue-choice report --title <t> --author <a>
+queue-choice: the required file sources.md is missing. Run: research.sh add queue-choice sources --title <t> --author <a>
