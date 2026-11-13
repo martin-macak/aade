@@ -52,7 +52,7 @@ jobs:
         with:
           # ci-plan.sh diffs from the merge-base with the PR base.
           fetch-depth: 0
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           install_args: gh yq
       - id: plan
@@ -91,7 +91,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The structural checks need no node and no decisionkit.
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           install_args: jq yq vale
       - run: vale sync
@@ -113,7 +113,7 @@ jobs:
           fetch-depth: 0
       # The suites fake gh and decisionkit. Two skill drift suites check the
       # installed decisionkit, so the job installs it with node.
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           install_args: bats gh jq yq node npm:@adxtya21/decisionkit
       # The runner image puts Homebrew bash 5 first on PATH. Put /bin first,
